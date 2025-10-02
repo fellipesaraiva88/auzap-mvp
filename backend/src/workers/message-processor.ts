@@ -258,12 +258,45 @@ const worker = new Worker(
   }
 );
 
+// Additional worker event handlers (complementing those in index.ts)
 worker.on('completed', (job) => {
   logger.info({ jobId: job.id }, '✅ Job completed');
 });
 
 worker.on('failed', (job, err) => {
   logger.error({ jobId: job?.id, error: err }, '❌ Job failed');
+});
+
+worker.on('error', (err) => {
+  logger.error(
+    {
+      error: {
+        message: err.message,
+        stack: err.stack,
+        name: err.name,
+      },
+    },
+    '⚠️  Worker-level error in message processor'
+  );
+});
+
+worker.on('stalled', (jobId) => {
+  logger.warn(
+    { jobId },
+    '⏸️  Job stalled - may need manual intervention or will be retried'
+  );
+});
+
+worker.on('drained', () => {
+  logger.debug('📭 Message queue drained (no pending jobs)');
+});
+
+worker.on('paused', () => {
+  logger.warn('⏸️  Message processor worker paused');
+});
+
+worker.on('resumed', () => {
+  logger.info('▶️  Message processor worker resumed');
 });
 
 export default worker;

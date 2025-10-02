@@ -26,7 +26,7 @@ O projeto possui 3 workflows principais:
 1. Vá para: `https://github.com/[seu-usuario]/[seu-repo]/settings/secrets/actions`
 2. Clique em "New repository secret"
 
-### Passo 2: Adicionar Secrets Obrigatórios
+https://github.com/fellipesaraiva88/auzap-mvpsettings/secrets/actions### Passo 2: Adicionar Secrets Obrigatórios
 
 #### **Supabase Credentials**
 

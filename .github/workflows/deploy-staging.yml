@@ -1,0 +1,255 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests (use with caution)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+env:
+  NODE_ENV: staging
+  RENDER_SERVICE_ID_BACKEND: ${{ secrets.RENDER_SERVICE_ID_BACKEND_STAGING }}
+  RENDER_SERVICE_ID_FRONTEND: ${{ secrets.RENDER_SERVICE_ID_FRONTEND_STAGING }}
+
+jobs:
+  # Pre-deployment validation
+  pre-deploy:
+    name: Pre-deployment Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      skip_tests: ${{ steps.check.outputs.skip_tests }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check skip tests flag
+        id: check
+        run: |
+          if [[ "${{ github.event.inputs.skip_tests }}" == "true" ]]; then
+            echo "skip_tests=true" >> $GITHUB_OUTPUT
+            echo "⚠️ WARNING: Skipping tests as requested"
+          else
+            echo "skip_tests=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Deploying version: $VERSION"
+
+      - name: Run deployment checklist
+        run: bash scripts/deploy-checklist.sh
+
+      - name: Run security checks
+        run: bash scripts/security-check.sh
+
+  # Run tests (unless skipped)
+  test:
+    name: Run Tests
+    needs: pre-deploy
+    if: needs.pre-deploy.outputs.skip_tests != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: auzap_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/auzap_test
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/auzap_test
+          REDIS_URL: redis://localhost:6379
+
+  # Build and deploy
+  deploy:
+    name: Deploy to Staging
+    needs: [pre-deploy, test]
+    if: always() && (needs.test.result == 'success' || needs.pre-deploy.outputs.skip_tests == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Deploy to Render (Backend)
+        id: deploy-backend
+        run: |
+          echo "Deploying backend to Render..."
+          curl -X POST "https://api.render.com/v1/services/${{ env.RENDER_SERVICE_ID_BACKEND }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "clearCache": "clear"
+            }' | tee deploy-response.json
+
+          DEPLOY_ID=$(jq -r '.id' deploy-response.json)
+          echo "deploy_id=$DEPLOY_ID" >> $GITHUB_OUTPUT
+
+      - name: Deploy to Render (Frontend)
+        id: deploy-frontend
+        run: |
+          echo "Deploying frontend to Render..."
+          curl -X POST "https://api.render.com/v1/services/${{ env.RENDER_SERVICE_ID_FRONTEND }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "clearCache": "clear"
+            }' | tee deploy-response.json
+
+          DEPLOY_ID=$(jq -r '.id' deploy-response.json)
+          echo "deploy_id=$DEPLOY_ID" >> $GITHUB_OUTPUT
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting for deployment to complete..."
+          sleep 120
+
+      - name: Set deployment URL
+        id: deploy
+        run: |
+          echo "url=${{ secrets.STAGING_URL }}" >> $GITHUB_OUTPUT
+
+  # Post-deployment validation
+  post-deploy:
+    name: Post-deployment Validation
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run smoke tests
+        run: bash scripts/smoke-test.sh
+        env:
+          TARGET_URL: ${{ secrets.STAGING_URL }}
+          API_URL: ${{ secrets.STAGING_API_URL }}
+
+      - name: Health check
+        run: |
+          echo "Running health checks..."
+          curl -f "${{ secrets.STAGING_API_URL }}/health" || exit 1
+          curl -f "${{ secrets.STAGING_API_URL }}/api/health" || exit 1
+
+      - name: Validate deployment
+        run: bash scripts/validate-production.sh
+        env:
+          TARGET_URL: ${{ secrets.STAGING_URL }}
+          API_URL: ${{ secrets.STAGING_API_URL }}
+
+  # Notify on deployment
+  notify:
+    name: Notify Team
+    needs: [deploy, post-deploy]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send success notification
+        if: needs.post-deploy.result == 'success'
+        run: |
+          echo "✅ Staging deployment successful!"
+          echo "Version: ${{ needs.pre-deploy.outputs.version }}"
+          echo "URL: ${{ secrets.STAGING_URL }}"
+
+      - name: Send failure notification
+        if: needs.deploy.result == 'failure' || needs.post-deploy.result == 'failure'
+        run: |
+          echo "❌ Staging deployment failed!"
+          echo "Please check the logs and try again."
+          exit 1

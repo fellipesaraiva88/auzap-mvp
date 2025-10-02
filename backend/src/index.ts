@@ -22,6 +22,7 @@ import bookingsRoutes from './routes/bookings.routes';
 import servicesRoutes from './routes/services.routes';
 import metricsRoutes from './routes/metrics.routes';
 import capacityRoutes from './routes/capacity.routes';
+import healthRoutes from './routes/health.routes';
 import { startWorkers, stopWorkers } from './workers';
 
 const app = express();
@@ -71,10 +72,8 @@ app.use(
   })
 );
 
-// Health check (sem tenant middleware)
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+// Health check routes (sem tenant middleware)
+app.use('/health', healthRoutes);
 
 // Public routes (sem tenant middleware)
 app.use('/api/auth', authRoutes);
@@ -125,7 +124,7 @@ app.use(
 );
 
 // Start server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const HOST = '0.0.0.0'; // Railway requires binding to 0.0.0.0
 
 httpServer.listen(PORT, HOST, () => {
@@ -137,21 +136,83 @@ httpServer.listen(PORT, HOST, () => {
   startWorkers();
 });
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received, closing server...');
-  await stopWorkers();
-  httpServer.close(() => {
-    logger.info('Server closed');
+// Graceful shutdown with comprehensive cleanup
+let isShuttingDown = false;
+const SHUTDOWN_TIMEOUT = 30000; // 30 seconds max
+
+async function gracefulShutdown(signal: string) {
+  if (isShuttingDown) {
+    logger.warn({ signal }, 'Shutdown already in progress, ignoring signal');
+    return;
+  }
+
+  isShuttingDown = true;
+  logger.info({ signal }, '🛑 Graceful shutdown initiated');
+
+  // Set timeout to force exit if graceful shutdown takes too long
+  const forceExitTimer = setTimeout(() => {
+    logger.error('⚠️  Graceful shutdown timeout exceeded, forcing exit');
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT);
+
+  try {
+    // Step 1: Stop accepting new connections
+    logger.info('📡 Closing HTTP server (no new connections)...');
+    await new Promise<void>((resolve, reject) => {
+      httpServer.close((err) => {
+        if (err) {
+          logger.error({ error: err }, '❌ Error closing HTTP server');
+          reject(err);
+        } else {
+          logger.info('✅ HTTP server closed');
+          resolve();
+        }
+      });
+    });
+
+    // Step 2: Close Socket.IO connections
+    logger.info('🔌 Closing Socket.IO connections...');
+    await new Promise<void>((resolve) => {
+      io.close(() => {
+        logger.info('✅ Socket.IO closed');
+        resolve();
+      });
+    });
+
+    // Step 3: Stop BullMQ workers and queues
+    logger.info('⚙️  Stopping BullMQ workers...');
+    await stopWorkers();
+    logger.info('✅ BullMQ workers stopped');
+
+    // Step 4: Close Redis connections (if exists)
+    logger.info('🔴 Closing Redis connections...');
+    const { connection } = await import('./config/redis');
+    if (connection && connection.status !== 'end') {
+      await connection.quit();
+      logger.info('✅ Redis connection closed');
+    }
+
+    // Step 5: Cleanup complete
+    clearTimeout(forceExitTimer);
+    logger.info('✅ Graceful shutdown complete');
     process.exit(0);
-  });
+  } catch (error) {
+    clearTimeout(forceExitTimer);
+    logger.error({ error }, '❌ Error during graceful shutdown');
+    process.exit(1);
+  }
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  logger.error({ error }, '❌ Uncaught exception');
+  gracefulShutdown('uncaughtException');
 });
 
-process.on('SIGINT', async () => {
-  logger.info('SIGINT received, closing server...');
-  await stopWorkers();
-  httpServer.close(() => {
-    logger.info('Server closed');
-    process.exit(0);
-  });
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error({ reason, promise }, '❌ Unhandled promise rejection');
+  gracefulShutdown('unhandledRejection');
 });

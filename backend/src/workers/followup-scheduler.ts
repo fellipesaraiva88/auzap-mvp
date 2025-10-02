@@ -19,7 +19,10 @@ const followupScheduler = new Worker(
     const { organizationId } = job.data;
 
     try {
-      logger.info({ jobId: job.id, organizationId }, 'Starting followup scheduler');
+      logger.info(
+        { jobId: job.id, organizationId },
+        'Starting followup scheduler'
+      );
 
       // Buscar todas as organizações se não especificada
       let organizations: string[] = [];
@@ -44,7 +47,8 @@ const followupScheduler = new Worker(
       for (const orgId of organizations) {
         try {
           // Buscar follow-ups pendentes
-          const pendingFollowups = await FollowupsService.getPendingFollowups(orgId);
+          const pendingFollowups =
+            await FollowupsService.getPendingFollowups(orgId);
 
           logger.info(
             { organizationId: orgId, count: pendingFollowups.length },
@@ -57,7 +61,9 @@ const followupScheduler = new Worker(
               totalProcessed++;
 
               // Processar follow-up (enviar mensagem)
-              const result = await FollowupsService.processFollowup(followup.id);
+              const result = await FollowupsService.processFollowup(
+                followup.id
+              );
 
               if (result.success) {
                 totalSent++;
@@ -138,11 +144,17 @@ const followupWorker = new Worker(
     const { followupId } = job.data;
 
     try {
-      logger.info({ jobId: job.id, followupId }, 'Processing followup from queue');
+      logger.info(
+        { jobId: job.id, followupId },
+        'Processing followup from queue'
+      );
 
       const result = await FollowupsService.processFollowup(followupId);
 
-      logger.info({ jobId: job.id, followupId }, 'Followup processed from queue');
+      logger.info(
+        { jobId: job.id, followupId },
+        'Followup processed from queue'
+      );
 
       return result;
     } catch (error: any) {
@@ -180,6 +192,27 @@ followupScheduler.on('failed', (job, err) => {
   logger.error({ jobId: job?.id, error: err }, '❌ Followup scheduler failed');
 });
 
+followupScheduler.on('error', (err) => {
+  logger.error(
+    {
+      error: {
+        message: err.message,
+        stack: err.stack,
+        name: err.name,
+      },
+    },
+    '⚠️  Worker-level error in followup scheduler'
+  );
+});
+
+followupScheduler.on('stalled', (jobId) => {
+  logger.warn({ jobId }, '⏸️  Followup scheduler job stalled');
+});
+
+followupScheduler.on('drained', () => {
+  logger.debug('📭 Followup scheduler queue drained');
+});
+
 // Event handlers para worker
 followupWorker.on('completed', (job) => {
   logger.info({ jobId: job.id }, '✅ Followup job completed');
@@ -187,6 +220,35 @@ followupWorker.on('completed', (job) => {
 
 followupWorker.on('failed', (job, err) => {
   logger.error({ jobId: job?.id, error: err }, '❌ Followup job failed');
+});
+
+followupWorker.on('error', (err) => {
+  logger.error(
+    {
+      error: {
+        message: err.message,
+        stack: err.stack,
+        name: err.name,
+      },
+    },
+    '⚠️  Worker-level error in followup worker'
+  );
+});
+
+followupWorker.on('stalled', (jobId) => {
+  logger.warn({ jobId }, '⏸️  Followup worker job stalled');
+});
+
+followupWorker.on('drained', () => {
+  logger.debug('📭 Followup worker queue drained');
+});
+
+followupWorker.on('paused', () => {
+  logger.warn('⏸️  Followup worker paused');
+});
+
+followupWorker.on('resumed', () => {
+  logger.info('▶️  Followup worker resumed');
 });
 
 /**
@@ -212,7 +274,11 @@ export async function startFollowupScheduler() {
     logger.info('Followup scheduler started - running every 30 minutes');
 
     // Executar imediatamente uma vez
-    await followupQueue.add('check-pending-followups', {}, { jobId: 'followup-scheduler-initial' });
+    await followupQueue.add(
+      'check-pending-followups',
+      {},
+      { jobId: 'followup-scheduler-initial' }
+    );
 
     return { success: true };
   } catch (error) {

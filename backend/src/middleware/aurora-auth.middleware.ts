@@ -1,4 +1,5 @@
 import { supabase } from '../config/supabase';
+import { logger } from '../config/logger';
 import { AuroraContext } from '../types';
 
 /**
@@ -29,7 +30,10 @@ export async function detectOwnerNumber(
       permissions: ownerNumber.permissions,
     };
   } catch (error) {
-    console.error('Error detecting owner number:', error);
+    logger.error(
+      { error, phoneNumber, organizationId },
+      'Error detecting owner number'
+    );
     return { isOwner: false };
   }
 }
