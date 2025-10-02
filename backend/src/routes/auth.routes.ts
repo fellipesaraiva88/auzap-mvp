@@ -111,15 +111,21 @@ router.post('/login', async (req, res): Promise<void> => {
 router.get('/me', async (req, res): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
+    logger.info({ authHeader }, 'Auth header received');
+
     if (!authHeader) {
       res.status(401).json({ error: 'No authorization header' });
       return;
     }
 
     const token = authHeader.replace('Bearer ', '');
+    logger.info({ tokenLength: token.length }, 'Token extracted');
+
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    logger.info({ user, error }, 'Supabase getUser result');
 
     if (error || !user) {
+      logger.error({ error }, 'Invalid token from Supabase');
       res.status(401).json({ error: 'Invalid token' });
       return;
     }
@@ -130,9 +136,10 @@ router.get('/me', async (req, res): Promise<void> => {
       .eq('auth_user_id', user.id)
       .single();
 
+    logger.info({ profile }, 'Profile fetched');
     res.json({ user: profile });
   } catch (error: any) {
-    logger.error('Get user error', error);
+    logger.error({ error: error.message, stack: error.stack }, 'Get user error');
     res.status(500).json({ error: error.message });
   }
 });
