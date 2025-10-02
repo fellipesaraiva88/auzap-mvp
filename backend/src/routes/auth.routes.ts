@@ -72,14 +72,17 @@ router.post('/logout', async (req, res) => {
 router.get('/me', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader) {
       return res.status(401).json({ error: 'No authorization header' });
     }
 
     const token = authHeader.replace('Bearer ', '');
 
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
 
     if (error || !user) {
       return res.status(401).json({ error: 'Invalid token' });
@@ -129,7 +132,6 @@ router.post('/register', async (req, res) => {
       .from('organizations')
       .insert({
         name: organization_name,
-        status: 'trial',
       })
       .select()
       .single();
@@ -172,7 +174,10 @@ router.post('/register', async (req, res) => {
       },
     });
 
-    logger.info({ userId: authData.user.id, organizationId: org.id }, 'User registered');
+    logger.info(
+      { userId: authData.user.id, organizationId: org.id },
+      'User registered'
+    );
 
     res.json({
       user: authData.user,
