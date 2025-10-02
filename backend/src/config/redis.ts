@@ -1,7 +1,16 @@
 import { Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
+import { Redis as UpstashRedis } from '@upstash/redis';
 
-// Conexão Redis
+// Upstash Redis (para produção com REST API)
+const upstashRedis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+  ? new UpstashRedis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    })
+  : null;
+
+// Conexão Redis (ioredis para BullMQ)
 const connection = process.env.REDIS_URL
   ? new IORedis(process.env.REDIS_URL, {
       maxRetriesPerRequest: null,
@@ -16,4 +25,4 @@ const connection = process.env.REDIS_URL
 // Fila de mensagens
 export const messageQueue = new Queue('messages', { connection });
 
-export { connection };
+export { connection, upstashRedis };
