@@ -287,9 +287,140 @@
     }
   }
 
+  /* Walking Paw Animation */
+  @keyframes pawWalk {
+    0%, 100% {
+      transform: translateY(0) rotate(0deg);
+      opacity: 0.3;
+    }
+    50% {
+      transform: translateY(-10px) rotate(5deg);
+      opacity: 0.8;
+    }
+  }
+
+  .paw-walk {
+    animation: pawWalk 1.5s ease-in-out infinite;
+  }
+
+  /* Scale Bounce */
+  @keyframes scaleBounce {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+
+  .scale-bounce {
+    animation: scaleBounce 2s ease-in-out infinite;
+  }
+
+  /* Gradient Shift */
+  @keyframes gradientShift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  .gradient-animate {
+    background-size: 200% 200%;
+    animation: gradientShift 3s ease infinite;
+  }
+
+  /* Floating */
+  @keyframes floating {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  .floating {
+    animation: floating 3s ease-in-out infinite;
+  }
+
+  /* Rotate Glow */
+  @keyframes rotateGlow {
+    0% {
+      transform: rotate(0deg);
+      filter: brightness(1);
+    }
+    50% {
+      filter: brightness(1.2);
+    }
+    100% {
+      transform: rotate(360deg);
+      filter: brightness(1);
+    }
+  }
+
+  .rotate-glow {
+    animation: rotateGlow 8s linear infinite;
+  }
+
   /* Glow Effect */
   .glow-primary {
     @apply shadow-[0_0_20px_rgba(0,102,255,0.3)];
+  }
+
+  .glow-success {
+    @apply shadow-[0_0_20px_rgba(76,175,80,0.3)];
+  }
+
+  .glow-warning {
+    @apply shadow-[0_0_20px_rgba(255,193,7,0.3)];
+  }
+
+  .glow-danger {
+    @apply shadow-[0_0_20px_rgba(244,67,54,0.3)];
+  }
+
+  /* Status Indicators */
+  .status-dot {
+    @apply inline-block w-2 h-2 rounded-full;
+  }
+
+  .status-dot-success {
+    @apply status-dot bg-ai-success animate-pulse;
+  }
+
+  .status-dot-pending {
+    @apply status-dot bg-ai-pending animate-pulse;
+  }
+
+  .status-dot-escalated {
+    @apply status-dot bg-ai-escalated animate-pulse;
+  }
+
+  /* Badge Styles */
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary/10 text-primary border-primary/20;
+  }
+
+  .badge-success {
+    @apply badge bg-ai-success/10 text-ai-success border-ai-success/20;
+  }
+
+  .badge-pending {
+    @apply badge bg-ai-pending/10 text-ai-pending border-ai-pending/20;
+  }
+
+  .badge-escalated {
+    @apply badge bg-ai-escalated/10 text-ai-escalated border-ai-escalated/20;
   }
 }
 
