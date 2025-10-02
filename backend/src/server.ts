@@ -21,6 +21,13 @@ export const io = new Server(httpServer, {
   }
 });
 
+// Conectar Socket.IO ao BaileysService para eventos real-time
+import { baileysService } from './services/baileys/baileys.service.js';
+baileysService.setSocketEmitter((event: string, data: any) => {
+  io.to(`org:${data.organizationId}`).emit(event, data);
+  logger.debug({ event, organizationId: data.organizationId }, 'Socket.IO event emitted');
+});
+
 // Middleware
 app.use(helmet({
   contentSecurityPolicy: {

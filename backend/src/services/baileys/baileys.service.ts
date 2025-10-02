@@ -353,8 +353,8 @@ export class BaileysService {
 
       return {
         success: true,
-        messageId: sent?.key.id,
-        timestamp: Number(sent?.messageTimestamp),
+        messageId: sent?.key.id || undefined,
+        timestamp: Number(sent?.messageTimestamp) || 0,
         protoMessage: sent || undefined
       };
     } catch (error) {
@@ -381,8 +381,8 @@ export class BaileysService {
 
       return {
         success: true,
-        messageId: sent?.key.id,
-        timestamp: Number(sent?.messageTimestamp),
+        messageId: sent?.key.id || undefined,
+        timestamp: Number(sent?.messageTimestamp) || 0,
         protoMessage: sent || undefined
       };
     } catch (error) {
@@ -410,8 +410,8 @@ export class BaileysService {
 
       return {
         success: true,
-        messageId: sent?.key.id,
-        timestamp: Number(sent?.messageTimestamp),
+        messageId: sent?.key.id || undefined,
+        timestamp: Number(sent?.messageTimestamp) || 0,
         protoMessage: sent || undefined
       };
     } catch (error) {
@@ -427,7 +427,7 @@ export class BaileysService {
    * Obtém instância (com validação multi-tenant)
    */
   private getInstance(instanceId: string, organizationId?: string): BaileysInstance {
-    for (const [key, instance] of this.instances.entries()) {
+    for (const instance of this.instances.values()) {
       if (instance.instanceId === instanceId) {
         // Validar tenant se fornecido
         if (organizationId && instance.organizationId !== organizationId) {
