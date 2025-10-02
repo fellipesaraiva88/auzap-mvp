@@ -1,0 +1,512 @@
+{
+  "timestamp": "2025-10-02T01:11:34.771498",
+  "database": "AuZap Supabase",
+  "tables_found": [
+    "organizations",
+    "users",
+    "organization_settings",
+    "whatsapp_instances",
+    "services",
+    "contacts",
+    "pets",
+    "bookings",
+    "conversations",
+    "messages",
+    "ai_interactions",
+    "authorized_owner_numbers",
+    "aurora_proactive_messages",
+    "aurora_automations"
+  ],
+  "tables_missing": [],
+  "table_analysis": {
+    "organizations": {
+      "status": "exists",
+      "row_count": 1,
+      "columns": [
+        "id",
+        "name",
+        "slug",
+        "business_type",
+        "subscription_tier",
+        "subscription_status",
+        "max_users",
+        "max_whatsapp_instances",
+        "max_pets",
+        "features",
+        "contact_email",
+        "contact_phone",
+        "address",
+        "business_hours",
+        "created_at",
+        "updated_at"
+      ],
+      "column_types": {
+        "id": "uuid",
+        "name": "text",
+        "slug": "text",
+        "business_type": "text",
+        "subscription_tier": "text",
+        "subscription_status": "text",
+        "max_users": "integer",
+        "max_whatsapp_instances": "integer",
+        "max_pets": "integer",
+        "features": "jsonb",
+        "contact_email": "text",
+        "contact_phone": "unknown",
+        "address": "unknown",
+        "business_hours": "jsonb",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "column_count": 16,
+      "relationships": {
+        "foreign_keys": [],
+        "referenced_by": []
+      }
+    },
+    "users": {
+      "status": "exists",
+      "row_count": 1,
+      "columns": [
+        "id",
+        "organization_id",
+        "auth_user_id",
+        "email",
+        "full_name",
+        "role",
+        "phone",
+        "avatar_url",
+        "permissions",
+        "status",
+        "last_login_at",
+        "created_at",
+        "updated_at"
+      ],
+      "column_types": {
+        "id": "uuid",
+        "organization_id": "uuid",
+        "auth_user_id": "uuid",
+        "email": "text",
+        "full_name": "text",
+        "role": "text",
+        "phone": "unknown",
+        "avatar_url": "unknown",
+        "permissions": "array",
+        "status": "text",
+        "last_login_at": "unknown",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "column_count": 13,
+      "relationships": {
+        "foreign_keys": [
+          {
+            "column": "organization_id",
+            "references": "organizations",
+            "type": "inferred"
+          }
+        ],
+        "referenced_by": []
+      }
+    },
+    "organization_settings": {
+      "status": "exists",
+      "row_count": 0,
+      "columns": [],
+      "column_types": {},
+      "column_count": 0
+    },
+    "whatsapp_instances": {
+      "status": "exists",
+      "row_count": 2,
+      "columns": [
+        "id",
+        "organization_id",
+        "instance_name",
+        "phone_number",
+        "status",
+        "qr_code",
+        "qr_code_expires_at",
+        "pairing_code",
+        "pairing_code_expires_at",
+        "pairing_method",
+        "session_data",
+        "baileys_version",
+        "wa_version",
+        "browser_name",
+        "last_connected_at",
+        "last_disconnected_at",
+        "reconnection_attempts",
+        "messages_sent_count",
+        "messages_received_count",
+        "created_at",
+        "updated_at"
+      ],
+      "column_types": {
+        "id": "uuid",
+        "organization_id": "uuid",
+        "instance_name": "text",
+        "phone_number": "text",
+        "status": "text",
+        "qr_code": "unknown",
+        "qr_code_expires_at": "unknown",
+        "pairing_code": "unknown",
+        "pairing_code_expires_at": "unknown",
+        "pairing_method": "text",
+        "session_data": "jsonb",
+        "baileys_version": "unknown",
+        "wa_version": "unknown",
+        "browser_name": "text",
+        "last_connected_at": "unknown",
+        "last_disconnected_at": "unknown",
+        "reconnection_attempts": "integer",
+        "messages_sent_count": "integer",
+        "messages_received_count": "integer",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "column_count": 21,
+      "relationships": {
+        "foreign_keys": [
+          {
+            "column": "organization_id",
+            "references": "organizations",
+            "type": "inferred"
+          }
+        ],
+        "referenced_by": []
+      }
+    },
+    "services": {
+      "status": "exists",
+      "row_count": 0,
+      "columns": [],
+      "column_types": {},
+      "column_count": 0
+    },
+    "contacts": {
+      "status": "exists",
+      "row_count": 0,
+      "columns": [],
+      "column_types": {},
+      "column_count": 0
+    },
+    "pets": {
+      "status": "exists",
+      "row_count": 0,
+      "columns": [],
+      "column_types": {},
+      "column_count": 0
+    },
+    "bookings": {
+      "status": "exists",
+      "row_count": 0,
+      "columns": [],
+      "column_types": {},
+      "column_count": 0
+    },
+    "conversations": {
+      "status": "exists",
+      "row_count": 0,
+      "columns": [],
+      "column_types": {},
+      "column_count": 0
+    },
+    "messages": {
+      "status": "exists",
+      "row_count": 0,
+      "columns": [],
+      "column_types": {},
+      "column_count": 0
+    },
+    "ai_interactions": {
+      "status": "exists",
+      "row_count": 0,
+      "columns": [],
+      "column_types": {},
+      "column_count": 0
+    },
+    "authorized_owner_numbers": {
+      "status": "exists",
+      "row_count": 0,
+      "columns": [],
+      "column_types": {},
+      "column_count": 0
+    },
+    "aurora_proactive_messages": {
+      "status": "exists",
+      "row_count": 0,
+      "columns": [],
+      "column_types": {},
+      "column_count": 0
+    },
+    "aurora_automations": {
+      "status": "exists",
+      "row_count": 0,
+      "columns": [],
+      "column_types": {},
+      "column_count": 0
+    }
+  },
+  "rls_recommendations": [
+    {
+      "table": "organizations",
+      "priority": "high",
+      "reason": "Contains sensitive user/organization data",
+      "policies": [
+        "SELECT: Users can only see their organization's organizations",
+        "INSERT: Users can only insert for their organization",
+        "UPDATE: Users can only update their organization's records",
+        "DELETE: Users can only delete their organization's records"
+      ]
+    },
+    {
+      "table": "users",
+      "priority": "high",
+      "reason": "Contains sensitive user/organization data",
+      "policies": [
+        "SELECT: Users can only see their organization's users",
+        "INSERT: Users can only insert for their organization",
+        "UPDATE: Users can only update their organization's records",
+        "DELETE: Users can only delete their organization's records"
+      ]
+    },
+    {
+      "table": "organization_settings",
+      "priority": "high",
+      "reason": "Contains sensitive user/organization data",
+      "policies": [
+        "SELECT: Users can only see their organization's organization_settings",
+        "INSERT: Users can only insert for their organization",
+        "UPDATE: Users can only update their organization's records",
+        "DELETE: Users can only delete their organization's records"
+      ]
+    },
+    {
+      "table": "whatsapp_instances",
+      "priority": "high",
+      "reason": "Contains sensitive user/organization data",
+      "policies": [
+        "SELECT: Users can only see their organization's whatsapp_instances",
+        "INSERT: Users can only insert for their organization",
+        "UPDATE: Users can only update their organization's records",
+        "DELETE: Users can only delete their organization's records"
+      ]
+    },
+    {
+      "table": "services",
+      "priority": "medium",
+      "reason": "Contains organization-specific configuration",
+      "policies": [
+        "SELECT: Restricted to organization members",
+        "UPDATE: Restricted to organization admins"
+      ]
+    },
+    {
+      "table": "contacts",
+      "priority": "high",
+      "reason": "Contains sensitive user/organization data",
+      "policies": [
+        "SELECT: Users can only see their organization's contacts",
+        "INSERT: Users can only insert for their organization",
+        "UPDATE: Users can only update their organization's records",
+        "DELETE: Users can only delete their organization's records"
+      ]
+    },
+    {
+      "table": "pets",
+      "priority": "high",
+      "reason": "Contains sensitive user/organization data",
+      "policies": [
+        "SELECT: Users can only see their organization's pets",
+        "INSERT: Users can only insert for their organization",
+        "UPDATE: Users can only update their organization's records",
+        "DELETE: Users can only delete their organization's records"
+      ]
+    },
+    {
+      "table": "bookings",
+      "priority": "high",
+      "reason": "Contains sensitive user/organization data",
+      "policies": [
+        "SELECT: Users can only see their organization's bookings",
+        "INSERT: Users can only insert for their organization",
+        "UPDATE: Users can only update their organization's records",
+        "DELETE: Users can only delete their organization's records"
+      ]
+    },
+    {
+      "table": "conversations",
+      "priority": "high",
+      "reason": "Contains sensitive user/organization data",
+      "policies": [
+        "SELECT: Users can only see their organization's conversations",
+        "INSERT: Users can only insert for their organization",
+        "UPDATE: Users can only update their organization's records",
+        "DELETE: Users can only delete their organization's records"
+      ]
+    },
+    {
+      "table": "messages",
+      "priority": "high",
+      "reason": "Contains sensitive user/organization data",
+      "policies": [
+        "SELECT: Users can only see their organization's messages",
+        "INSERT: Users can only insert for their organization",
+        "UPDATE: Users can only update their organization's records",
+        "DELETE: Users can only delete their organization's records"
+      ]
+    },
+    {
+      "table": "ai_interactions",
+      "priority": "high",
+      "reason": "Contains sensitive user/organization data",
+      "policies": [
+        "SELECT: Users can only see their organization's ai_interactions",
+        "INSERT: Users can only insert for their organization",
+        "UPDATE: Users can only update their organization's records",
+        "DELETE: Users can only delete their organization's records"
+      ]
+    },
+    {
+      "table": "authorized_owner_numbers",
+      "priority": "medium",
+      "reason": "Contains organization-specific configuration",
+      "policies": [
+        "SELECT: Restricted to organization members",
+        "UPDATE: Restricted to organization admins"
+      ]
+    },
+    {
+      "table": "aurora_proactive_messages",
+      "priority": "medium",
+      "reason": "Contains organization-specific configuration",
+      "policies": [
+        "SELECT: Restricted to organization members",
+        "UPDATE: Restricted to organization admins"
+      ]
+    },
+    {
+      "table": "aurora_automations",
+      "priority": "medium",
+      "reason": "Contains organization-specific configuration",
+      "policies": [
+        "SELECT: Restricted to organization members",
+        "UPDATE: Restricted to organization admins"
+      ]
+    }
+  ],
+  "index_recommendations": [
+    {
+      "table": "organizations",
+      "recommendations": [
+        {
+          "column": "name",
+          "type": "btree",
+          "reason": "Search and unique lookups"
+        },
+        {
+          "column": "created_at",
+          "type": "btree",
+          "reason": "Temporal queries and sorting"
+        },
+        {
+          "column": "updated_at",
+          "type": "btree",
+          "reason": "Temporal queries and sorting"
+        }
+      ]
+    },
+    {
+      "table": "users",
+      "recommendations": [
+        {
+          "column": "organization_id",
+          "type": "btree",
+          "reason": "Foreign key - improves JOIN performance"
+        },
+        {
+          "column": "auth_user_id",
+          "type": "btree",
+          "reason": "Foreign key - improves JOIN performance"
+        },
+        {
+          "column": "email",
+          "type": "btree",
+          "reason": "Search and unique lookups"
+        },
+        {
+          "column": "phone",
+          "type": "btree",
+          "reason": "Search and unique lookups"
+        },
+        {
+          "column": "status",
+          "type": "btree",
+          "reason": "Frequent filtering on status"
+        },
+        {
+          "column": "created_at",
+          "type": "btree",
+          "reason": "Temporal queries and sorting"
+        },
+        {
+          "column": "updated_at",
+          "type": "btree",
+          "reason": "Temporal queries and sorting"
+        }
+      ]
+    },
+    {
+      "table": "whatsapp_instances",
+      "recommendations": [
+        {
+          "column": "organization_id",
+          "type": "btree",
+          "reason": "Foreign key - improves JOIN performance"
+        },
+        {
+          "column": "phone_number",
+          "type": "btree",
+          "reason": "Search and unique lookups"
+        },
+        {
+          "column": "status",
+          "type": "btree",
+          "reason": "Frequent filtering on status"
+        },
+        {
+          "column": "created_at",
+          "type": "btree",
+          "reason": "Temporal queries and sorting"
+        },
+        {
+          "column": "updated_at",
+          "type": "btree",
+          "reason": "Temporal queries and sorting"
+        }
+      ]
+    }
+  ],
+  "issues": [],
+  "optimizations": [
+    {
+      "type": "index_creation",
+      "priority": "high",
+      "action": "Create 7 indexes on users",
+      "reason": "Multiple columns need indexing for performance"
+    },
+    {
+      "type": "index_creation",
+      "priority": "high",
+      "action": "Create 5 indexes on whatsapp_instances",
+      "reason": "Multiple columns need indexing for performance"
+    },
+    {
+      "type": "security",
+      "priority": "critical",
+      "action": "Enable RLS on 10 sensitive tables",
+      "reason": "Protect user data with Row Level Security"
+    }
+  ]
+}
