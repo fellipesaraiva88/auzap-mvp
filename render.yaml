@@ -1,33 +1,4 @@
 services:
-  # Backend API
-  - type: web
-    name: auzap-api
-    env: node
-    region: oregon
-    plan: starter
-    buildCommand: npm ci && npm run build
-    startCommand: npm start
-    rootDir: backend
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_ANON_KEY
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: UPSTASH_REDIS_REST_URL
-        sync: false
-      - key: UPSTASH_REDIS_REST_TOKEN
-        sync: false
-      - key: FRONTEND_URL
-        value: https://auzap-mvp-frontend.onrender.com
-      - key: PORT
-        value: 3000
-
   # Frontend Static Site
   - type: web
     name: auzap-frontend
