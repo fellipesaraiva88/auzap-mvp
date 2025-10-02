@@ -99,6 +99,29 @@ app.get('/health/supabase', async (_req: Request, res: Response): Promise<void> 
   }
 });
 
+app.get('/health/queues', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const { messageQueue, campaignQueue, automationQueue } = await import('./queue/queue-manager.js');
+
+    const [messageStats, campaignStats, automationStats] = await Promise.all([
+      messageQueue.getJobCounts(),
+      campaignQueue.getJobCounts(),
+      automationQueue.getJobCounts()
+    ]);
+
+    res.json({
+      status: 'ok',
+      queues: {
+        message: messageStats,
+        campaign: campaignStats,
+        automation: automationStats
+      }
+    });
+  } catch (error) {
+    res.status(503).json({ status: 'error', queues: { connected: false, error } });
+  }
+});
+
 // Routes
 app.use('/api/auth', (await import('./routes/auth.routes.js')).default);
 app.use('/api/dashboard', (await import('./routes/dashboard.routes.js')).default);
@@ -111,6 +134,13 @@ app.use('/api/followups', (await import('./routes/followups.routes.js')).default
 app.use('/api/settings', (await import('./routes/settings.routes.js')).default);
 app.use('/api/automations', (await import('./routes/automations.routes.js')).default);
 app.use('/api/conversations', (await import('./routes/conversations.routes.js')).default);
+
+// Bull Board - Queue Monitoring UI (owner-only)
+const { serverAdapter, bullBoardAuthMiddleware, bullBoardHealthCheck } =
+  await import('./queue/monitoring/bull-board.js');
+
+app.use('/admin/queues', bullBoardAuthMiddleware, serverAdapter.getRouter());
+app.get('/admin/queues/health', bullBoardAuthMiddleware, bullBoardHealthCheck);
 
 // Socket.io connection handling with JWT authentication
 io.use(async (socket, next) => {
@@ -135,20 +165,21 @@ io.use(async (socket, next) => {
     }
 
     // Verify user belongs to the organization
+    const orgId = Array.isArray(organizationId) ? organizationId[0] : organizationId;
     const { data: membership } = await supabaseAdmin
       .from('organizations')
       .select('id')
-      .eq('id', organizationId)
+      .eq('id', orgId)
       .single();
 
     if (!membership) {
-      logger.error({ userId: user.id, organizationId }, 'User does not belong to organization');
+      logger.error({ userId: user.id, organizationId: orgId }, 'User does not belong to organization');
       return next(new Error('Access denied to organization'));
     }
 
     // Attach user data to socket
     socket.data.userId = user.id;
-    socket.data.organizationId = organizationId as string;
+    socket.data.organizationId = orgId;
 
     logger.info({ userId: user.id, organizationId }, 'Socket.io authenticated');
     next();

@@ -1,5 +1,4 @@
 import { Redis } from 'ioredis';
-import { Queue, Worker, QueueEvents } from 'bullmq';
 
 const redisUrl = process.env.REDIS_URL;
 
@@ -17,63 +16,13 @@ const redisOptions = {
   family: 6
 };
 
-// Redis connection for BullMQ
+// Redis connection for BullMQ (compartilhado por todas as filas)
 export const redisConnection = new Redis(redisUrl, redisOptions);
 
-// Redis client for caching
+// Redis client for caching (separado para operações de cache)
 export const redisCache = new Redis(redisUrl, {
   tls: {
     rejectUnauthorized: false
   },
   family: 6
 });
-
-// Queue for message processing
-export const messageQueue = new Queue('message-processing', {
-  connection: redisConnection,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 2000
-    },
-    removeOnComplete: {
-      count: 100,
-      age: 24 * 3600 // 24 hours
-    },
-    removeOnFail: {
-      count: 500
-    }
-  }
-});
-
-// Queue for scheduled followups
-export const followupQueue = new Queue('followup-scheduler', {
-  connection: redisConnection,
-  defaultJobOptions: {
-    attempts: 5,
-    backoff: {
-      type: 'exponential',
-      delay: 5000
-    }
-  }
-});
-
-// Queue for Aurora proactive messages
-export const auroraQueue = new Queue('aurora-proactive', {
-  connection: redisConnection,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 3000
-    }
-  }
-});
-
-// Queue events for monitoring
-export const messageQueueEvents = new QueueEvents('message-processing', {
-  connection: redisConnection
-});
-
-export { Worker };

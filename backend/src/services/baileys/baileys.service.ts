@@ -1,585 +1,360 @@
 import makeWASocket, {
+  DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
+  useMultiFileAuthState,
   WASocket,
   proto,
   Browsers
 } from '@whiskeysockets/baileys';
+import { Boom } from '@hapi/boom';
+import path from 'path';
+import fs from 'fs/promises';
 import QRCode from 'qrcode';
 import { logger } from '../../config/logger.js';
-import { messageQueue } from '../../config/redis.js';
-import { sessionManager } from '../whatsapp/session-manager.js';
-import { connectionHandler } from '../whatsapp/connection-handler.js';
-import type {
-  BaileysInstance,
-  InitializeInstanceConfig,
-  InitializeInstanceResult,
-  WhatsAppConnectionStatus,
-  SendMessageResult,
-  TextMessage,
-  MediaMessage,
-  AudioMessage,
-  InstanceHealth,
-  IncomingMessageData,
-  MessageType
-} from '../../types/whatsapp.types.js';
+import { supabaseAdmin } from '../../config/supabase.js';
 
-/**
- * Serviço Baileys WhatsApp - Multi-tenant com Pairing Code
- *
- * REGRAS:
- * - SEMPRE usar pairing code como método principal
- * - SEMPRE persistir sessões em /app/sessions
- * - SEMPRE isolar por organization_id
- * - NUNCA processar mensagens síncronamente (usar BullMQ)
- * - SEMPRE usar auto-reconnect via ConnectionHandler
- */
+interface BaileysInstance {
+  sock: WASocket;
+  organizationId: string;
+  instanceId: string;
+  phoneNumber?: string;
+}
+
 export class BaileysService {
   private instances = new Map<string, BaileysInstance>();
+  private sessionPath: string;
 
   constructor() {
-    // Configurar emitter Socket.IO no connection handler
-    // (será configurado externamente via setSocketEmitter)
+    this.sessionPath = process.env.WHATSAPP_SESSION_PATH || './sessions';
   }
 
   /**
-   * Define emitter Socket.IO para eventos real-time
-   */
-  setSocketEmitter(emitter: (event: string, data: any) => void): void {
-    connectionHandler.setSocketEmitter(emitter);
-  }
-
-  /**
-   * Gera chave única para instância (multi-tenant)
-   */
-  private getInstanceKey(organizationId: string, instanceId: string): string {
-    return `${organizationId}_${instanceId}`;
-  }
-
-  /**
-   * Inicializa instância WhatsApp com pairing code (método principal)
+   * Inicializa uma instância WhatsApp com pairing code
    */
   async initializeInstance(
-    config: InitializeInstanceConfig
-  ): Promise<InitializeInstanceResult> {
-    const { organizationId, instanceId, phoneNumber, preferredAuthMethod = 'pairing_code' } = config;
-
+    organizationId: string,
+    instanceId: string,
+    phoneNumber?: string
+  ): Promise<{ success: boolean; pairingCode?: string; qrCode?: string }> {
     try {
-      const instanceKey = this.getInstanceKey(organizationId, instanceId);
-
-      // Verificar se já existe
+      const instanceKey = `${organizationId}_${instanceId}`;
+      
+      // Verifica se já existe
       if (this.instances.has(instanceKey)) {
-        return {
-          success: false,
-          instanceId,
-          status: 'connected',
-          error: 'Instance already running'
-        };
+        throw new Error('Instance already exists');
       }
 
-      logger.info({ organizationId, instanceId, phoneNumber }, 'Initializing WhatsApp instance');
+      const sessionDir = path.join(this.sessionPath, instanceKey);
+      await fs.mkdir(sessionDir, { recursive: true });
 
-      // Inicializar auth state via SessionManager
-      const { state, saveCreds } = await sessionManager.initAuthState(organizationId, instanceId);
+      // Auth state
+      const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
 
-      // Fetch latest Baileys version
+      // Fetch latest version
       const { version, isLatest } = await fetchLatestBaileysVersion();
       logger.info({ version, isLatest }, 'Using Baileys version');
 
-      // Criar socket WhatsApp
+      // Criar socket
       const sock = makeWASocket({
         version,
         logger: logger as any,
-        printQRInTerminal: false, // NUNCA printar QR no terminal
+        printQRInTerminal: !phoneNumber,
         auth: {
           creds: state.creds,
           keys: makeCacheableSignalKeyStore(state.keys, logger as any)
         },
         browser: Browsers.ubuntu('Chrome'),
-        generateHighQualityLinkPreview: true,
-        markOnlineOnConnect: true,
-        syncFullHistory: false,
-        getMessage: async () => undefined // Prevenir erros de mensagens antigas
+        generateHighQualityLinkPreview: true
       });
 
-      // Event: credentials update
+      // Event handlers
       sock.ev.on('creds.update', saveCreds);
 
-      // Event: connection update
       sock.ev.on('connection.update', async (update) => {
-        await this.handleConnectionUpdate(organizationId, instanceId, sock, update);
+        const { connection, lastDisconnect, qr } = update;
+
+        if (qr && !phoneNumber) {
+          // Gerar QR code
+          const qrCodeData = await QRCode.toDataURL(qr);
+          await this.updateInstanceStatus(instanceId, 'qr_pending', qrCodeData);
+        }
+
+        if (connection === 'close') {
+          const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
+          logger.info({ shouldReconnect }, 'Connection closed');
+
+          if (shouldReconnect) {
+            await this.initializeInstance(organizationId, instanceId, phoneNumber);
+          } else {
+            await this.updateInstanceStatus(instanceId, 'disconnected');
+            this.instances.delete(instanceKey);
+          }
+        } else if (connection === 'open') {
+          logger.info('Connection opened successfully');
+          const number = sock.user?.id.split(':')[0];
+          await this.updateInstanceStatus(instanceId, 'connected', null, number);
+        }
       });
 
-      // Event: incoming messages (SEMPRE via BullMQ)
       sock.ev.on('messages.upsert', async (msg) => {
-        await this.handleIncomingMessages(organizationId, instanceId, msg);
+        await this.handleIncomingMessage(organizationId, instanceId, msg);
       });
 
       // Guardar instância
-      const instance: BaileysInstance = {
+      this.instances.set(instanceKey, {
         sock,
         organizationId,
         instanceId,
-        phoneNumber,
-        status: 'connecting',
-        authMethod: preferredAuthMethod,
-        createdAt: new Date(),
-        lastActivity: new Date(),
-        reconnectAttempts: 0
-      };
+        phoneNumber
+      });
 
-      this.instances.set(instanceKey, instance);
-
-      // Pairing code (método principal)
-      if (phoneNumber && preferredAuthMethod === 'pairing_code' && !sock.authState.creds.registered) {
-        try {
-          const pairingCode = await sock.requestPairingCode(phoneNumber);
-          logger.info({ organizationId, instanceId, pairingCode }, 'Pairing code generated');
-
-          await connectionHandler.handlePairingCode(organizationId, instanceId, pairingCode);
-
-          return {
-            success: true,
-            instanceId,
-            status: 'pairing_pending',
-            pairingCode
-          };
-        } catch (error) {
-          logger.error({ error, organizationId, instanceId }, 'Failed to generate pairing code');
-
-          // Fallback para QR code se falhar
-          if (preferredAuthMethod === 'pairing_code') {
-            logger.warn({ organizationId, instanceId }, 'Falling back to QR code');
-            // QR será gerado no próximo connection.update
-          }
-        }
+      // Pairing code se tiver número
+      let pairingCode: string | undefined;
+      if (phoneNumber && !sock.authState.creds.registered) {
+        pairingCode = await sock.requestPairingCode(phoneNumber);
+        logger.info({ pairingCode }, 'Pairing code generated');
+        await this.updateInstanceStatus(instanceId, 'connecting');
       }
 
       return {
         success: true,
-        instanceId,
-        status: 'connecting'
+        pairingCode,
+        qrCode: undefined
       };
     } catch (error) {
-      logger.error({ error, organizationId, instanceId }, 'Failed to initialize instance');
-      return {
-        success: false,
-        instanceId,
-        status: 'failed',
-        error: (error as Error).message
-      };
+      logger.error({ error }, 'Failed to initialize WhatsApp instance');
+      throw error;
     }
   }
 
   /**
-   * Trata updates de conexão
+   * Envia mensagem de texto
    */
-  private async handleConnectionUpdate(
-    organizationId: string,
+  async sendTextMessage(
     instanceId: string,
-    sock: WASocket,
-    update: any
-  ): Promise<void> {
-    const { connection, lastDisconnect, qr } = update;
-
-    // QR Code gerado (fallback)
-    if (qr) {
-      const qrCodeData = await QRCode.toDataURL(qr);
-      await connectionHandler.handleQRCode(organizationId, instanceId, qrCodeData);
+    to: string,
+    message: string
+  ): Promise<proto.WebMessageInfo> {
+    const instance = this.getInstanceByInstanceId(instanceId);
+    if (!instance) {
+      throw new Error('Instance not found');
     }
 
-    // Conexão fechada
-    if (connection === 'close') {
-      const error = lastDisconnect?.error;
-
-      await connectionHandler.handleDisconnect(
-        organizationId,
-        instanceId,
-        error,
-        async () => {
-          // Função de reconexão
-          await this.reconnectInstance(organizationId, instanceId);
-        }
-      );
-
-      // Remover instância se não vai reconectar
-      if (!connectionHandler.shouldReconnect(error)) {
-        const instanceKey = this.getInstanceKey(organizationId, instanceId);
-        this.instances.delete(instanceKey);
-      }
-    }
-
-    // Conexão aberta (sucesso!)
-    if (connection === 'open') {
-      await connectionHandler.handleConnected(organizationId, instanceId, sock);
-
-      // Atualizar metadata da sessão
-      await sessionManager.updateLastConnected(organizationId, instanceId);
-
-      // Atualizar instância local
-      const instanceKey = this.getInstanceKey(organizationId, instanceId);
-      const instance = this.instances.get(instanceKey);
-      if (instance) {
-        instance.status = 'connected';
-        instance.lastActivity = new Date();
-        instance.reconnectAttempts = 0;
-      }
-    }
+    const jid = this.formatJid(to);
+    const sent = await instance.sock.sendMessage(jid, { text: message });
+    return sent!;
   }
 
   /**
-   * Reconecta instância (chamado pelo ConnectionHandler)
+   * Envia imagem
    */
-  private async reconnectInstance(organizationId: string, instanceId: string): Promise<void> {
-    logger.info({ organizationId, instanceId }, 'Reconnecting instance');
-
-    const instanceKey = this.getInstanceKey(organizationId, instanceId);
-    const instance = this.instances.get(instanceKey);
-
-    // Remover instância antiga
-    if (instance) {
-      this.instances.delete(instanceKey);
+  async sendImageMessage(
+    instanceId: string,
+    to: string,
+    imageBuffer: Buffer,
+    caption?: string
+  ): Promise<proto.WebMessageInfo> {
+    const instance = this.getInstanceByInstanceId(instanceId);
+    if (!instance) {
+      throw new Error('Instance not found');
     }
 
-    // Reinicializar
-    await this.initializeInstance({
-      organizationId,
-      instanceId,
-      phoneNumber: instance?.phoneNumber,
-      preferredAuthMethod: instance?.authMethod || 'pairing_code'
+    const jid = this.formatJid(to);
+    const sent = await instance.sock.sendMessage(jid, {
+      image: imageBuffer,
+      caption
     });
+    return sent!;
   }
 
   /**
-   * Processa mensagens recebidas (SEMPRE via BullMQ)
+   * Envia áudio
    */
-  private async handleIncomingMessages(
+  async sendAudioMessage(
+    instanceId: string,
+    to: string,
+    audioBuffer: Buffer,
+    ptt: boolean = true
+  ): Promise<proto.WebMessageInfo> {
+    const instance = this.getInstanceByInstanceId(instanceId);
+    if (!instance) {
+      throw new Error('Instance not found');
+    }
+
+    const jid = this.formatJid(to);
+    const sent = await instance.sock.sendMessage(jid, {
+      audio: audioBuffer,
+      mimetype: 'audio/mp4',
+      ptt
+    });
+    return sent!;
+  }
+
+  /**
+   * Envia botões (fallback to plain text - buttons not supported in current Baileys)
+   */
+  async sendButtonMessage(
+    instanceId: string,
+    to: string,
+    text: string,
+    buttons: { id: string; text: string }[],
+    footer?: string
+  ): Promise<proto.WebMessageInfo> {
+    const instance = this.getInstanceByInstanceId(instanceId);
+    if (!instance) {
+      throw new Error('Instance not found');
+    }
+
+    const jid = this.formatJid(to);
+    // Buttons não são suportados - enviando como texto formatado
+    const buttonText = buttons.map((btn, i) => `${i + 1}. ${btn.text}`).join('\n');
+    const fullMessage = `${text}\n\n${buttonText}${footer ? `\n\n${footer}` : ''}`;
+
+    const sent = await instance.sock.sendMessage(jid, { text: fullMessage });
+    return sent!;
+  }
+
+  /**
+   * Envia lista (fallback to plain text - lists not supported in current Baileys)
+   */
+  async sendListMessage(
+    instanceId: string,
+    to: string,
+    text: string,
+    _buttonText: string,
+    sections: { title: string; rows: { id: string; title: string; description?: string }[] }[]
+  ): Promise<proto.WebMessageInfo> {
+    const instance = this.getInstanceByInstanceId(instanceId);
+    if (!instance) {
+      throw new Error('Instance not found');
+    }
+
+    const jid = this.formatJid(to);
+    // Listas não são suportadas - enviando como texto formatado
+    const listText = sections.map(section => {
+      const rows = section.rows.map((row, i) =>
+        `${i + 1}. ${row.title}${row.description ? ` - ${row.description}` : ''}`
+      ).join('\n');
+      return `*${section.title}*\n${rows}`;
+    }).join('\n\n');
+
+    const fullMessage = `${text}\n\n${listText}`;
+    const sent = await instance.sock.sendMessage(jid, { text: fullMessage });
+    return sent!;
+  }
+
+  /**
+   * Verifica status da conexão
+   */
+  isConnected(instanceId: string): boolean {
+    const instance = this.getInstanceByInstanceId(instanceId);
+    return !!instance?.sock.user;
+  }
+
+  /**
+   * Desconecta instância
+   */
+  async disconnect(instanceId: string): Promise<void> {
+    const instance = this.getInstanceByInstanceId(instanceId);
+    if (instance) {
+      await instance.sock.logout();
+      const key = `${instance.organizationId}_${instanceId}`;
+      this.instances.delete(key);
+      await this.updateInstanceStatus(instanceId, 'disconnected');
+    }
+  }
+
+  /**
+   * Lista todas as instâncias
+   */
+  listInstances(): string[] {
+    return Array.from(this.instances.keys());
+  }
+
+  // Métodos privados
+
+  private getInstanceByInstanceId(instanceId: string): BaileysInstance | undefined {
+    for (const [_key, instance] of this.instances.entries()) {
+      if (instance.instanceId === instanceId) {
+        return instance;
+      }
+    }
+    return undefined;
+  }
+
+  private formatJid(phone: string): string {
+    // Remove caracteres não numéricos
+    const cleaned = phone.replace(/\D/g, '');
+    
+    // Se já termina com @s.whatsapp.net, retorna
+    if (phone.includes('@')) {
+      return phone;
+    }
+
+    // Adiciona @s.whatsapp.net para números individuais
+    return `${cleaned}@s.whatsapp.net`;
+  }
+
+  private async handleIncomingMessage(
     organizationId: string,
     instanceId: string,
     msg: { messages: proto.IWebMessageInfo[]; type: 'notify' | 'append' }
   ): Promise<void> {
     for (const message of msg.messages) {
-      // Ignorar mensagens próprias
       if (!message.message || message.key.fromMe) continue;
 
       const from = message.key.remoteJid!;
-      const phoneNumber = from.split('@')[0];
       const content = this.extractMessageContent(message);
-      const messageType = this.detectMessageType(message);
 
-      const messageData: IncomingMessageData = {
+      logger.info({
         organizationId,
         instanceId,
         from,
-        phoneNumber,
+        content
+      }, 'Incoming WhatsApp message');
+
+      // Adicionar à fila de processamento
+      const { addMessageJob } = await import('../../queue/queue-manager.js');
+      await addMessageJob({
+        organizationId,
+        instanceId,
+        from,
         content,
-        messageId: message.key.id!,
-        timestamp: Number(message.messageTimestamp),
-        messageType
-      };
-
-      logger.info(
-        { organizationId, instanceId, from: phoneNumber, messageType },
-        'Incoming WhatsApp message'
-      );
-
-      // SEMPRE enviar para BullMQ (NUNCA processar síncronamente)
-      try {
-        await messageQueue.add('process-message', messageData, {
-          removeOnComplete: true,
-          attempts: 3
-        });
-      } catch (error) {
-        logger.error({ error, messageData }, 'Failed to queue message');
-      }
-
-      // Atualizar last activity
-      const instanceKey = this.getInstanceKey(organizationId, instanceId);
-      const instance = this.instances.get(instanceKey);
-      if (instance) {
-        instance.lastActivity = new Date();
-      }
+        messageId: message.key.id || undefined,
+        timestamp: (message.messageTimestamp as number) || Date.now()
+      });
     }
   }
 
-  /**
-   * Extrai conteúdo de mensagem
-   */
   private extractMessageContent(message: proto.IWebMessageInfo): string {
     const msg = message.message;
     if (!msg) return '';
 
     if (msg.conversation) return msg.conversation;
     if (msg.extendedTextMessage?.text) return msg.extendedTextMessage.text;
-    if (msg.imageMessage?.caption) return msg.imageMessage.caption || '[Image]';
-    if (msg.videoMessage?.caption) return msg.videoMessage.caption || '[Video]';
-    if (msg.documentMessage?.caption) return msg.documentMessage.caption || '[Document]';
-    if (msg.audioMessage) return '[Audio]';
-    if (msg.stickerMessage) return '[Sticker]';
-    if (msg.locationMessage) return '[Location]';
-    if (msg.contactMessage) return '[Contact]';
+    if (msg.imageMessage?.caption) return msg.imageMessage.caption;
+    if (msg.videoMessage?.caption) return msg.videoMessage.caption;
+    if (msg.documentMessage?.caption) return msg.documentMessage.caption;
 
-    return '[Unknown message type]';
+    return '[Media message]';
   }
 
-  /**
-   * Detecta tipo de mensagem
-   */
-  private detectMessageType(message: proto.IWebMessageInfo): MessageType {
-    const msg = message.message;
-    if (!msg) return 'unknown';
-
-    if (msg.conversation || msg.extendedTextMessage) return 'text';
-    if (msg.imageMessage) return 'image';
-    if (msg.videoMessage) return 'video';
-    if (msg.audioMessage) return 'audio';
-    if (msg.documentMessage) return 'document';
-    if (msg.stickerMessage) return 'sticker';
-    if (msg.locationMessage) return 'location';
-    if (msg.contactMessage) return 'contact';
-
-    return 'unknown';
-  }
-
-  /**
-   * Envia mensagem de texto
-   */
-  async sendTextMessage(message: TextMessage): Promise<SendMessageResult> {
-    try {
-      const instance = this.getInstance(message.instanceId, message.organizationId);
-      const jid = this.formatJid(message.to);
-
-      const sent = await instance.sock.sendMessage(jid, { text: message.text });
-
-      return {
-        success: true,
-        messageId: sent?.key.id || undefined,
-        timestamp: Number(sent?.messageTimestamp) || 0,
-        protoMessage: sent || undefined
-      };
-    } catch (error) {
-      logger.error({ error, message }, 'Failed to send text message');
-      return {
-        success: false,
-        error: (error as Error).message
-      };
-    }
-  }
-
-  /**
-   * Envia imagem
-   */
-  async sendImageMessage(message: MediaMessage): Promise<SendMessageResult> {
-    try {
-      const instance = this.getInstance(message.instanceId, message.organizationId);
-      const jid = this.formatJid(message.to);
-
-      const sent = await instance.sock.sendMessage(jid, {
-        image: message.mediaBuffer,
-        caption: message.caption
-      });
-
-      return {
-        success: true,
-        messageId: sent?.key.id || undefined,
-        timestamp: Number(sent?.messageTimestamp) || 0,
-        protoMessage: sent || undefined
-      };
-    } catch (error) {
-      logger.error({ error, message }, 'Failed to send image message');
-      return {
-        success: false,
-        error: (error as Error).message
-      };
-    }
-  }
-
-  /**
-   * Envia áudio (PTT ou arquivo)
-   */
-  async sendAudioMessage(message: AudioMessage): Promise<SendMessageResult> {
-    try {
-      const instance = this.getInstance(message.instanceId, message.organizationId);
-      const jid = this.formatJid(message.to);
-
-      const sent = await instance.sock.sendMessage(jid, {
-        audio: message.audioBuffer,
-        mimetype: 'audio/mp4',
-        ptt: message.ptt ?? true
-      });
-
-      return {
-        success: true,
-        messageId: sent?.key.id || undefined,
-        timestamp: Number(sent?.messageTimestamp) || 0,
-        protoMessage: sent || undefined
-      };
-    } catch (error) {
-      logger.error({ error, message }, 'Failed to send audio message');
-      return {
-        success: false,
-        error: (error as Error).message
-      };
-    }
-  }
-
-  /**
-   * Obtém instância (com validação multi-tenant)
-   */
-  private getInstance(instanceId: string, organizationId?: string): BaileysInstance {
-    for (const instance of this.instances.values()) {
-      if (instance.instanceId === instanceId) {
-        // Validar tenant se fornecido
-        if (organizationId && instance.organizationId !== organizationId) {
-          throw new Error('Unauthorized: Organization mismatch');
-        }
-        return instance;
-      }
-    }
-
-    throw new Error('Instance not found');
-  }
-
-  /**
-   * Formata número para JID WhatsApp
-   */
-  private formatJid(phone: string): string {
-    // Se já é JID, retornar
-    if (phone.includes('@')) {
-      return phone;
-    }
-
-    // Limpar número
-    const cleaned = phone.replace(/\D/g, '');
-
-    // Individual: @s.whatsapp.net
-    return `${cleaned}@s.whatsapp.net`;
-  }
-
-  /**
-   * Verifica se instância está conectada
-   */
-  isConnected(instanceId: string, organizationId?: string): boolean {
-    try {
-      const instance = this.getInstance(instanceId, organizationId);
-      return instance.status === 'connected' && !!instance.sock.user;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Obtém status da instância
-   */
-  getStatus(instanceId: string, organizationId?: string): WhatsAppConnectionStatus {
-    try {
-      const instance = this.getInstance(instanceId, organizationId);
-      return instance.status;
-    } catch {
-      return 'disconnected';
-    }
-  }
-
-  /**
-   * Health check completo
-   */
-  async getHealth(instanceId: string, organizationId?: string): Promise<InstanceHealth> {
-    try {
-      const instance = this.getInstance(instanceId, organizationId);
-      const sessionExists = await sessionManager.sessionExists(
-        instance.organizationId,
-        instance.instanceId
-      );
-
-      const health = await connectionHandler.checkHealth(
-        instance.organizationId,
-        instance.instanceId,
-        instance.sock
-      );
-
-      return {
-        instanceId,
-        isConnected: instance.status === 'connected',
-        status: health.status,
-        phoneNumber: instance.phoneNumber,
-        lastActivity: instance.lastActivity,
-        reconnectAttempts: health.reconnectAttempts,
-        sessionExists
-      };
-    } catch {
-      return {
-        instanceId,
-        isConnected: false,
-        status: 'disconnected',
-        lastActivity: new Date(0),
-        reconnectAttempts: 0,
-        sessionExists: false
-      };
-    }
-  }
-
-  /**
-   * Desconecta e remove instância
-   */
-  async disconnect(instanceId: string, organizationId?: string): Promise<void> {
-    try {
-      const instance = this.getInstance(instanceId, organizationId);
-
-      logger.info({ organizationId: instance.organizationId, instanceId }, 'Disconnecting instance');
-
-      // Logout do WhatsApp
-      await instance.sock.logout();
-
-      // Remover sessão
-      await sessionManager.removeSession(instance.organizationId, instance.instanceId);
-
-      // Limpar handler
-      connectionHandler.cleanup(instance.organizationId, instance.instanceId);
-
-      // Remover instância
-      const instanceKey = this.getInstanceKey(instance.organizationId, instance.instanceId);
-      this.instances.delete(instanceKey);
-
-      logger.info({ organizationId: instance.organizationId, instanceId }, 'Instance disconnected');
-    } catch (error) {
-      logger.error({ error, instanceId }, 'Failed to disconnect instance');
-      throw error;
-    }
-  }
-
-  /**
-   * Lista todas as instâncias ativas
-   */
-  listInstances(organizationId?: string): BaileysInstance[] {
-    const instances = Array.from(this.instances.values());
-
-    if (organizationId) {
-      return instances.filter(i => i.organizationId === organizationId);
-    }
-
-    return instances;
-  }
-
-  /**
-   * Força reconexão imediata
-   */
-  async forceReconnect(instanceId: string, organizationId?: string): Promise<void> {
-    const instance = this.getInstance(instanceId, organizationId);
-
-    await connectionHandler.forceReconnect(
-      instance.organizationId,
-      instance.instanceId,
-      async () => {
-        await this.reconnectInstance(instance.organizationId, instance.instanceId);
-      }
-    );
-  }
-
-  /**
-   * Cleanup de sessões antigas (executar periodicamente)
-   */
-  async cleanupOldSessions(daysThreshold: number = 30): Promise<number> {
-    return await sessionManager.cleanupOldSessions(daysThreshold);
+  private async updateInstanceStatus(
+    instanceId: string,
+    status: 'disconnected' | 'connecting' | 'connected' | 'qr_pending',
+    qrCode: string | null = null,
+    phoneNumber?: string
+  ): Promise<void> {
+    await supabaseAdmin
+      .from('whatsapp_instances')
+      .update({
+        status,
+        qr_code: qrCode,
+        phone_number: phoneNumber,
+        last_connected_at: status === 'connected' ? new Date().toISOString() : undefined
+      })
+      .eq('id', instanceId);
   }
 }
 
