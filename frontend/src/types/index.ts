@@ -49,7 +49,13 @@ export interface Booking {
   pet_id?: string;
   service_id?: string;
   booking_type: 'appointment' | 'hotel' | 'daycare' | 'grooming' | 'training';
-  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+  status:
+    | 'scheduled'
+    | 'confirmed'
+    | 'in_progress'
+    | 'completed'
+    | 'cancelled'
+    | 'no_show';
   start_time: string;
   end_time: string;
   price?: number;
@@ -84,9 +90,17 @@ export interface WhatsAppInstance {
   organization_id: string;
   instance_name: string;
   phone_number?: string;
-  status: 'connected' | 'connecting' | 'disconnected' | 'qr_pending' | 'logged_out' | 'error';
+  status:
+    | 'connected'
+    | 'connecting'
+    | 'disconnected'
+    | 'qr_pending'
+    | 'logged_out'
+    | 'error';
   pairing_code?: string;
   pairing_method: 'code' | 'qr';
   last_connected_at?: string;
+  messages_sent_count?: number;
+  messages_received_count?: number;
   created_at: string;
 }
