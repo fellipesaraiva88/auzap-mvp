@@ -7,6 +7,7 @@ import { logger } from '../config/logger.js';
  * Redis-backed rate limiter store for distributed rate limiting
  * Ensures rate limits work across multiple backend instances
  */
+// @ts-ignore - RedisStore is used dynamically
 class RedisStore {
   prefix: string;
 

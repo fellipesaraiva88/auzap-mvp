@@ -158,20 +158,21 @@ io.use(async (socket, next) => {
     }
 
     // Verify user belongs to the organization
+    const orgId = Array.isArray(organizationId) ? organizationId[0] : organizationId;
     const { data: membership } = await supabaseAdmin
       .from('organizations')
       .select('id')
-      .eq('id', organizationId)
+      .eq('id', orgId)
       .single();
 
     if (!membership) {
-      logger.error({ userId: user.id, organizationId }, 'User does not belong to organization');
+      logger.error({ userId: user.id, organizationId: orgId }, 'User does not belong to organization');
       return next(new Error('Access denied to organization'));
     }
 
     // Attach user data to socket
     socket.data.userId = user.id;
-    socket.data.organizationId = organizationId as string;
+    socket.data.organizationId = orgId;
 
     logger.info({ userId: user.id, organizationId }, 'Socket.io authenticated');
     next();
