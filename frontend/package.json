@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:check": "tsc && vite build",
     "preview": "vite preview",
+    "start": "npx serve dist -s -p ${PORT:-5000}",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
@@ -23,6 +24,7 @@
     "react-hook-form": "^7.54.0",
     "react-router-dom": "^7.9.3",
     "recharts": "^2.15.4",
+    "serve": "^14.2.3",
     "socket.io-client": "^4.8.1",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.23.8",

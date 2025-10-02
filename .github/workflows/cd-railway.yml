@@ -1,0 +1,221 @@
+name: CD - Deploy to Railway
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to deploy'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - api
+          - workers
+          - frontend
+
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  # Deploy via Railway CLI (Trigger Redeploy)
+  deploy-services:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy Backend API
+        if: |
+          github.event.inputs.service == 'all' ||
+          github.event.inputs.service == 'api' ||
+          github.event_name == 'push'
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "🚀 Deploying Backend API to Railway..."
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway service ${{ secrets.RAILWAY_SERVICE_API }}
+          railway up --detach
+          echo "✅ Backend API deployment triggered!"
+
+      - name: Deploy Workers
+        if: |
+          github.event.inputs.service == 'all' ||
+          github.event.inputs.service == 'workers' ||
+          github.event_name == 'push'
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "🚀 Deploying Workers to Railway..."
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway service ${{ secrets.RAILWAY_SERVICE_WORKERS }}
+          railway up --detach
+          echo "✅ Workers deployment triggered!"
+
+      - name: Deploy Frontend
+        if: |
+          github.event.inputs.service == 'all' ||
+          github.event.inputs.service == 'frontend' ||
+          github.event_name == 'push'
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "🚀 Deploying Frontend to Railway..."
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway service ${{ secrets.RAILWAY_SERVICE_FRONTEND }}
+          railway up --detach
+          echo "✅ Frontend deployment triggered!"
+
+  # Wait for deployments to complete
+  wait-for-deploy:
+    name: Wait for Railway Deployments
+    runs-on: ubuntu-latest
+    needs: [deploy-services]
+
+    steps:
+      - name: Wait for services to be ready
+        run: |
+          echo "⏳ Waiting 3 minutes for Railway deployments to complete..."
+          echo "Railway typically takes 2-5 minutes for initial builds"
+          sleep 180
+
+  # Post-deployment health checks
+  health-check:
+    name: Post-Deploy Health Check
+    runs-on: ubuntu-latest
+    needs: [wait-for-deploy]
+    if: always()
+
+    steps:
+      - name: Health check - API
+        env:
+          API_URL: ${{ secrets.RAILWAY_API_URL }}
+        run: |
+          echo "🏥 Checking API health..."
+
+          max_attempts=20
+          attempt=0
+
+          while [ $attempt -lt $max_attempts ]; do
+            status_code=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/health" || echo "000")
+
+            if [ "$status_code" == "200" ]; then
+              echo "✅ API is healthy!"
+
+              # Get health details
+              echo "📊 Health details:"
+              curl -s "${API_URL}/health" | jq '.' || true
+
+              exit 0
+            fi
+
+            echo "Status: $status_code - Retrying... ($attempt/$max_attempts)"
+            attempt=$((attempt + 1))
+            sleep 15
+          done
+
+          echo "❌ API health check failed after $max_attempts attempts"
+          echo "This might be normal if it's the first deploy (can take 5-10 min)"
+          exit 1
+
+      - name: Health check - Frontend
+        env:
+          FRONTEND_URL: ${{ secrets.RAILWAY_FRONTEND_URL }}
+        run: |
+          echo "🏥 Checking Frontend health..."
+
+          max_attempts=10
+          attempt=0
+
+          while [ $attempt -lt $max_attempts ]; do
+            status_code=$(curl -s -o /dev/null -w "%{http_code}" "${FRONTEND_URL}" || echo "000")
+
+            if [ "$status_code" == "200" ]; then
+              echo "✅ Frontend is healthy!"
+              exit 0
+            fi
+
+            echo "Status: $status_code - Retrying... ($attempt/$max_attempts)"
+            attempt=$((attempt + 1))
+            sleep 10
+          done
+
+          echo "❌ Frontend health check failed"
+          exit 1
+
+      - name: Verify CORS Configuration
+        env:
+          API_URL: ${{ secrets.RAILWAY_API_URL }}
+          FRONTEND_URL: ${{ secrets.RAILWAY_FRONTEND_URL }}
+        run: |
+          echo "🔍 Testing CORS from frontend to backend..."
+
+          curl -s -I -H "Origin: ${FRONTEND_URL}" \
+            -H "Access-Control-Request-Method: POST" \
+            -H "Access-Control-Request-Headers: Content-Type" \
+            -X OPTIONS "${API_URL}/health" | grep -i "access-control" || \
+            echo "⚠️  CORS headers not found - verify backend CORS config"
+
+  # Deployment summary
+  deploy-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [deploy-services, wait-for-deploy, health-check]
+    if: always()
+
+    steps:
+      - name: Create deployment summary
+        run: |
+          echo "## 🚂 Railway Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.deploy-services.result }}" == "success" ]; then
+            echo "✅ **Services**: Deployment triggered successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Services**: Deployment trigger failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.health-check.result }}" == "success" ]; then
+            echo "✅ **Health Checks**: All services healthy" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Health Checks**: Some services unhealthy" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "💡 **Tip**: First deploys can take 5-10 minutes. Check Railway dashboard for build status." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [Railway Dashboard](https://railway.app/dashboard)" >> $GITHUB_STEP_SUMMARY
+          echo "- [API Health](${{ secrets.RAILWAY_API_URL }}/health)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Frontend](${{ secrets.RAILWAY_FRONTEND_URL }})" >> $GITHUB_STEP_SUMMARY
+
+  # Optional: Notify on deployment
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [deploy-summary]
+    if: always() && github.event_name == 'push'
+
+    steps:
+      - name: Create deployment notification
+        run: |
+          if [ "${{ needs.health-check.result }}" == "success" ]; then
+            echo "🎉 Deployment to Railway completed successfully!"
+            echo "🌐 Frontend: ${{ secrets.RAILWAY_FRONTEND_URL }}"
+            echo "🔌 API: ${{ secrets.RAILWAY_API_URL }}"
+          else
+            echo "⚠️  Deployment completed with warnings"
+            echo "Check Railway dashboard for details"
+          fi
