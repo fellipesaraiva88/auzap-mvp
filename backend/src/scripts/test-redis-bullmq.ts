@@ -114,6 +114,9 @@ async function testIORedisConnection(): Promise<TestResult> {
       console.log(`${colors.cyan}  Using REDIS_URL${colors.reset}`);
       connection = new IORedis(process.env.REDIS_URL, {
         maxRetriesPerRequest: null,
+        tls: {
+          rejectUnauthorized: false, // Upstash requires TLS
+        },
       });
     } else {
       console.log(`${colors.cyan}  Using local Redis (${process.env.REDIS_HOST}:${process.env.REDIS_PORT})${colors.reset}`);
@@ -190,6 +193,9 @@ async function testBullMQ(): Promise<TestResult> {
     if (process.env.REDIS_URL) {
       connection = new IORedis(process.env.REDIS_URL, {
         maxRetriesPerRequest: null,
+        tls: {
+          rejectUnauthorized: false, // Upstash requires TLS
+        },
       });
     } else {
       connection = new IORedis({

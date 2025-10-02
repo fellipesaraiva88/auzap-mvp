@@ -15,6 +15,9 @@ const upstashRedis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_R
 const connection = process.env.REDIS_URL
   ? new IORedis(process.env.REDIS_URL, {
       maxRetriesPerRequest: null,
+      tls: {
+        rejectUnauthorized: false, // Upstash requires TLS
+      },
     })
   : process.env.NODE_ENV === 'production'
   ? new IORedis({

@@ -5,7 +5,6 @@ import type { Pet, Contact } from '@/types';
 import { DataTable, DataTableColumn } from '@/components/DataTable';
 import { FormModal, FormField } from '@/components/FormModal';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 
 /*
  * Pets Page - Pet Management

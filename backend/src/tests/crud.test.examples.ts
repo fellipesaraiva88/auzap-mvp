@@ -439,18 +439,14 @@ describe('CRUD API Tests', () => {
  *
  * Adicionar ao package.json:
  *
- * "scripts": {
- *   "test": "jest",
- *   "test:watch": "jest --watch",
- *   "test:coverage": "jest --coverage"
- * },
- * "jest": {
- *   "preset": "ts-jest",
- *   "testEnvironment": "node",
- *   "testMatch": ["**/*.test.ts"],
- *   "collectCoverageFrom": [
- *     "src/**/*.ts",
- *     "!src/**/*.test.ts"
- *   ]
- * }
+ * scripts:
+ *   test: jest
+ *   test:watch: jest --watch
+ *   test:coverage: jest --coverage
+ *
+ * jest:
+ *   preset: ts-jest
+ *   testEnvironment: node
+ *   testMatch: ['**\/*.test.ts']
+ *   collectCoverageFrom: ['src/**\/*.ts', '!src/**\/*.test.ts']
  */

@@ -12,12 +12,12 @@ export function validateBody<T>(schema: z.ZodSchema<T>) {
     if (!result.success) {
       return res.status(400).json({
         error: 'Validation failed',
-        details: result.errors,
+        details: 'errors' in result ? result.errors : [],
       });
     }
 
     // Substituir body com dados validados
-    req.body = result.data;
+    req.body = 'data' in result ? result.data : req.body;
     next();
   };
 }
@@ -32,12 +32,12 @@ export function validateQuery<T>(schema: z.ZodSchema<T>) {
     if (!result.success) {
       return res.status(400).json({
         error: 'Validation failed',
-        details: result.errors,
+        details: 'errors' in result ? result.errors : [],
       });
     }
 
     // Substituir query com dados validados
-    req.query = result.data as any;
+    req.query = ('data' in result ? result.data : req.query) as any;
     next();
   };
 }
@@ -52,12 +52,12 @@ export function validateParams<T>(schema: z.ZodSchema<T>) {
     if (!result.success) {
       return res.status(400).json({
         error: 'Validation failed',
-        details: result.errors,
+        details: 'errors' in result ? result.errors : [],
       });
     }
 
     // Substituir params com dados validados
-    req.params = result.data as any;
+    req.params = ('data' in result ? result.data : req.params) as any;
     next();
   };
 }

@@ -8,9 +8,14 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "worker": "node dist/workers/index.js",
-    "test": "jest",
+    "test": "dotenv -e .env.test -- jest",
+    "test:watch": "dotenv -e .env.test -- jest --watch",
+    "test:coverage": "dotenv -e .env.test -- jest --coverage",
+    "test:crud": "dotenv -e .env.test -- jest tests/crud.test.ts",
+    "test:auth": "dotenv -e .env.test -- jest tests/auth.test.ts",
+    "test:queue": "dotenv -e .env.test -- jest tests/queue.test.ts",
+    "test:verbose": "dotenv -e .env.test -- jest --verbose",
     "test:redis": "ts-node src/scripts/test-redis-bullmq.ts",
-    "test:queue": "ts-node src/scripts/test-message-queue.ts",
     "upstash:info": "ts-node src/scripts/get-upstash-connection.ts"
   },
   "dependencies": {

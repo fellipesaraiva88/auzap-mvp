@@ -5,6 +5,8 @@ import {
   MessageSquare,
   Calendar,
   Users,
+  UserCircle,
+  PawPrint,
   MessageCircle,
   Settings
 } from 'lucide-react';
@@ -17,6 +19,8 @@ export default function Layout() {
     { name: 'Conversas', to: '/conversations', icon: MessageSquare },
     { name: 'Agendamentos', to: '/bookings', icon: Calendar },
     { name: 'Clientes', to: '/clients', icon: Users },
+    { name: 'Contatos', to: '/contacts', icon: UserCircle },
+    { name: 'Pets', to: '/pets', icon: PawPrint },
     { name: 'WhatsApp', to: '/whatsapp', icon: MessageCircle },
     { name: 'Configurações', to: '/settings', icon: Settings },
   ];

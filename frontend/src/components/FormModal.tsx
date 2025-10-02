@@ -97,7 +97,7 @@ interface FormFieldProps {
   label: string;
   name: string;
   type?: string;
-  value: string | number;
+  value: string | number | undefined;
   onChange: (value: any) => void;
   placeholder?: string;
   required?: boolean;
@@ -129,7 +129,7 @@ export function FormField({
       {type === 'select' && options ? (
         <select
           name={name}
-          value={value}
+          value={value || ''}
           onChange={(e) => onChange(e.target.value)}
           required={required}
           disabled={disabled}
@@ -145,7 +145,7 @@ export function FormField({
       ) : type === 'textarea' ? (
         <textarea
           name={name}
-          value={value}
+          value={value || ''}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           required={required}
@@ -157,7 +157,7 @@ export function FormField({
         <input
           type={type}
           name={name}
-          value={value}
+          value={value || ''}
           onChange={(e) => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
           placeholder={placeholder}
           required={required}
