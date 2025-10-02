@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/auth';
 import type { WhatsAppInstance } from '@/types';
-import { io, Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
 import {
   Smartphone,
   QrCode,
@@ -47,7 +47,6 @@ export default function WhatsApp() {
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [socket, setSocket] = useState<Socket | null>(null);
 
   // Load instances from database
   const loadInstances = useCallback(async () => {
@@ -117,8 +116,6 @@ export default function WhatsApp() {
     socketConnection.on('disconnect', () => {
       console.log('Socket.IO disconnected');
     });
-
-    setSocket(socketConnection);
 
     return () => {
       supabase.removeChannel(channel);
