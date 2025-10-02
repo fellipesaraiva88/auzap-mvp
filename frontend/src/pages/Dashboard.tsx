@@ -1,5 +1,6 @@
 import { ImpactPanel } from '@/components/dashboard/ImpactPanel';
 import { MetricCards } from '@/components/dashboard/MetricCards';
+import { ImpactCharts } from '@/components/dashboard/ImpactCharts';
 
 export default function Dashboard() {
   return (
@@ -10,11 +11,8 @@ export default function Dashboard() {
       {/* Cards de Métricas */}
       <MetricCards />
 
-      {/* Placeholder para futuros gráficos */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Análises e Gráficos</h3>
-        <p className="text-gray-600">Em breve: Gráficos detalhados de performance e crescimento</p>
-      </div>
+      {/* Gráficos de Performance */}
+      <ImpactCharts />
     </div>
   );
 }
