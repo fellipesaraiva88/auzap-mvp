@@ -13,7 +13,8 @@
     "test": "vitest",
     "migration:create": "tsx src/scripts/create-migration.ts",
     "migration:run": "tsx src/scripts/run-migrations.ts",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "simulate:event": "tsx scripts/simulate-event.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
