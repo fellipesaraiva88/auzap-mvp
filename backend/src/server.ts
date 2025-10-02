@@ -89,6 +89,8 @@ app.use('/api/aurora', (await import('./routes/aurora.routes.js')).default);
 app.use('/api/contacts', (await import('./routes/contacts.routes.js')).default);
 app.use('/api/pets', (await import('./routes/pets.routes.js')).default);
 app.use('/api/bookings', (await import('./routes/bookings.routes.js')).default);
+app.use('/api/followups', (await import('./routes/followups.routes.js')).default);
+app.use('/api/settings', (await import('./routes/settings.routes.js')).default);
 
 // Socket.io connection handling
 io.on('connection', (socket) => {

@@ -4,6 +4,9 @@ import { AITimeline } from "@/components/AITimeline";
 import { ImpactCharts } from "@/components/ImpactCharts";
 import { AlertCircle, Clock, TrendingUp, Zap } from "lucide-react";
 import { QuickActions } from "@/components/QuickActions";
+import { WhatsAppStatusCard } from "@/components/WhatsAppStatus";
+import { PendingFollowupsCard } from "@/components/PendingFollowups";
+import { AIPersonalityCard } from "@/components/AIPersonalityCard";
 import { useDashboardStats } from "@/hooks/useDashboard";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -42,12 +45,7 @@ const Index = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className={`flex items-center gap-2 px-4 py-2 ${isWhatsAppOnline ? 'bg-ai-success/10 border-ai-success/20' : 'bg-gray-500/10 border-gray-500/20'} border rounded-xl`}>
-                <div className={`w-2 h-2 rounded-full ${isWhatsAppOnline ? 'bg-ai-success animate-pulse' : 'bg-gray-500'}`}></div>
-                <span className={`text-sm font-semibold ${isWhatsAppOnline ? 'text-ai-success' : 'text-gray-500'}`}>
-                  {isWhatsAppOnline ? 'IA Online' : 'WhatsApp Offline'}
-                </span>
-              </div>
+              <WhatsAppStatusCard instanceId={user?.organization?.whatsapp_instance_id || 'default'} />
               <QuickActions />
             </div>
           </div>
@@ -87,6 +85,16 @@ const Index = () => {
 
         {/* Main Impact Hero */}
         <ImpactHero />
+
+        {/* Priority Cards Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 fade-in">
+          <AIPersonalityCard />
+          <PendingFollowupsCard />
+          <div className="glass-card rounded-2xl p-6">
+            <h3 className="text-lg font-bold mb-4">Ações Rápidas</h3>
+            <QuickActions />
+          </div>
+        </div>
 
         {/* Impact Metrics Cards */}
         <ImpactCards />

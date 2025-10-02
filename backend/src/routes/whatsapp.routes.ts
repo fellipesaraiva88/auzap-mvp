@@ -49,9 +49,31 @@ router.post('/send', async (req: Request, res: Response): Promise<void> => {
 router.get('/instances/:instanceId/status', async (req: Request, res: Response): Promise<void> => {
   try {
     const { instanceId } = req.params;
+    const organizationId = req.headers['x-organization-id'] as string;
+
+    if (!organizationId) {
+      res.status(400).json({ error: 'Organization ID required' });
+      return;
+    }
+
+    // Check connection via Baileys service
     const isConnected = baileysService.isConnected(instanceId);
 
-    res.json({ connected: isConnected });
+    // Get instance details from database
+    const { data: instance } = await import('../config/supabase.js').then(m => m.supabaseAdmin
+      .from('whatsapp_instances')
+      .select('*')
+      .eq('id', instanceId)
+      .eq('organization_id', organizationId)
+      .single()
+    );
+
+    res.json({
+      connected: isConnected,
+      status: isConnected ? 'connected' : 'disconnected',
+      instance: instance || null,
+      timestamp: new Date().toISOString()
+    });
   } catch (error: any) {
     logger.error({ error }, 'Error checking instance status');
     res.status(500).json({ error: error.message });
