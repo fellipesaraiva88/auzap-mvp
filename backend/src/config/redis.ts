@@ -7,14 +7,26 @@ if (!redisUrl) {
   throw new Error('Missing REDIS_URL environment variable');
 }
 
-// Redis connection for BullMQ
-export const redisConnection = new Redis(redisUrl, {
+// Redis connection options with TLS for Upstash
+const redisOptions = {
   maxRetriesPerRequest: null,
-  enableReadyCheck: false
-});
+  enableReadyCheck: false,
+  tls: {
+    rejectUnauthorized: false
+  },
+  family: 6
+};
+
+// Redis connection for BullMQ
+export const redisConnection = new Redis(redisUrl, redisOptions);
 
 // Redis client for caching
-export const redisCache = new Redis(redisUrl);
+export const redisCache = new Redis(redisUrl, {
+  tls: {
+    rejectUnauthorized: false
+  },
+  family: 6
+});
 
 // Queue for message processing
 export const messageQueue = new Queue('message-processing', {
