@@ -1,59 +1,75 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
+import messageProcessor from './message-processor';
+import followupScheduler from './followup-scheduler';
+import auroraProactive, { setupProactiveSchedules } from './aurora-proactive';
 import { logger } from '../config/logger';
-import messageWorker from './message-processor';
-import {
-  followupScheduler,
-  followupWorker,
-  startFollowupScheduler,
-  stopFollowupScheduler,
-} from './followup-scheduler';
-import auroraProactiveWorker, { setupProactiveSchedules } from './aurora-proactive';
 
-logger.info('🚀 Starting AuZap Workers...');
+/**
+ * Inicializar todos os workers
+ */
+export function startWorkers() {
+  logger.info('🚀 Starting all workers...');
 
-// Iniciar scheduler de follow-ups
-startFollowupScheduler()
-  .then(() => {
-    logger.info('✅ Followup scheduler started');
-  })
-  .catch((error) => {
-    logger.error({ error }, '❌ Error starting followup scheduler');
+  // Worker de mensagens
+  messageProcessor.on('ready', () => {
+    logger.info('✅ Message processor worker ready');
   });
 
-// Iniciar schedules proativos da Aurora
-const proactiveJobs = setupProactiveSchedules();
-logger.info('✅ Aurora proactive schedules configured');
+  messageProcessor.on('completed', (job) => {
+    logger.info({ jobId: job.id }, '✅ Message processed successfully');
+  });
 
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received, closing workers...');
-  await messageWorker.close();
-  await auroraProactiveWorker.close();
-  await stopFollowupScheduler();
+  messageProcessor.on('failed', (job, err) => {
+    logger.error({ jobId: job?.id, error: err }, '❌ Message processing failed');
+  });
 
-  // Parar cron jobs
-  proactiveJobs.dailySummaryJob.stop();
-  proactiveJobs.birthdaysJob.stop();
-  proactiveJobs.inactiveClientsJob.stop();
-  proactiveJobs.opportunitiesJob.stop();
+  // Worker de follow-ups
+  followupScheduler.on('ready', () => {
+    logger.info('✅ Follow-up scheduler worker ready');
+  });
 
-  process.exit(0);
-});
+  followupScheduler.on('completed', (job) => {
+    logger.info({ jobId: job.id }, '✅ Follow-up scheduled successfully');
+  });
 
-process.on('SIGINT', async () => {
-  logger.info('SIGINT received, closing workers...');
-  await messageWorker.close();
-  await auroraProactiveWorker.close();
-  await stopFollowupScheduler();
+  followupScheduler.on('failed', (job, err) => {
+    logger.error({ jobId: job?.id, error: err }, '❌ Follow-up scheduling failed');
+  });
 
-  // Parar cron jobs
-  proactiveJobs.dailySummaryJob.stop();
-  proactiveJobs.birthdaysJob.stop();
-  proactiveJobs.inactiveClientsJob.stop();
-  proactiveJobs.opportunitiesJob.stop();
+  // Worker proativo Aurora
+  auroraProactive.on('ready', () => {
+    logger.info('✅ Aurora proactive worker ready');
+  });
 
-  process.exit(0);
-});
+  // Configurar cron jobs
+  const cronJobs = setupProactiveSchedules();
+  logger.info('✅ Proactive cron jobs configured');
+  logger.info('   - Daily summary: 18:00');
+  logger.info('   - Birthdays: 09:00');
+  logger.info('   - Inactive clients: Monday 10:00');
+  logger.info('   - Opportunities: Tuesday/Thursday 15:00');
 
-logger.info('✅ Workers running');
+  return {
+    messageProcessor,
+    followupScheduler,
+    auroraProactive,
+    cronJobs,
+  };
+}
+
+/**
+ * Graceful shutdown
+ */
+export async function stopWorkers() {
+  logger.info('🛑 Stopping all workers...');
+
+  await messageProcessor.close();
+  logger.info('✅ Message processor stopped');
+
+  await followupScheduler.close();
+  logger.info('✅ Follow-up scheduler stopped');
+
+  await auroraProactive.close();
+  logger.info('✅ Aurora proactive stopped');
+
+  logger.info('✅ All workers stopped');
+}

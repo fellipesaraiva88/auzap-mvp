@@ -14,6 +14,7 @@ import authRoutes from './routes/auth.routes';
 import contactsRoutes from './routes/contacts.routes';
 import bookingsRoutes from './routes/bookings.routes';
 import servicesRoutes from './routes/services.routes';
+import { startWorkers, stopWorkers } from './workers';
 
 const app = express();
 const httpServer = createServer(app);
@@ -81,19 +82,24 @@ httpServer.listen(PORT, () => {
   logger.info(`🚀 AuZap API server running on port ${PORT}`);
   logger.info(`📡 Socket.IO server ready`);
   logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+
+  // Inicializar workers
+  startWorkers();
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   logger.info('SIGTERM received, closing server...');
+  await stopWorkers();
   httpServer.close(() => {
     logger.info('Server closed');
     process.exit(0);
   });
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   logger.info('SIGINT received, closing server...');
+  await stopWorkers();
   httpServer.close(() => {
     logger.info('Server closed');
     process.exit(0);
