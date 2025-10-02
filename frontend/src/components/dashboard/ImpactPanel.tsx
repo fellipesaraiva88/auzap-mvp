@@ -1,39 +1,39 @@
-import { useMemo } from 'react';
+import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
+import { useTenant } from '@/hooks/useTenant';
+import { Skeleton } from '@/components/ui/Skeleton';
 
-interface ImpactData {
-  timeRecovered: string;
-  moneySaved: string;
-  salesClosed: number;
-  workDays: number;
-  nightlyStats: {
-    clientsServed: number;
-    appointmentsBooked: number;
-    salesValue: number;
-    followUpsSent: number;
+export function ImpactPanel() {
+  const { organizationId } = useTenant();
+  const { data, isLoading } = useDashboardMetrics(organizationId, '7d');
+
+  if (isLoading) {
+    return (
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200 rounded-xl p-8">
+        <Skeleton className="h-8 w-64 mx-auto mb-8" />
+        <Skeleton className="h-32 w-full mb-8" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const impactData = {
+    timeRecovered: data.impactData.timeRecovered,
+    moneySaved: data.impactData.moneySaved,
+    salesClosed: data.impactData.salesClosed,
+    workDays: data.impactData.workDays,
+    nightlyStats: {
+      clientsServed: 8,
+      appointmentsBooked: 3,
+      salesValue: 340,
+      followUpsSent: 12,
+    },
   };
-}
-
-interface ImpactPanelProps {
-  data?: ImpactData;
-}
-
-export function ImpactPanel({ data }: ImpactPanelProps) {
-  const impactData: ImpactData = useMemo(
-    () =>
-      data || {
-        timeRecovered: '32 horas',
-        moneySaved: '1.440',
-        salesClosed: 18,
-        workDays: 4,
-        nightlyStats: {
-          clientsServed: 8,
-          appointmentsBooked: 3,
-          salesValue: 340,
-          followUpsSent: 12
-        }
-      },
-    [data]
-  );
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200 rounded-xl p-6">
@@ -78,9 +78,7 @@ export function ImpactPanel({ data }: ImpactPanelProps) {
             <div className="text-3xl font-bold text-blue-600 mb-2">
               🎯 {impactData.salesClosed} vendas
             </div>
-            <p className="text-sm text-gray-600">
-              Fechadas pela IA sozinha
-            </p>
+            <p className="text-sm text-gray-600">Fechadas pela IA sozinha</p>
           </div>
 
           <div className="bg-white rounded-lg p-6 text-center border border-purple-200">
@@ -111,40 +109,90 @@ export function ImpactPanel({ data }: ImpactPanelProps) {
           <div className="space-y-3">
             <div className="flex items-center space-x-3 text-gray-900">
               <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="w-3 h-3 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
-              <span>{impactData.nightlyStats.clientsServed} clientes atendidos</span>
+              <span>
+                {impactData.nightlyStats.clientsServed} clientes atendidos
+              </span>
             </div>
 
             <div className="flex items-center space-x-3 text-gray-900">
               <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="w-3 h-3 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
-              <span>{impactData.nightlyStats.appointmentsBooked} agendamentos confirmados para hoje</span>
+              <span>
+                {impactData.nightlyStats.appointmentsBooked} agendamentos
+                confirmados para hoje
+              </span>
             </div>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center space-x-3 text-gray-900">
               <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="w-3 h-3 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
-              <span>2 vendas de ração fechadas (R$ {impactData.nightlyStats.salesValue})</span>
+              <span>
+                2 vendas de ração fechadas (R${' '}
+                {impactData.nightlyStats.salesValue})
+              </span>
             </div>
 
             <div className="flex items-center space-x-3 text-gray-900">
               <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="w-3 h-3 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
-              <span>{impactData.nightlyStats.followUpsSent} follow-ups enviados</span>
+              <span>
+                {impactData.nightlyStats.followUpsSent} follow-ups enviados
+              </span>
             </div>
           </div>
         </div>

@@ -1,48 +1,51 @@
-import { TrendingUp, Target, Zap, Clock } from 'lucide-react';
+import {
+  TrendingUp,
+  Target,
+  Zap,
+  Clock,
+  Cpu,
+  Calendar,
+  ChartBar,
+} from 'lucide-react';
+import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
+import { useTenant } from '@/hooks/useTenant';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 
-interface MetricData {
-  moneyInMotion: {
-    value: string;
-    conversations: number;
-  };
-  guaranteedRevenue: {
-    value: string;
-    scheduled: number;
-  };
-  capacityUsage: {
-    percentage: number;
-    occupied: number;
-    total: number;
-  };
-  freeTime: {
-    hours: number;
-    minutes: number;
-  };
-}
+export function MetricCards() {
+  const { organizationId } = useTenant();
+  const { data, isLoading } = useDashboardMetrics(organizationId, '7d');
 
-interface MetricCardsProps {
-  data?: MetricData;
-}
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
+    );
+  }
 
-export function MetricCards({ data }: MetricCardsProps) {
-  const metricsData: MetricData = data || {
+  if (!data) return null;
+
+  const metricsData = {
     moneyInMotion: {
-      value: '4.280',
-      conversations: 12
+      value: data.metricsData.moneyInMotion.value.toLocaleString('pt-BR'),
+      conversations: data.metricsData.moneyInMotion.conversations,
     },
     guaranteedRevenue: {
-      value: '8.940',
-      scheduled: 23
+      value: data.metricsData.guaranteedRevenue.value.toLocaleString('pt-BR'),
+      scheduled: data.metricsData.guaranteedRevenue.scheduled,
     },
     capacityUsage: {
-      percentage: 87,
-      occupied: 26,
-      total: 30
+      percentage: data.metricsData.capacityUsage.percentage,
+      occupied: data.metricsData.capacityUsage.occupied,
+      total: data.metricsData.capacityUsage.total,
     },
     freeTime: {
-      hours: 6,
-      minutes: 42
-    }
+      hours: data.metricsData.freeTime.hours,
+      minutes: data.metricsData.freeTime.minutes,
+    },
   };
 
   return (
@@ -70,11 +73,11 @@ export function MetricCards({ data }: MetricCardsProps) {
           </p>
           <div className="flex items-center space-x-2">
             <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-              <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12z"/>
-              </svg>
+              <Cpu className="w-2 h-2 text-white" />
             </div>
-            <span className="text-xs text-green-600 font-medium">IA gerenciando</span>
+            <span className="text-xs text-green-600 font-medium">
+              IA gerenciando
+            </span>
           </div>
         </div>
       </div>
@@ -102,11 +105,11 @@ export function MetricCards({ data }: MetricCardsProps) {
           </p>
           <div className="flex items-center space-x-2">
             <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-              <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"/>
-              </svg>
+              <Calendar className="w-2 h-2 text-white" />
             </div>
-            <span className="text-xs text-blue-600 font-medium">Caixa futuro</span>
+            <span className="text-xs text-blue-600 font-medium">
+              Caixa futuro
+            </span>
           </div>
         </div>
       </div>
@@ -130,15 +133,16 @@ export function MetricCards({ data }: MetricCardsProps) {
             🏨 {metricsData.capacityUsage.percentage}%
           </div>
           <p className="text-sm text-gray-600">
-            {metricsData.capacityUsage.occupied}/{metricsData.capacityUsage.total} vagas ocupadas
+            {metricsData.capacityUsage.occupied}/
+            {metricsData.capacityUsage.total} vagas ocupadas
           </p>
           <div className="flex items-center space-x-2">
             <div className="w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center">
-              <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
-              </svg>
+              <ChartBar className="w-2 h-2 text-white" />
             </div>
-            <span className="text-xs text-purple-600 font-medium">Taxa ótima</span>
+            <span className="text-xs text-purple-600 font-medium">
+              Taxa ótima
+            </span>
           </div>
         </div>
       </div>
@@ -164,11 +168,11 @@ export function MetricCards({ data }: MetricCardsProps) {
           <p className="text-sm text-gray-600">hoje</p>
           <div className="flex items-center space-x-2">
             <div className="w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
-              <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12z"/>
-              </svg>
+              <Cpu className="w-2 h-2 text-white" />
             </div>
-            <span className="text-xs text-orange-600 font-medium">IA trabalhando</span>
+            <span className="text-xs text-orange-600 font-medium">
+              IA trabalhando
+            </span>
           </div>
         </div>
       </div>
