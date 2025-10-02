@@ -1,6 +1,7 @@
 import { openai, AI_MODELS, calculateCost } from '../../config/openai.js';
 import { logger } from '../../config/logger.js';
 import { supabaseAdmin } from '../../config/supabase.js';
+import type { TablesInsert } from '../../types/database.types.js';
 import { contactsService } from '../contacts/contacts.service.js';
 import { petsService } from '../pets/pets.service.js';
 import { bookingsService } from '../bookings/bookings.service.js';
@@ -345,7 +346,7 @@ Informações que você pode coletar:
     choice: any,
     cost: number
   ): Promise<void> {
-    await supabaseAdmin.from('ai_interactions').insert({
+    const interactionData: TablesInsert<'ai_interactions'> = {
       organization_id: context.organizationId,
       contact_id: context.contactId,
       model: AI_MODELS.CLIENT,
@@ -354,7 +355,8 @@ Informações que você pode coletar:
       total_cost_cents: cost,
       intent_detected: choice.message.function_call?.name || 'conversation',
       confidence_score: 0.9
-    });
+    };
+    await supabaseAdmin.from('ai_interactions').insert(interactionData);
   }
 }
 

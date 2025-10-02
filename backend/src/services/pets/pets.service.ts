@@ -1,7 +1,10 @@
 import { supabaseAdmin } from '../../config/supabase.js';
 import { logger } from '../../config/logger.js';
+import type { Tables, TablesInsert } from '../../types/database.types.js';
 
-export interface Pet {
+export type Pet = Tables<'pets'>;
+
+export interface PetLegacy {
   id: string;
   organization_id: string;
   contact_id: string;
@@ -60,15 +63,17 @@ export class PetsService {
    */
   async create(data: CreatePetData): Promise<Pet> {
     try {
+      const petData: TablesInsert<'pets'> = {
+        ...data,
+        allergies: data.allergies || [],
+        vaccinations: data.vaccinations || [],
+        is_active: true
+      };
       const { data: pet, error } = await supabaseAdmin
         .from('pets')
-        .insert({
-          ...data,
-          allergies: data.allergies || [],
-          vaccinations: data.vaccinations || []
-        })
+        .insert(petData)
         .select()
-        .single();
+        .single() as { data: Pet | null; error: any };
 
       if (error) {
         throw error;
@@ -169,7 +174,7 @@ export class PetsService {
       .update(data)
       .eq('id', petId)
       .select()
-      .single();
+      .single() as { data: Pet | null; error: any };
 
     if (error) {
       logger.error({ error, petId }, 'Error updating pet');

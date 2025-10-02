@@ -1,7 +1,10 @@
 import { supabaseAdmin } from '../../config/supabase.js';
 import { logger } from '../../config/logger.js';
+import type { Tables, TablesInsert } from '../../types/database.types.js';
 
-export interface Contact {
+export type Contact = Tables<'contacts'>;
+
+export interface ContactLegacy {
   id: string;
   organization_id: string;
   whatsapp_instance_id: string | null;
@@ -62,16 +65,19 @@ export class ContactsService {
       }
 
       // Criar novo contato
+      const contactData: TablesInsert<'contacts'> = {
+        organization_id: organizationId,
+        phone_number: phoneNumber,
+        whatsapp_instance_id: instanceId,
+        last_interaction_at: new Date().toISOString(),
+        is_active: true,
+        tags: []
+      };
       const { data: newContact, error: createError } = await supabaseAdmin
         .from('contacts')
-        .insert({
-          organization_id: organizationId,
-          phone_number: phoneNumber,
-          whatsapp_instance_id: instanceId,
-          last_interaction_at: new Date().toISOString()
-        })
+        .insert(contactData)
         .select()
-        .single();
+        .single() as { data: Contact | null; error: any };
 
       if (createError) {
         throw createError;
@@ -153,7 +159,7 @@ export class ContactsService {
       .update(data)
       .eq('id', contactId)
       .select()
-      .single();
+      .single() as { data: Contact | null; error: any };
 
     if (error) {
       logger.error({ error, contactId }, 'Error updating contact');

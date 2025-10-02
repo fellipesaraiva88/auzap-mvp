@@ -1,7 +1,10 @@
 import { supabaseAdmin } from '../../config/supabase.js';
 import { logger } from '../../config/logger.js';
+import type { Tables, TablesInsert } from '../../types/database.types.js';
 
-export interface Booking {
+export type Booking = Tables<'bookings'>;
+
+export interface BookingLegacy {
   id: string;
   organization_id: string;
   contact_id: string;
@@ -61,15 +64,16 @@ export class BookingsService {
         throw new Error('Horário não disponível');
       }
 
+      const bookingData: TablesInsert<'bookings'> = {
+        ...data,
+        status: data.status || 'pending',
+        created_by_ai: data.created_by_ai || false
+      };
       const { data: booking, error } = await supabaseAdmin
         .from('bookings')
-        .insert({
-          ...data,
-          status: data.status || 'pending',
-          created_by_ai: data.created_by_ai || false
-        })
+        .insert(bookingData)
         .select()
-        .single();
+        .single() as { data: Booking | null; error: any };
 
       if (error) {
         throw error;
@@ -185,7 +189,7 @@ export class BookingsService {
       .update(data)
       .eq('id', bookingId)
       .select()
-      .single();
+      .single() as { data: Booking | null; error: any };
 
     if (error) {
       logger.error({ error, bookingId }, 'Error updating booking');

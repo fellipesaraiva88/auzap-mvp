@@ -2,6 +2,7 @@ import { Worker, Job } from 'bullmq';
 import { redisConnection, messageQueue } from '../config/redis.js';
 import { logger } from '../config/logger.js';
 import { supabaseAdmin } from '../config/supabase.js';
+import type { TablesInsert, Tables } from '../types/database.types.js';
 import { clientAIService } from '../services/ai/client-ai.service.js';
 import { auroraService } from '../services/aurora/aurora.service.js';
 import { contactsService } from '../services/contacts/contacts.service.js';
@@ -201,17 +202,19 @@ export class MessageProcessorWorker {
     }
 
     // Criar nova conversa
+    const convData: TablesInsert<'conversations'> = {
+      organization_id: organizationId,
+      whatsapp_instance_id: instanceId,
+      contact_id: contactId,
+      status: 'active',
+      last_message_at: new Date().toISOString(),
+      tags: []
+    };
     const { data: newConv } = await supabaseAdmin
       .from('conversations')
-      .insert({
-        organization_id: organizationId,
-        whatsapp_instance_id: instanceId,
-        contact_id: contactId,
-        status: 'active',
-        last_message_at: new Date().toISOString()
-      })
+      .insert(convData)
       .select()
-      .single();
+      .single() as { data: Tables<'conversations'> | null; error: any };
 
     return newConv;
   }
@@ -247,20 +250,22 @@ export class MessageProcessorWorker {
     isOwner: boolean,
     conversationId?: string
   ): Promise<void> {
-    const messages = [
+    const messages: TablesInsert<'messages'>[] = [
       {
         organization_id: organizationId,
         conversation_id: conversationId,
         direction: 'inbound',
         content: inboundContent,
-        sent_by_ai: false
+        sent_by_ai: false,
+        metadata: {}
       },
       {
         organization_id: organizationId,
         conversation_id: conversationId,
         direction: 'outbound',
         content: outboundContent,
-        sent_by_ai: true
+        sent_by_ai: true,
+        metadata: {}
       }
     ];
 

@@ -20,6 +20,20 @@ export interface Database {
           created_at: string
           updated_at: string
         }
+        Insert: {
+          name: string
+          email: string
+          phone?: string | null
+          address?: string | null
+          settings?: Json
+        }
+        Update: {
+          name?: string
+          email?: string
+          phone?: string | null
+          address?: string | null
+          settings?: Json
+        }
       }
       users: {
         Row: {
@@ -31,6 +45,20 @@ export interface Database {
           auth_user_id: string | null
           created_at: string
           updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          email: string
+          full_name: string
+          role: string
+          auth_user_id?: string | null
+        }
+        Update: {
+          organization_id?: string
+          email?: string
+          full_name?: string
+          role?: string
+          auth_user_id?: string | null
         }
       }
       organization_settings: {
@@ -48,6 +76,27 @@ export interface Database {
           created_at: string
           updated_at: string
         }
+        Insert: {
+          organization_id: string
+          ai_client_enabled?: boolean
+          ai_client_model?: string
+          ai_client_temperature?: number
+          aurora_enabled?: boolean
+          aurora_model?: string
+          aurora_daily_summary_time?: string
+          business_hours?: Json
+          services_config?: Json
+        }
+        Update: {
+          ai_client_enabled?: boolean
+          ai_client_model?: string
+          ai_client_temperature?: number
+          aurora_enabled?: boolean
+          aurora_model?: string
+          aurora_daily_summary_time?: string
+          business_hours?: Json
+          services_config?: Json
+        }
       }
       services: {
         Row: {
@@ -63,6 +112,27 @@ export interface Database {
           deposit_percentage: number
           created_at: string
           updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          name: string
+          type: string
+          description?: string | null
+          duration_minutes: number
+          price_cents: number
+          is_active?: boolean
+          requires_deposit?: boolean
+          deposit_percentage?: number
+        }
+        Update: {
+          name?: string
+          type?: string
+          description?: string | null
+          duration_minutes?: number
+          price_cents?: number
+          is_active?: boolean
+          requires_deposit?: boolean
+          deposit_percentage?: number
         }
       }
       contacts: {
@@ -80,6 +150,29 @@ export interface Database {
           is_active: boolean
           created_at: string
           updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          whatsapp_instance_id?: string | null
+          phone_number: string
+          full_name?: string | null
+          email?: string | null
+          address?: string | null
+          notes?: string | null
+          tags?: string[]
+          last_interaction_at?: string | null
+          is_active?: boolean
+        }
+        Update: {
+          whatsapp_instance_id?: string | null
+          phone_number?: string
+          full_name?: string | null
+          email?: string | null
+          address?: string | null
+          notes?: string | null
+          tags?: string[]
+          last_interaction_at?: string | null
+          is_active?: boolean
         }
       }
       pets: {
@@ -103,6 +196,38 @@ export interface Database {
           created_at: string
           updated_at: string
         }
+        Insert: {
+          organization_id: string
+          contact_id: string
+          name: string
+          species: string
+          breed?: string | null
+          age_years?: number | null
+          age_months?: number | null
+          weight_kg?: number | null
+          color?: string | null
+          gender?: string | null
+          is_neutered?: boolean | null
+          medical_notes?: string | null
+          allergies?: string[]
+          vaccinations?: Json
+          is_active?: boolean
+        }
+        Update: {
+          name?: string
+          species?: string
+          breed?: string | null
+          age_years?: number | null
+          age_months?: number | null
+          weight_kg?: number | null
+          color?: string | null
+          gender?: string | null
+          is_neutered?: boolean | null
+          medical_notes?: string | null
+          allergies?: string[]
+          vaccinations?: Json
+          is_active?: boolean
+        }
       }
       bookings: {
         Row: {
@@ -123,6 +248,31 @@ export interface Database {
           created_at: string
           updated_at: string
         }
+        Insert: {
+          organization_id: string
+          contact_id: string
+          pet_id?: string | null
+          service_id: string
+          whatsapp_instance_id?: string | null
+          scheduled_start: string
+          scheduled_end: string
+          status?: string
+          cancellation_reason?: string | null
+          notes?: string | null
+          reminder_sent_at?: string | null
+          price_cents?: number | null
+          created_by_ai?: boolean
+        }
+        Update: {
+          pet_id?: string | null
+          scheduled_start?: string
+          scheduled_end?: string
+          status?: string
+          cancellation_reason?: string | null
+          notes?: string | null
+          reminder_sent_at?: string | null
+          price_cents?: number | null
+        }
       }
       whatsapp_instances: {
         Row: {
@@ -136,6 +286,23 @@ export interface Database {
           last_connected_at: string | null
           created_at: string
           updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          instance_name: string
+          phone_number?: string | null
+          status?: string
+          qr_code?: string | null
+          session_data?: Json | null
+          last_connected_at?: string | null
+        }
+        Update: {
+          instance_name?: string
+          phone_number?: string | null
+          status?: string
+          qr_code?: string | null
+          session_data?: Json | null
+          last_connected_at?: string | null
         }
       }
       conversations: {
@@ -153,12 +320,31 @@ export interface Database {
           created_at: string
           updated_at: string
         }
+        Insert: {
+          organization_id: string
+          whatsapp_instance_id: string
+          contact_id?: string | null
+          status?: string
+          last_message_at?: string | null
+          escalated_to_human_at?: string | null
+          escalation_reason?: string | null
+          summary?: string | null
+          tags?: string[]
+        }
+        Update: {
+          status?: string
+          last_message_at?: string | null
+          escalated_to_human_at?: string | null
+          escalation_reason?: string | null
+          summary?: string | null
+          tags?: string[]
+        }
       }
       messages: {
         Row: {
           id: string
           organization_id: string
-          conversation_id: string
+          conversation_id: string | null
           whatsapp_message_id: string | null
           direction: string
           content: string | null
@@ -168,6 +354,26 @@ export interface Database {
           sent_by_ai: boolean
           metadata: Json
           created_at: string
+        }
+        Insert: {
+          organization_id: string
+          conversation_id?: string | null
+          whatsapp_message_id?: string | null
+          direction: string
+          content?: string | null
+          media_url?: string | null
+          media_type?: string | null
+          status?: string | null
+          sent_by_ai?: boolean
+          metadata?: Json
+        }
+        Update: {
+          whatsapp_message_id?: string | null
+          content?: string | null
+          media_url?: string | null
+          media_type?: string | null
+          status?: string | null
+          metadata?: Json
         }
       }
       ai_interactions: {
@@ -187,6 +393,26 @@ export interface Database {
           confidence_score: number | null
           created_at: string
         }
+        Insert: {
+          organization_id: string
+          conversation_id?: string | null
+          contact_id?: string | null
+          message_id?: string | null
+          model: string
+          prompt_tokens?: number | null
+          completion_tokens?: number | null
+          total_cost_cents?: number | null
+          intent_detected?: string | null
+          entities_extracted?: Json
+          action_taken?: string | null
+          confidence_score?: number | null
+        }
+        Update: {
+          intent_detected?: string | null
+          entities_extracted?: Json
+          action_taken?: string | null
+          confidence_score?: number | null
+        }
       }
       authorized_owner_numbers: {
         Row: {
@@ -199,22 +425,31 @@ export interface Database {
           created_at: string
           updated_at: string
         }
+        Insert: {
+          organization_id: string
+          phone_number: string
+          owner_name: string
+          is_active?: boolean
+          notes?: string | null
+        }
+        Update: {
+          phone_number?: string
+          owner_name?: string
+          is_active?: boolean
+          notes?: string | null
+        }
       }
     }
   }
 }
 
 export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
-
-// Insert types - fields required for creating new records
-export type TablesInsert<T extends keyof Database['public']['Tables']> =
-  Omit<Database['public']['Tables'][T]['Row'], 'id' | 'created_at' | 'updated_at'>
-
-// Update types - all fields optional except id
-export type TablesUpdate<T extends keyof Database['public']['Tables']> =
-  Partial<Omit<Database['public']['Tables'][T]['Row'], 'id' | 'created_at' | 'updated_at'>>
+export type TablesInsert<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Insert']
+export type TablesUpdate<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Update']
 
 export type Organization = Tables<'organizations'>
+export type User = Tables<'users'>
+export type OrganizationSettings = Tables<'organization_settings'>
 export type Service = Tables<'services'>
 export type Contact = Tables<'contacts'>
 export type Pet = Tables<'pets'>
