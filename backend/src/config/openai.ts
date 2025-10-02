@@ -13,13 +13,14 @@ export const openai = new OpenAI({
 // Default models
 export const AI_MODELS = {
   CLIENT: 'gpt-4-turbo-preview',
-  AURORA: 'gpt-4-turbo-preview',
+  AURORA: 'gpt-4o-mini', // Aurora usa GPT-4o-mini para otimização de custo
   FALLBACK: 'gpt-3.5-turbo'
 } as const;
 
 // Token pricing (in cents per 1K tokens)
 export const TOKEN_PRICING = {
   'gpt-4-turbo-preview': { input: 1.0, output: 3.0 },
+  'gpt-4o-mini': { input: 0.015, output: 0.06 }, // Preços do GPT-4o-mini
   'gpt-3.5-turbo': { input: 0.05, output: 0.15 }
 } as const;
 

@@ -1,9 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { AuroraService } from '../services/aurora/aurora.service.js';
+import { auroraProactiveService } from '../services/aurora/aurora-proactive.service.js';
+import { auroraAuthMiddleware } from '../middleware/aurora-auth.middleware.js';
 import { logger } from '../config/logger.js';
 
 const router = Router();
 const auroraService = new AuroraService();
+
+// Aplicar middleware de autenticação em todas as rotas
+router.use(auroraAuthMiddleware);
 
 // Generate daily summary
 router.post('/summary/daily', async (req: Request, res: Response): Promise<void> => {
@@ -78,14 +83,14 @@ router.get('/opportunities', async (req: Request, res: Response): Promise<void> 
 // Process owner message (from WhatsApp)
 router.post('/message', async (req: Request, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
-    const { phoneNumber, message, ownerName } = req.body;
+    const { organizationId, phoneNumber, organizationName } = req.auroraContext!;
+    const { message, ownerName } = req.body;
 
     const response = await auroraService.processOwnerMessage(
       {
         organizationId,
         ownerPhone: phoneNumber,
-        ownerName: ownerName || 'Proprietário'
+        ownerName: ownerName || organizationName || 'Proprietário'
       },
       message
     );
@@ -93,6 +98,69 @@ router.post('/message', async (req: Request, res: Response): Promise<void> => {
     res.json({ response });
   } catch (error: any) {
     logger.error('Process owner message error', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Proactive messages endpoints
+
+// Analyze and generate proactive notifications
+router.post('/proactive/analyze', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { organizationId } = req.auroraContext!;
+
+    const messages = await auroraProactiveService.analyzeAndNotify(organizationId);
+
+    res.json({
+      count: messages.length,
+      messages: messages.map(m => ({
+        type: m.type,
+        priority: m.priority,
+        preview: m.message.substring(0, 100) + '...'
+      }))
+    });
+  } catch (error: any) {
+    logger.error('Analyze proactive messages error', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Generate weekly report
+router.post('/proactive/weekly-report', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { organizationId } = req.auroraContext!;
+
+    const report = await auroraProactiveService.generateWeeklyReport(organizationId);
+
+    if (!report) {
+      res.status(404).json({ error: 'Unable to generate report' });
+      return;
+    }
+
+    res.json({ report: report.message });
+  } catch (error: any) {
+    logger.error('Generate weekly report error', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Send proactive message
+router.post('/proactive/send', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { organizationId, phoneNumber } = req.auroraContext!;
+    const { type, message, priority } = req.body;
+
+    const sent = await auroraProactiveService.sendProactiveMessage({
+      type,
+      organizationId,
+      ownerPhone: phoneNumber,
+      message,
+      priority: priority || 'medium'
+    });
+
+    res.json({ sent, message: sent ? 'Message queued for delivery' : 'Failed to queue message' });
+  } catch (error: any) {
+    logger.error('Send proactive message error', error);
     res.status(500).json({ error: error.message });
   }
 });
