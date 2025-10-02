@@ -1,14 +1,21 @@
 # 🚀 Status do Deploy - AuZap MVP
 
-## ✅ Concluído
+**ÚLTIMA ATUALIZAÇÃO**: 02/10/2025 13:23 UTC
+**DEPLOY VERSÃO**: v2 (Novos Serviços)
 
-### Frontend
-- **URL**: https://auzap-mvp-frontend.onrender.com
-- **Status**: LIVE ✅
+---
+
+## ✅ SERVIÇOS NO AR
+
+### Frontend - `auzap-front-prod`
+- **URL**: https://auzap-front-prod.onrender.com
+- **Service ID**: srv-d3f7mjc9c44c73ei0etg
+- **Status**: ✅ LIVE (200 OK)
+- **Deploy**: Concluído em 13:18:55 UTC
 - **Env Vars**: Configuradas
   - `VITE_SUPABASE_URL`
   - `VITE_SUPABASE_ANON_KEY`
-  - `VITE_API_URL=https://auzap-api.onrender.com`
+  - `VITE_API_URL=https://auzap-api-v2.onrender.com`
 
 ### Database (Supabase)
 - **Status**: 100% Configurado ✅
@@ -26,17 +33,16 @@
 - ✅ **NODE_ENV**: production
 - ✅ **FRONTEND_URL**: https://auzap-mvp-frontend.onrender.com
 
-## ⏳ Pendente
+## ⏳ EM PROGRESSO
 
-### Backend API
-- **URL**: https://auzap-api.onrender.com
-- **Status**: ⚠️ BUILD EM PROGRESSO
-- **Service ID**: srv-d3eu56ali9vc73dpca3g
+### Backend API - `auzap-api-v2`
+- **URL**: https://auzap-api-v2.onrender.com
+- **Service ID**: srv-d3f7lok9c44c73ehvkfg
+- **Status**: 🟡 BUILD EM PROGRESSO (6+ minutos)
+- **Deploy ID**: dep-d3f7lp49c44c73ehvlh0
+- **Build iniciado**: 13:15:19 UTC
 
-**AÇÃO NECESSÁRIA (MANUAL)**:
-1. Acessar: https://dashboard.render.com/web/srv-d3eu56ali9vc73dpca3g/settings
-2. Build & Deploy → Root Directory: `backend`
-3. Salvar e trigger Manual Deploy
+**Nota**: Primeiro build pode levar 5-10 minutos (instalação deps + TypeScript build)
 
 **Env Vars já configuradas no Render**:
 - SUPABASE_URL
