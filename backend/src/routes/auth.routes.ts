@@ -1,9 +1,13 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../config/supabase.js';
 import { logger } from '../config/logger.js';
+import { authLimiter } from '../middleware/rate-limiter.js';
 import type { TablesInsert, Organization, Tables } from '../types/database.types.js';
 
 const router = Router();
+
+// Apply strict rate limiting to all auth routes
+router.use(authLimiter);
 
 // Register organization and first user
 router.post('/register', async (req, res): Promise<void> => {

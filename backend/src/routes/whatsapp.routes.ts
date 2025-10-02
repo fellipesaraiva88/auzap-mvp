@@ -1,8 +1,15 @@
 import { Router, Request, Response } from 'express';
 import { baileysService } from '../services/baileys/baileys.service.js';
 import { logger } from '../config/logger.js';
+import { webhookLimiter, standardLimiter } from '../middleware/rate-limiter.js';
 
 const router = Router();
+
+// Webhook routes get special high-volume rate limiting
+router.use('/webhook', webhookLimiter);
+
+// Other routes use standard limiting
+router.use(standardLimiter);
 
 /**
  * POST /api/whatsapp/instances

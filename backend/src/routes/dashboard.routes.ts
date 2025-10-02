@@ -1,8 +1,12 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../config/supabase.js';
 import { logger } from '../config/logger.js';
+import { readLimiter } from '../middleware/rate-limiter.js';
 
 const router = Router();
+
+// Dashboard is read-heavy, allow higher limits
+router.use(readLimiter);
 
 // Get dashboard stats
 router.get('/stats', async (req, res): Promise<void> => {
