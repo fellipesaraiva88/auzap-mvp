@@ -1,0 +1,180 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # PR Title Check
+  pr-title:
+    name: Check PR Title
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate PR Title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          requireScope: false
+
+  # File size check
+  file-size-check:
+    name: Check File Sizes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for large files
+        run: |
+          echo "🔍 Checking for files larger than 1MB..."
+
+          large_files=$(find . -type f -size +1M -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/dist/*" -not -path "*/coverage/*")
+
+          if [ -n "$large_files" ]; then
+            echo "⚠️  Large files found:"
+            echo "$large_files"
+            echo ""
+            echo "Please consider:"
+            echo "1. Adding large files to .gitignore"
+            echo "2. Using Git LFS for binary files"
+            echo "3. Compressing or optimizing the files"
+            exit 1
+          else
+            echo "✅ No large files found"
+          fi
+
+  # Secrets detection
+  secrets-scan:
+    name: Scan for Secrets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  # Dependencies security audit
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Audit backend dependencies
+        working-directory: ./backend
+        run: |
+          npm audit --audit-level=moderate || true
+          npm audit --json > audit-backend.json || true
+
+      - name: Audit frontend dependencies
+        working-directory: ./frontend
+        run: |
+          npm audit --audit-level=moderate || true
+          npm audit --json > audit-frontend.json || true
+
+      - name: Upload audit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit
+          path: |
+            backend/audit-backend.json
+            frontend/audit-frontend.json
+          retention-days: 7
+
+  # Check for TODO/FIXME comments
+  code-quality:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for TODO/FIXME
+        run: |
+          echo "🔍 Checking for TODO/FIXME comments..."
+
+          todos=$(grep -r "TODO\|FIXME" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" backend/ frontend/ || true)
+
+          if [ -n "$todos" ]; then
+            echo "📝 Found TODO/FIXME comments:"
+            echo "$todos"
+            echo ""
+            echo "Consider creating issues for these items"
+          else
+            echo "✅ No TODO/FIXME comments found"
+          fi
+
+  # PR Summary
+  pr-summary:
+    name: PR Summary
+    runs-on: ubuntu-latest
+    needs: [pr-title, file-size-check, secrets-scan, security-audit, code-quality]
+    if: always()
+
+    steps:
+      - name: Create PR summary
+        run: |
+          echo "## 📋 PR Checks Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.pr-title.result }}" == "success" ]; then
+            echo "✅ **PR Title**: Valid" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **PR Title**: Invalid format" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.file-size-check.result }}" == "success" ]; then
+            echo "✅ **File Sizes**: All files within limits" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️  **File Sizes**: Large files detected" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.secrets-scan.result }}" == "success" ]; then
+            echo "✅ **Secrets Scan**: No secrets found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Secrets Scan**: Potential secrets detected" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.security-audit.result }}" == "success" ]; then
+            echo "✅ **Security Audit**: Complete" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️  **Security Audit**: Vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.code-quality.result }}" == "success" ]; then
+            echo "✅ **Code Quality**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Code Quality**: Issues found" >> $GITHUB_STEP_SUMMARY
+          fi

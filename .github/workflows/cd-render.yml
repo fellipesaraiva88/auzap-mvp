@@ -1,0 +1,324 @@
+name: CD - Deploy to Render
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to deploy'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - api
+          - workers
+          - frontend
+
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  # Deploy API Service
+  deploy-api:
+    name: Deploy API to Render
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event.inputs.service == 'all' ||
+      github.event.inputs.service == 'api'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trigger Render Deploy - API
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID_API: ${{ secrets.RENDER_SERVICE_ID_API }}
+        run: |
+          echo "🚀 Deploying API to Render..."
+
+          response=$(curl -X POST \
+            "https://api.render.com/v1/services/${RENDER_SERVICE_ID_API}/deploys" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "clearCache": "clear"
+            }')
+
+          echo "Response: $response"
+
+          deploy_id=$(echo $response | jq -r '.id')
+
+          if [ "$deploy_id" != "null" ]; then
+            echo "✅ Deploy triggered successfully! Deploy ID: $deploy_id"
+            echo "DEPLOY_ID=$deploy_id" >> $GITHUB_ENV
+          else
+            echo "❌ Failed to trigger deploy"
+            exit 1
+          fi
+
+      - name: Wait for API deployment
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID_API: ${{ secrets.RENDER_SERVICE_ID_API }}
+        run: |
+          echo "⏳ Waiting for API deployment to complete..."
+
+          max_attempts=60
+          attempt=0
+
+          while [ $attempt -lt $max_attempts ]; do
+            status=$(curl -s \
+              "https://api.render.com/v1/services/${RENDER_SERVICE_ID_API}/deploys/${DEPLOY_ID}" \
+              -H "Authorization: Bearer ${RENDER_API_KEY}" | jq -r '.status')
+
+            echo "Deploy status: $status"
+
+            if [ "$status" == "live" ]; then
+              echo "✅ API deployment successful!"
+              exit 0
+            elif [ "$status" == "build_failed" ] || [ "$status" == "deactivated" ]; then
+              echo "❌ API deployment failed with status: $status"
+              exit 1
+            fi
+
+            attempt=$((attempt + 1))
+            sleep 10
+          done
+
+          echo "⏰ Deployment timeout after 10 minutes"
+          exit 1
+
+  # Deploy Workers Service
+  deploy-workers:
+    name: Deploy Workers to Render
+    runs-on: ubuntu-latest
+    needs: [deploy-api]
+    if: |
+      always() &&
+      (github.event_name == 'push' ||
+       github.event.inputs.service == 'all' ||
+       github.event.inputs.service == 'workers')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trigger Render Deploy - Workers
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID_WORKERS: ${{ secrets.RENDER_SERVICE_ID_WORKERS }}
+        run: |
+          echo "🚀 Deploying Workers to Render..."
+
+          response=$(curl -X POST \
+            "https://api.render.com/v1/services/${RENDER_SERVICE_ID_WORKERS}/deploys" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "clearCache": "clear"
+            }')
+
+          deploy_id=$(echo $response | jq -r '.id')
+
+          if [ "$deploy_id" != "null" ]; then
+            echo "✅ Deploy triggered successfully! Deploy ID: $deploy_id"
+            echo "DEPLOY_ID=$deploy_id" >> $GITHUB_ENV
+          else
+            echo "❌ Failed to trigger deploy"
+            exit 1
+          fi
+
+      - name: Wait for Workers deployment
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID_WORKERS: ${{ secrets.RENDER_SERVICE_ID_WORKERS }}
+        run: |
+          echo "⏳ Waiting for Workers deployment to complete..."
+
+          max_attempts=60
+          attempt=0
+
+          while [ $attempt -lt $max_attempts ]; do
+            status=$(curl -s \
+              "https://api.render.com/v1/services/${RENDER_SERVICE_ID_WORKERS}/deploys/${DEPLOY_ID}" \
+              -H "Authorization: Bearer ${RENDER_API_KEY}" | jq -r '.status')
+
+            echo "Deploy status: $status"
+
+            if [ "$status" == "live" ]; then
+              echo "✅ Workers deployment successful!"
+              exit 0
+            elif [ "$status" == "build_failed" ] || [ "$status" == "deactivated" ]; then
+              echo "❌ Workers deployment failed with status: $status"
+              exit 1
+            fi
+
+            attempt=$((attempt + 1))
+            sleep 10
+          done
+
+          echo "⏰ Deployment timeout after 10 minutes"
+          exit 1
+
+  # Deploy Frontend Service
+  deploy-frontend:
+    name: Deploy Frontend to Render
+    runs-on: ubuntu-latest
+    needs: [deploy-api]
+    if: |
+      always() &&
+      (github.event_name == 'push' ||
+       github.event.inputs.service == 'all' ||
+       github.event.inputs.service == 'frontend')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trigger Render Deploy - Frontend
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID_FRONTEND: ${{ secrets.RENDER_SERVICE_ID_FRONTEND }}
+        run: |
+          echo "🚀 Deploying Frontend to Render..."
+
+          response=$(curl -X POST \
+            "https://api.render.com/v1/services/${RENDER_SERVICE_ID_FRONTEND}/deploys" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "clearCache": "clear"
+            }')
+
+          deploy_id=$(echo $response | jq -r '.id')
+
+          if [ "$deploy_id" != "null" ]; then
+            echo "✅ Deploy triggered successfully! Deploy ID: $deploy_id"
+            echo "DEPLOY_ID=$deploy_id" >> $GITHUB_ENV
+          else
+            echo "❌ Failed to trigger deploy"
+            exit 1
+          fi
+
+      - name: Wait for Frontend deployment
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID_FRONTEND: ${{ secrets.RENDER_SERVICE_ID_FRONTEND }}
+        run: |
+          echo "⏳ Waiting for Frontend deployment to complete..."
+
+          max_attempts=60
+          attempt=0
+
+          while [ $attempt -lt $max_attempts ]; do
+            status=$(curl -s \
+              "https://api.render.com/v1/services/${RENDER_SERVICE_ID_FRONTEND}/deploys/${DEPLOY_ID}" \
+              -H "Authorization: Bearer ${RENDER_API_KEY}" | jq -r '.status')
+
+            echo "Deploy status: $status"
+
+            if [ "$status" == "live" ]; then
+              echo "✅ Frontend deployment successful!"
+              exit 0
+            elif [ "$status" == "build_failed" ] || [ "$status" == "deactivated" ]; then
+              echo "❌ Frontend deployment failed with status: $status"
+              exit 1
+            fi
+
+            attempt=$((attempt + 1))
+            sleep 10
+          done
+
+          echo "⏰ Deployment timeout after 10 minutes"
+          exit 1
+
+  # Post-deployment health checks
+  health-check:
+    name: Post-Deploy Health Check
+    runs-on: ubuntu-latest
+    needs: [deploy-api, deploy-workers, deploy-frontend]
+    if: always()
+
+    steps:
+      - name: Health check - API
+        env:
+          API_URL: ${{ secrets.RENDER_API_URL }}
+        run: |
+          echo "🏥 Checking API health..."
+
+          max_attempts=10
+          attempt=0
+
+          while [ $attempt -lt $max_attempts ]; do
+            status_code=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/health" || echo "000")
+
+            if [ "$status_code" == "200" ]; then
+              echo "✅ API is healthy!"
+              exit 0
+            fi
+
+            echo "Status: $status_code - Retrying... ($attempt/$max_attempts)"
+            attempt=$((attempt + 1))
+            sleep 10
+          done
+
+          echo "❌ API health check failed"
+          exit 1
+
+      - name: Health check - Frontend
+        env:
+          FRONTEND_URL: ${{ secrets.RENDER_FRONTEND_URL }}
+        run: |
+          echo "🏥 Checking Frontend health..."
+
+          status_code=$(curl -s -o /dev/null -w "%{http_code}" "${FRONTEND_URL}" || echo "000")
+
+          if [ "$status_code" == "200" ]; then
+            echo "✅ Frontend is healthy!"
+          else
+            echo "❌ Frontend health check failed (status: $status_code)"
+            exit 1
+          fi
+
+  # Deployment summary
+  deploy-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [deploy-api, deploy-workers, deploy-frontend, health-check]
+    if: always()
+
+    steps:
+      - name: Create deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.deploy-api.result }}" == "success" ]; then
+            echo "✅ **API**: Deployed successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **API**: Deployment failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.deploy-workers.result }}" == "success" ]; then
+            echo "✅ **Workers**: Deployed successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Workers**: Deployment failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.deploy-frontend.result }}" == "success" ]; then
+            echo "✅ **Frontend**: Deployed successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Frontend**: Deployment failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.health-check.result }}" == "success" ]; then
+            echo "✅ **Health Checks**: All services healthy" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Health Checks**: Some services unhealthy" >> $GITHUB_STEP_SUMMARY
+          fi
