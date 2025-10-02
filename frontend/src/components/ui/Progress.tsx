@@ -49,6 +49,16 @@ export function Progress({
   );
 }
 
+interface ProgressCircularProps {
+  value: number;
+  max?: number;
+  size?: number;
+  strokeWidth?: number;
+  showLabel?: boolean;
+  variant?: 'default' | 'success' | 'warning' | 'error';
+  className?: string;
+}
+
 export function ProgressCircular({
   value,
   max = 100,
@@ -56,7 +66,7 @@ export function ProgressCircular({
   strokeWidth = 4,
   showLabel = true,
   variant = 'default',
-}: ProgressProps & { strokeWidth?: number }) {
+}: ProgressCircularProps) {
   const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;

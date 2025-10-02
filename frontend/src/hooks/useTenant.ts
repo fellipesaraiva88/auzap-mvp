@@ -23,11 +23,11 @@ export function useTenant() {
       limits: {
         maxUsers: organization.max_users || 5,
         maxWhatsappInstances: organization.max_whatsapp_instances || 1,
-        maxPets: organization.max_pets || 100
+        maxPets: organization.max_pets || 100,
       },
       userId: user.id,
       userRole: user.role,
-      userPermissions: user.permissions || []
+      userPermissions: user.permissions || [],
     };
   }, [user, organization]);
 
@@ -48,7 +48,10 @@ export function useTenant() {
     if (!hasFeature(feature)) return false;
 
     // Verificar status da subscription
-    if (tenantInfo.subscriptionStatus !== 'active' && tenantInfo.subscriptionStatus !== 'trial') {
+    if (
+      tenantInfo.subscriptionStatus !== 'active' &&
+      tenantInfo.subscriptionStatus !== 'trial'
+    ) {
       return false;
     }
 
@@ -67,12 +70,13 @@ export function useTenant() {
 
   return {
     tenantInfo,
+    organizationId: tenantInfo?.organizationId || '',
     hasFeature,
     hasPermission,
     canAccessFeature,
     isOwner,
     isAdmin,
-    isLoading: !user || !organization
+    isLoading: !user || !organization,
   };
 }
 
@@ -86,7 +90,7 @@ export function useTenantHeaders() {
     if (!tenantInfo) return {};
 
     return {
-      'X-Organization-Id': tenantInfo.organizationId
+      'X-Organization-Id': tenantInfo.organizationId,
     };
   }, [tenantInfo]);
 }
@@ -101,7 +105,7 @@ export function useTenantQueryParams() {
     if (!tenantInfo) return {};
 
     return {
-      organizationId: tenantInfo.organizationId
+      organizationId: tenantInfo.organizationId,
     };
   }, [tenantInfo]);
 }

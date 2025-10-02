@@ -5,6 +5,10 @@ export interface Organization {
   business_type: 'petshop' | 'clinic' | 'hotel' | 'daycare' | 'hybrid';
   subscription_tier: 'free' | 'basic' | 'pro' | 'enterprise';
   subscription_status: 'active' | 'trial' | 'suspended' | 'cancelled';
+  features?: Record<string, boolean>;
+  max_users?: number;
+  max_whatsapp_instances?: number;
+  max_pets?: number;
   created_at: string;
 }
 
@@ -15,6 +19,7 @@ export interface User {
   full_name: string;
   role: 'owner' | 'admin' | 'manager' | 'staff' | 'veterinarian' | 'groomer';
   avatar_url?: string;
+  permissions?: string[];
   created_at: string;
 }
 
