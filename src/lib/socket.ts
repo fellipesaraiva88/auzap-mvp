@@ -6,15 +6,21 @@ class SocketManager {
   private socket: Socket | null = null;
   private organizationId: string | null = null;
 
-  connect(token: string): void {
+  connect(token: string, organizationId: string): void {
     if (this.socket?.connected) {
       return;
     }
+
+    this.organizationId = organizationId;
 
     this.socket = io(SOCKET_URL, {
       auth: {
         token
       },
+      query: {
+        organizationId
+      },
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
@@ -22,15 +28,23 @@ class SocketManager {
     });
 
     this.socket.on('connect', () => {
-      console.log('Socket.io connected:', this.socket?.id);
+      console.log('✅ Socket.io connected:', this.socket?.id);
+    });
+
+    this.socket.on('authenticated', (data) => {
+      console.log('✅ Socket.io authenticated:', data);
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.log('Socket.io disconnected:', reason);
+      console.log('🔌 Socket.io disconnected:', reason);
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('Socket.io connection error:', error);
+      console.error('❌ Socket.io connection error:', error.message);
+    });
+
+    this.socket.on('error', (error) => {
+      console.error('❌ Socket.io error:', error);
     });
   }
 
@@ -80,25 +94,42 @@ export const socketManager = new SocketManager();
 
 // Event types para type safety
 export interface SocketEvents {
+  // Authentication
+  'authenticated': (data: { userId: string; organizationId: string; timestamp: string }) => void;
+
   // WhatsApp events
   'whatsapp:qr': (data: { instanceId: string; qrCode: string }) => void;
   'whatsapp:connected': (data: { instanceId: string; phoneNumber: string }) => void;
   'whatsapp:disconnected': (data: { instanceId: string }) => void;
   'whatsapp:message': (data: { instanceId: string; from: string; message: string }) => void;
+  'whatsapp-status-changed': (data: { instanceId: string; status: string; connected: boolean }) => void;
 
   // Message events
   'message:new': (data: { conversationId: string; message: any }) => void;
+  'new-message': (data: { conversationId: string; from: string; message: any }) => void;
   'message:sent': (data: { messageId: string; status: string }) => void;
+  'message-sent': (data: { messageId: string; conversationId: string }) => void;
   'message:failed': (data: { messageId: string; error: string }) => void;
 
   // Conversation events
   'conversation:updated': (data: { conversationId: string; updates: any }) => void;
   'conversation:escalated': (data: { conversationId: string; reason: string }) => void;
+  'conversation-escalated': (data: { conversationId: string; contactId: string; reason: string }) => void;
 
   // Booking events
   'booking:created': (data: { bookingId: string; booking: any }) => void;
   'booking:updated': (data: { bookingId: string; updates: any }) => void;
   'booking:reminder': (data: { bookingId: string }) => void;
+
+  // Follow-up events
+  'followup-scheduled': (data: { followupId: string; contactId: string; scheduledFor: string }) => void;
+  'followup-sent': (data: { followupId: string; contactId: string; sentAt: string }) => void;
+
+  // Automation events
+  'automation-action': (data: { actionType: string; entityType: string; entityId: string; description: string }) => void;
+
+  // Error events
+  'error': (data: { message: string }) => void;
 }
 
 // Helper para adicionar listeners tipados

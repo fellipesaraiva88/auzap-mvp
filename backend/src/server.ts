@@ -91,18 +91,71 @@ app.use('/api/pets', (await import('./routes/pets.routes.js')).default);
 app.use('/api/bookings', (await import('./routes/bookings.routes.js')).default);
 app.use('/api/followups', (await import('./routes/followups.routes.js')).default);
 app.use('/api/settings', (await import('./routes/settings.routes.js')).default);
+app.use('/api/automations', (await import('./routes/automations.routes.js')).default);
 
-// Socket.io connection handling
+// Socket.io connection handling with JWT authentication
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth.token;
+    const organizationId = socket.handshake.query.organizationId;
+
+    if (!token) {
+      return next(new Error('Authentication token required'));
+    }
+
+    if (!organizationId) {
+      return next(new Error('Organization ID required'));
+    }
+
+    // Verify JWT token with Supabase
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+    if (error || !user) {
+      logger.error({ error }, 'Socket.io authentication failed');
+      return next(new Error('Invalid or expired token'));
+    }
+
+    // Verify user belongs to the organization
+    const { data: membership } = await supabaseAdmin
+      .from('organizations')
+      .select('id')
+      .eq('id', organizationId)
+      .single();
+
+    if (!membership) {
+      logger.error({ userId: user.id, organizationId }, 'User does not belong to organization');
+      return next(new Error('Access denied to organization'));
+    }
+
+    // Attach user data to socket
+    socket.data.userId = user.id;
+    socket.data.organizationId = organizationId as string;
+
+    logger.info({ userId: user.id, organizationId }, 'Socket.io authenticated');
+    next();
+  } catch (error: any) {
+    logger.error({ error }, 'Socket.io authentication error');
+    next(new Error('Authentication failed'));
+  }
+});
+
 io.on('connection', (socket) => {
-  logger.info({ socketId: socket.id }, 'Client connected via Socket.io');
+  const { userId, organizationId } = socket.data;
+  logger.info({ socketId: socket.id, userId, organizationId }, 'Client connected via Socket.io');
 
-  socket.on('join-organization', (organizationId: string) => {
-    socket.join(`org:${organizationId}`);
-    logger.info({ socketId: socket.id, organizationId }, 'Client joined organization room');
+  // Automatically join organization room
+  socket.join(`org:${organizationId}`);
+  logger.info({ socketId: socket.id, organizationId }, 'Client joined organization room');
+
+  // Emit initial connection confirmation
+  socket.emit('authenticated', {
+    userId,
+    organizationId,
+    timestamp: new Date().toISOString()
   });
 
   socket.on('disconnect', () => {
-    logger.info({ socketId: socket.id }, 'Client disconnected');
+    logger.info({ socketId: socket.id, userId, organizationId }, 'Client disconnected');
   });
 });
 

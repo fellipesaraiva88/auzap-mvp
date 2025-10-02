@@ -7,12 +7,17 @@ import { QuickActions } from "@/components/QuickActions";
 import { WhatsAppStatusCard } from "@/components/WhatsAppStatus";
 import { PendingFollowupsCard } from "@/components/PendingFollowups";
 import { AIPersonalityCard } from "@/components/AIPersonalityCard";
+import { AutomationBadges } from "@/components/AutomationBadges";
 import { useDashboardStats } from "@/hooks/useDashboard";
 import { useAuth } from "@/hooks/useAuth";
+import { useDashboardSocketUpdates } from "@/hooks/useSocket";
 
 const Index = () => {
   const { user } = useAuth();
   const { data: stats, isLoading } = useDashboardStats();
+
+  // Enable real-time updates via Socket.io
+  useDashboardSocketUpdates();
 
   // Show loading state
   if (isLoading) {
@@ -95,6 +100,9 @@ const Index = () => {
             <QuickActions />
           </div>
         </div>
+
+        {/* Automation Badges */}
+        <AutomationBadges />
 
         {/* Impact Metrics Cards */}
         <ImpactCards />
