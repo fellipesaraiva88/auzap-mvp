@@ -1,56 +1,41 @@
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
-
-interface Service {
-  name: string;
-  percentage: number;
-  occupied: number;
-  total: number;
-  dailyRevenue: number;
-  color: string;
-  waitingList: boolean;
-}
-
-// Mock data - será substituído por dados reais da API
-const servicesData: Service[] = [
-  {
-    name: 'Hotel',
-    percentage: 80,
-    occupied: 8,
-    total: 10,
-    dailyRevenue: 1600,
-    color: '#3b82f6',
-    waitingList: false,
-  },
-  {
-    name: 'Creche',
-    percentage: 100,
-    occupied: 15,
-    total: 15,
-    dailyRevenue: 750,
-    color: '#10b981',
-    waitingList: true,
-  },
-  {
-    name: 'Banho & Tosa',
-    percentage: 60,
-    occupied: 12,
-    total: 20,
-    dailyRevenue: 840,
-    color: '#8b5cf6',
-    waitingList: false,
-  },
-  {
-    name: 'Veterinário',
-    percentage: 90,
-    occupied: 9,
-    total: 10,
-    dailyRevenue: 1200,
-    color: '#f59e0b',
-    waitingList: false,
-  },
-];
+import { useCapacity } from '@/hooks/useCapacity';
+import { useTenant } from '@/hooks/useTenant';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export function CapacityUsage() {
+  const { organizationId } = useTenant();
+  const { data, isLoading } = useCapacity(organizationId);
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+        <Skeleton className="h-8 w-64 mb-6" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Skeleton className="h-48" />
+          <Skeleton className="h-48" />
+          <Skeleton className="h-48" />
+          <Skeleton className="h-48" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!data || !data.services.length) {
+    return (
+      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+        <h3 className="text-xl font-bold text-gray-900 mb-2">
+          🏨 Ocupação dos Serviços
+        </h3>
+        <p className="text-gray-600">
+          Nenhum serviço cadastrado ainda. Crie seus serviços primeiro.
+        </p>
+      </div>
+    );
+  }
+
+  const { services, summary } = data;
+
   return (
     <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
       <div className="mb-6">
@@ -63,9 +48,9 @@ export function CapacityUsage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {servicesData.map((service, index) => (
+        {services.map((service, index) => (
           <div
-            key={index}
+            key={service.id || index}
             className="space-y-3 p-4 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
           >
             {/* Header do Serviço */}
@@ -134,33 +119,25 @@ export function CapacityUsage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
-              {servicesData.reduce((sum, s) => sum + s.occupied, 0)}
+              {summary.totalOccupied}
             </div>
             <div className="text-xs text-gray-600 mt-1">Vagas Ocupadas</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">
-              R${' '}
-              {servicesData
-                .reduce((sum, s) => sum + s.dailyRevenue, 0)
-                .toLocaleString('pt-BR')}
+              R$ {summary.totalRevenue.toLocaleString('pt-BR')}
             </div>
             <div className="text-xs text-gray-600 mt-1">Receita/Dia</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-purple-600">
-              {Math.round(
-                servicesData.reduce((sum, s) => sum + s.percentage, 0) /
-                  servicesData.length
-              )}
-              %
+              {summary.averageOccupancy}%
             </div>
             <div className="text-xs text-gray-600 mt-1">Ocupação Média</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-orange-600">
-              {servicesData.filter((s) => s.percentage === 100).length}/
-              {servicesData.length}
+              {summary.servicesAtCapacity}/{services.length}
             </div>
             <div className="text-xs text-gray-600 mt-1">Serviços Lotados</div>
           </div>

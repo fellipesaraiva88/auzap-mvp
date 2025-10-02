@@ -12,36 +12,31 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-
-// Mock data - será substituído por dados reais da API
-const timeSavedData = [
-  { day: 'Seg', hours: 6.5, revenue: 850 },
-  { day: 'Ter', hours: 7.2, revenue: 920 },
-  { day: 'Qua', hours: 5.8, revenue: 780 },
-  { day: 'Qui', hours: 8.1, revenue: 1050 },
-  { day: 'Sex', hours: 9.3, revenue: 1200 },
-  { day: 'Sáb', hours: 4.5, revenue: 600 },
-  { day: 'Dom', hours: 3.2, revenue: 420 },
-];
-
-const conversionsData = [
-  { hour: '00h', conversions: 2 },
-  { hour: '04h', conversions: 5 },
-  { hour: '08h', conversions: 8 },
-  { hour: '12h', conversions: 12 },
-  { hour: '16h', conversions: 15 },
-  { hour: '20h', conversions: 10 },
-  { hour: '23h', conversions: 6 },
-];
-
-const metricsComparisonData = [
-  { month: 'Jan', comIA: 85, semIA: 35 },
-  { month: 'Fev', comIA: 92, semIA: 38 },
-  { month: 'Mar', comIA: 88, semIA: 42 },
-  { month: 'Abr', comIA: 95, semIA: 45 },
-];
+import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
+import { useTenant } from '@/hooks/useTenant';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export function ImpactCharts() {
+  const { organizationId } = useTenant();
+  const { data, isLoading } = useDashboardMetrics(organizationId, '7d');
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Skeleton className="h-96" />
+        <Skeleton className="h-96" />
+        <div className="lg:col-span-2">
+          <Skeleton className="h-96" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const timeSavedData = data.chartsData.timeSavedData;
+  const conversionsData = data.chartsData.conversionsData;
+  const metricsComparisonData = data.chartsData.metricsComparison;
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Tempo Economizado vs Receita */}
@@ -146,7 +141,7 @@ export function ImpactCharts() {
             <Legend />
             <Line
               type="monotone"
-              dataKey="comIA"
+              dataKey="withAI"
               stroke="#10b981"
               strokeWidth={3}
               dot={{ fill: '#10b981', r: 6 }}
@@ -154,7 +149,7 @@ export function ImpactCharts() {
             />
             <Line
               type="monotone"
-              dataKey="semIA"
+              dataKey="withoutAI"
               stroke="#ef4444"
               strokeWidth={3}
               dot={{ fill: '#ef4444', r: 6 }}
