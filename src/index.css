@@ -2,19 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  * {
+    @apply transition-colors duration-200;
+  }
+}
+
 /* 🐾 AuZap Design System - Apple-Inspired Blue Pet Theme
    All colors MUST be HSL. Glassmorphism + Neumorphism focus.
 */
 
 @layer base {
   :root {
-    /* Ocean Blue - Apple Signature Primary */
-    --ocean-blue: 215 100% 50%;
-    --sky-blue: 211 100% 50%;
+    /* Ocean Blue Primary Colors - Enhanced */
+    --ocean-blue: 210 100% 50%;
+    --sky-blue: 210 100% 52%;
     --arctic-blue: 210 100% 97%;
+    --midnight-blue: 210 100% 15%;
     --glacier-blue: 210 100% 98%;
-    --sapphire-glow: 218 100% 44%;
-    --midnight-blue: 218 100% 15%;
+    --sapphire-glow: 210 100% 42%;
+    --deep-ocean: 215 100% 35%;
+    --electric-blue: 210 100% 60%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--ocean-blue)) 0%, hsl(var(--sapphire-glow)) 100%);
+    --gradient-glow: linear-gradient(135deg, hsl(var(--sky-blue) / 0.2) 0%, hsl(var(--electric-blue) / 0.1) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--muted) / 0.3) 100%);
+    --gradient-shine: linear-gradient(90deg, transparent 0%, hsl(var(--ocean-blue) / 0.1) 50%, transparent 100%);
 
     /* AI Action Colors */
     --ai-success: 122 39% 49%;
@@ -115,14 +129,36 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
 }
 
 @layer components {
-  /* Glassmorphism Card */
+  /* Glassmorphism Card - Enhanced */
   .glass-card {
-    @apply bg-white/60 backdrop-blur-xl border border-white/20 shadow-lg;
+    @apply bg-background/80 backdrop-blur-xl border border-border/50 shadow-2xl relative overflow-hidden;
+    background: linear-gradient(135deg, hsl(var(--background) / 0.9) 0%, hsl(var(--muted) / 0.3) 100%);
+  }
+  
+  .glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--gradient-shine);
+    transition: left 0.5s ease;
+  }
+  
+  .glass-card:hover::before {
+    left: 100%;
+  }
+  
+  .card-premium {
+    @apply glass-card;
+    box-shadow: 0 20px 60px -15px hsl(var(--ocean-blue) / 0.3);
+    border: 1px solid hsl(var(--ocean-blue) / 0.2);
   }
 
   .dark .glass-card {
@@ -159,12 +195,96 @@
 
   /* Smooth Animations */
   .smooth-transition {
-    @apply transition-all duration-300 ease-out;
+    @apply transition-all duration-300 ease-in-out;
   }
-
-  /* Hover Scale */
+  
   .hover-scale {
-    @apply smooth-transition hover:scale-[1.02] hover:shadow-xl;
+    @apply hover:scale-[1.02] transition-transform duration-300 ease-out;
+  }
+  
+  .hover-lift {
+    @apply hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 ease-out;
+  }
+  
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-ocean-blue to-sky-blue;
+  }
+  
+  .btn-gradient {
+    @apply relative overflow-hidden;
+    background: var(--gradient-primary);
+  }
+  
+  .btn-gradient::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: hsl(var(--background) / 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s ease, height 0.6s ease;
+  }
+  
+  .btn-gradient:hover::before {
+    width: 300px;
+    height: 300px;
+  }
+  
+  .shimmer {
+    animation: shimmer 2s infinite linear;
+    background: linear-gradient(90deg, transparent, hsl(var(--ocean-blue) / 0.1), transparent);
+    background-size: 200% 100%;
+  }
+  
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  
+  .fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .slide-in {
+    animation: slideIn 0.4s ease-out;
+  }
+  
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  .pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+  
+  @keyframes pulseGlow {
+    0%, 100% {
+      box-shadow: 0 0 20px hsl(var(--ocean-blue) / 0.3);
+    }
+    50% {
+      box-shadow: 0 0 40px hsl(var(--ocean-blue) / 0.6);
+    }
   }
 
   /* Glow Effect */
