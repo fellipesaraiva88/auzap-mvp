@@ -6,6 +6,9 @@
 # Stage 1: Build
 FROM node:20-alpine AS build
 
+# Install git (required for some npm dependencies)
+RUN apk add --no-cache git
+
 WORKDIR /app
 
 # Copy dependency files
@@ -23,6 +26,9 @@ RUN npm run build
 # ============================================
 # Stage 2: Production
 FROM node:20-alpine
+
+# Install git (required for some npm dependencies)
+RUN apk add --no-cache git
 
 # Set NODE_ENV to production
 ENV NODE_ENV=production
