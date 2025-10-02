@@ -18,9 +18,18 @@ import { startWorkers, stopWorkers } from './workers';
 
 const app = express();
 const httpServer = createServer(app);
+
+// Configurar origens permitidas (produção + desenvolvimento)
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://auzap-mvp-frontend.onrender.com'
+].filter(Boolean);
+
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: allowedOrigins,
     credentials: true,
   },
 });
@@ -28,7 +37,7 @@ const io = new SocketIOServer(httpServer, {
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: allowedOrigins,
   credentials: true,
 }));
 app.use(express.json());
