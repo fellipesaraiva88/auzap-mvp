@@ -2,54 +2,83 @@ import { ImpactHero } from "@/components/ImpactHero";
 import { ImpactCards } from "@/components/ImpactCards";
 import { AITimeline } from "@/components/AITimeline";
 import { ImpactCharts } from "@/components/ImpactCharts";
-import { AlertCircle } from "lucide-react";
-import { DemoShowcase } from "@/components/DemoShowcase";
+import { AlertCircle, Clock, TrendingUp, Zap } from "lucide-react";
 import { QuickActions } from "@/components/QuickActions";
-import { SystemOverview } from "@/components/SystemOverview";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background paw-pattern">
-      <div className="container mx-auto p-6 max-w-7xl">
-        {/* Header */}
-        <div className="mb-8 fade-in">
-          <div className="flex items-start justify-between mb-4">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto p-4 md:p-6 max-w-7xl space-y-6">
+        
+        {/* Header Section */}
+        <header className="fade-in">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-bold gradient-text mb-2">
+              <h1 className="text-3xl md:text-4xl font-bold gradient-text mb-2">
                 Oi Maria! 👋
               </h1>
-              <p className="text-muted-foreground text-lg">
-                A IA já atendeu <span className="text-primary font-semibold">23 clientes</span> hoje!
+              <p className="text-muted-foreground text-base md:text-lg">
+                A IA já atendeu <span className="text-primary font-bold">23 clientes</span> hoje e está trabalhando agora
               </p>
             </div>
-            <div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-4 py-2 bg-ai-success/10 border border-ai-success/20 rounded-xl">
+                <div className="w-2 h-2 rounded-full bg-ai-success animate-pulse"></div>
+                <span className="text-sm font-semibold text-ai-success">IA Online</span>
+              </div>
               <QuickActions />
             </div>
           </div>
+        </header>
+
+        {/* Quick Stats Bar */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 fade-in">
+          <div className="glass-card rounded-xl p-4 hover-scale">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="w-4 h-4 text-primary" />
+              <span className="text-xs text-muted-foreground uppercase tracking-wide">Trabalhando</span>
+            </div>
+            <div className="text-2xl font-bold gradient-text">3 agora</div>
+          </div>
+          <div className="glass-card rounded-xl p-4 hover-scale">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-4 h-4 text-ai-success" />
+              <span className="text-xs text-muted-foreground uppercase tracking-wide">Economizado</span>
+            </div>
+            <div className="text-2xl font-bold text-ai-success">4h 23m</div>
+          </div>
+          <div className="glass-card rounded-xl p-4 hover-scale">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="w-4 h-4 text-accent" />
+              <span className="text-xs text-muted-foreground uppercase tracking-wide">Taxa IA</span>
+            </div>
+            <div className="text-2xl font-bold text-accent">82%</div>
+          </div>
+          <div className="glass-card rounded-xl p-4 hover-scale">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="w-4 h-4 text-ai-escalated" />
+              <span className="text-xs text-muted-foreground uppercase tracking-wide">Requer você</span>
+            </div>
+            <div className="text-2xl font-bold text-ai-escalated">3 casos</div>
+          </div>
         </div>
 
-        {/* System Overview - Visão Geral do Sistema */}
-        <SystemOverview />
-
-        {/* Impact Hero Section - Tempo Recuperado */}
+        {/* Main Impact Hero */}
         <ImpactHero />
 
-        {/* Impact Cards - Métricas de Impacto */}
+        {/* Impact Metrics Cards */}
         <ImpactCards />
 
-        {/* AI Timeline - O que aconteceu enquanto você vivia sua vida */}
+        {/* AI Activity Machine */}
         <AITimeline />
 
-        {/* Impact Charts - Gráficos de Significado */}
+        {/* Performance Charts */}
         <ImpactCharts />
 
-        {/* Demo Showcase - Sistema de Notificações */}
-        <DemoShowcase />
-
-        {/* Only You Can Resolve Section - Redesigned */}
-        <div className="glass-card rounded-2xl p-6">
+        {/* Action Required Section */}
+        <div className="glass-card rounded-2xl p-6 fade-in">
           <div className="flex items-start gap-3 mb-6">
-            <div className="bg-ai-escalated/10 rounded-xl p-2">
+            <div className="bg-ai-escalated/10 rounded-xl p-2.5">
               <AlertCircle className="w-6 h-6 text-ai-escalated" />
             </div>
             <div>
@@ -62,8 +91,8 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="space-y-4">
-            {/* Escalated - Urgent Human Touch */}
+          <div className="space-y-3">
+            {/* Escalated - Urgent */}
             <div className="p-5 bg-gradient-to-r from-ai-escalated/10 to-ai-escalated/5 rounded-xl border-l-4 border-ai-escalated hover:shadow-lg smooth-transition cursor-pointer group">
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-3">
@@ -84,7 +113,7 @@ const Index = () => {
               </button>
             </div>
 
-            {/* Pending - Important Reminders */}
+            {/* Pending - Important */}
             <div className="p-5 bg-gradient-to-r from-ai-pending/10 to-ai-pending/5 rounded-xl border-l-4 border-ai-pending hover:shadow-lg smooth-transition cursor-pointer group">
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-3">
@@ -105,7 +134,7 @@ const Index = () => {
               </button>
             </div>
 
-            {/* Success - Ready Actions */}
+            {/* Success - Ready */}
             <div className="p-5 bg-gradient-to-r from-ai-success/10 to-ai-success/5 rounded-xl border-l-4 border-ai-success hover:shadow-lg smooth-transition cursor-pointer group">
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-3">
@@ -126,7 +155,7 @@ const Index = () => {
               </button>
             </div>
 
-            {/* Info - Awaiting Confirmation */}
+            {/* Info - Awaiting */}
             <div className="p-5 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl border-l-4 border-primary hover:shadow-lg smooth-transition cursor-pointer group">
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-3">
@@ -148,6 +177,7 @@ const Index = () => {
             </div>
           </div>
 
+          {/* Bottom Message */}
           <div className="mt-6 p-5 bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 rounded-xl border border-primary/10 text-center">
             <p className="text-sm font-medium text-foreground flex items-center justify-center gap-2">
               <span className="text-2xl">💡</span>
@@ -158,6 +188,7 @@ const Index = () => {
             </p>
           </div>
         </div>
+
       </div>
     </div>
   );
