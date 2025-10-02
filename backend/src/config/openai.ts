@@ -12,7 +12,7 @@ export const openai = new OpenAI({
 
 // Default models
 export const AI_MODELS = {
-  CLIENT: 'gpt-4-turbo-preview',
+  CLIENT: 'gpt-4o-mini', // Cliente usa GPT-4o-mini para otimização de custo
   AURORA: 'gpt-4o-mini', // Aurora usa GPT-4o-mini para otimização de custo
   FALLBACK: 'gpt-3.5-turbo'
 } as const;
