@@ -1,0 +1,288 @@
+{
+  "timestamp": "2025-10-02T01:07:00.518206",
+  "tables": {
+    "organizations": {
+      "exists": true,
+      "columns": [
+        "id",
+        "name",
+        "slug",
+        "business_type",
+        "subscription_tier",
+        "subscription_status",
+        "max_users",
+        "max_whatsapp_instances",
+        "max_pets",
+        "features",
+        "contact_email",
+        "contact_phone",
+        "address",
+        "business_hours",
+        "created_at",
+        "updated_at"
+      ],
+      "sample_data": true
+    },
+    "users": {
+      "exists": true,
+      "columns": [
+        "id",
+        "organization_id",
+        "auth_user_id",
+        "email",
+        "full_name",
+        "role",
+        "phone",
+        "avatar_url",
+        "permissions",
+        "status",
+        "last_login_at",
+        "created_at",
+        "updated_at"
+      ],
+      "sample_data": true
+    },
+    "organization_settings": {
+      "exists": true,
+      "columns": [],
+      "sample_data": false
+    },
+    "whatsapp_instances": {
+      "exists": true,
+      "columns": [
+        "id",
+        "organization_id",
+        "instance_name",
+        "phone_number",
+        "status",
+        "qr_code",
+        "qr_code_expires_at",
+        "pairing_code",
+        "pairing_code_expires_at",
+        "pairing_method",
+        "session_data",
+        "baileys_version",
+        "wa_version",
+        "browser_name",
+        "last_connected_at",
+        "last_disconnected_at",
+        "reconnection_attempts",
+        "messages_sent_count",
+        "messages_received_count",
+        "created_at",
+        "updated_at"
+      ],
+      "sample_data": true
+    },
+    "services": {
+      "exists": true,
+      "columns": [],
+      "sample_data": false
+    },
+    "contacts": {
+      "exists": true,
+      "columns": [],
+      "sample_data": false
+    },
+    "pets": {
+      "exists": true,
+      "columns": [],
+      "sample_data": false
+    },
+    "bookings": {
+      "exists": true,
+      "columns": [],
+      "sample_data": false
+    },
+    "conversations": {
+      "exists": true,
+      "columns": [],
+      "sample_data": false
+    },
+    "messages": {
+      "exists": true,
+      "columns": [],
+      "sample_data": false
+    },
+    "ai_interactions": {
+      "exists": true,
+      "columns": [],
+      "sample_data": false
+    },
+    "authorized_owner_numbers": {
+      "exists": true,
+      "columns": [],
+      "sample_data": false
+    },
+    "aurora_proactive_messages": {
+      "exists": true,
+      "columns": [],
+      "sample_data": false
+    },
+    "aurora_automations": {
+      "exists": true,
+      "columns": [],
+      "sample_data": false
+    }
+  },
+  "rls_status": {
+    "organizations": "needs_manual_check",
+    "users": "needs_manual_check",
+    "organization_settings": "needs_manual_check",
+    "whatsapp_instances": "needs_manual_check",
+    "services": "needs_manual_check",
+    "contacts": "needs_manual_check",
+    "pets": "needs_manual_check",
+    "bookings": "needs_manual_check",
+    "conversations": "needs_manual_check",
+    "messages": "needs_manual_check",
+    "ai_interactions": "needs_manual_check",
+    "authorized_owner_numbers": "needs_manual_check",
+    "aurora_proactive_messages": "needs_manual_check",
+    "aurora_automations": "needs_manual_check"
+  },
+  "indexes": {
+    "users": {
+      "recommended": [
+        "organization_id",
+        "email"
+      ],
+      "status": "needs_verification"
+    },
+    "contacts": {
+      "recommended": [
+        "organization_id",
+        "phone_number"
+      ],
+      "status": "needs_verification"
+    },
+    "messages": {
+      "recommended": [
+        "conversation_id",
+        "created_at"
+      ],
+      "status": "needs_verification"
+    },
+    "bookings": {
+      "recommended": [
+        "organization_id",
+        "contact_id",
+        "scheduled_date"
+      ],
+      "status": "needs_verification"
+    },
+    "pets": {
+      "recommended": [
+        "owner_contact_id"
+      ],
+      "status": "needs_verification"
+    },
+    "conversations": {
+      "recommended": [
+        "contact_id",
+        "organization_id",
+        "status"
+      ],
+      "status": "needs_verification"
+    }
+  },
+  "foreign_keys": {
+    "users": {
+      "expected": [
+        "organization_id -> organizations(id)"
+      ],
+      "status": "needs_verification"
+    },
+    "whatsapp_instances": {
+      "expected": [
+        "organization_id -> organizations(id)"
+      ],
+      "status": "needs_verification"
+    },
+    "contacts": {
+      "expected": [
+        "organization_id -> organizations(id)"
+      ],
+      "status": "needs_verification"
+    },
+    "pets": {
+      "expected": [
+        "owner_contact_id -> contacts(id)"
+      ],
+      "status": "needs_verification"
+    },
+    "bookings": {
+      "expected": [
+        "organization_id -> organizations(id)",
+        "contact_id -> contacts(id)",
+        "pet_id -> pets(id)",
+        "service_id -> services(id)"
+      ],
+      "status": "needs_verification"
+    },
+    "conversations": {
+      "expected": [
+        "contact_id -> contacts(id)",
+        "organization_id -> organizations(id)"
+      ],
+      "status": "needs_verification"
+    },
+    "messages": {
+      "expected": [
+        "conversation_id -> conversations(id)"
+      ],
+      "status": "needs_verification"
+    },
+    "ai_interactions": {
+      "expected": [
+        "message_id -> messages(id)",
+        "organization_id -> organizations(id)"
+      ],
+      "status": "needs_verification"
+    }
+  },
+  "issues": [],
+  "suggestions": [
+    {
+      "priority": "high",
+      "type": "security",
+      "message": "Manually verify RLS policies are enabled for all tables containing user data"
+    },
+    {
+      "priority": "medium",
+      "type": "performance",
+      "message": "Verify indexes on users for columns: organization_id, email"
+    },
+    {
+      "priority": "medium",
+      "type": "performance",
+      "message": "Verify indexes on contacts for columns: organization_id, phone_number"
+    },
+    {
+      "priority": "medium",
+      "type": "performance",
+      "message": "Verify indexes on messages for columns: conversation_id, created_at"
+    },
+    {
+      "priority": "medium",
+      "type": "performance",
+      "message": "Verify indexes on bookings for columns: organization_id, contact_id, scheduled_date"
+    },
+    {
+      "priority": "medium",
+      "type": "performance",
+      "message": "Verify indexes on pets for columns: owner_contact_id"
+    },
+    {
+      "priority": "medium",
+      "type": "performance",
+      "message": "Verify indexes on conversations for columns: contact_id, organization_id, status"
+    }
+  ],
+  "summary": {
+    "total_required": 14,
+    "found": 14,
+    "missing": 0,
+    "missing_tables": []
+  }
+}

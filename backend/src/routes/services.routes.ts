@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { supabase } from '../config/supabase';
+import { ServicesService } from '../services/services.service';
 import { logger } from '../config/logger';
 
 const router = Router();
@@ -23,59 +23,18 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const { data: service, error } = await supabase
-      .from('services')
-      .insert({
-        organization_id,
-        name,
-        service_type,
-        description,
-        duration_minutes: duration_minutes || 60,
-        price: price || 0,
-        is_active: true,
-      })
-      .select()
-      .single();
+    const service = await ServicesService.createService({
+      organization_id,
+      name,
+      service_type,
+      description,
+      duration_minutes,
+      price,
+    });
 
-    if (error) throw error;
-
-    logger.info({ serviceId: service.id }, 'Service created');
     res.json(service);
   } catch (error: any) {
     logger.error({ error }, 'Error in POST /api/services');
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/**
- * GET /api/services
- * Listar serviços
- */
-router.get('/', async (req, res) => {
-  try {
-    const { organization_id, is_active } = req.query;
-
-    if (!organization_id) {
-      return res.status(400).json({ error: 'organization_id required' });
-    }
-
-    let query = supabase
-      .from('services')
-      .select('*')
-      .eq('organization_id', organization_id)
-      .order('name', { ascending: true });
-
-    if (is_active !== undefined) {
-      query = query.eq('is_active', is_active === 'true');
-    }
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    res.json(data);
-  } catch (error: any) {
-    logger.error({ error }, 'Error in GET /api/services');
     res.status(500).json({ error: error.message });
   }
 });
@@ -93,22 +52,42 @@ router.get('/:id', async (req, res) => {
       return res.status(400).json({ error: 'organization_id required' });
     }
 
-    const { data, error } = await supabase
-      .from('services')
-      .select('*')
-      .eq('organization_id', organization_id)
-      .eq('id', id)
-      .single();
+    const service = await ServicesService.getServiceById(organization_id as string, id);
 
-    if (error) throw error;
-
-    if (!data) {
+    if (!service) {
       return res.status(404).json({ error: 'Service not found' });
     }
 
-    res.json(data);
+    res.json(service);
   } catch (error: any) {
     logger.error({ error }, 'Error in GET /api/services/:id');
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/services
+ * Listar serviços
+ */
+router.get('/', async (req, res) => {
+  try {
+    const { organization_id, service_type, is_active, search, limit, offset } = req.query;
+
+    if (!organization_id) {
+      return res.status(400).json({ error: 'organization_id required' });
+    }
+
+    const result = await ServicesService.listServices(organization_id as string, {
+      service_type: service_type as string,
+      is_active: is_active !== undefined ? is_active === 'true' : undefined,
+      search: search as string,
+      limit: limit ? parseInt(limit as string) : undefined,
+      offset: offset ? parseInt(offset as string) : undefined,
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    logger.error({ error }, 'Error in GET /api/services');
     res.status(500).json({ error: error.message });
   }
 });
@@ -126,18 +105,8 @@ router.put('/:id', async (req, res) => {
       return res.status(400).json({ error: 'organization_id required' });
     }
 
-    const { data, error } = await supabase
-      .from('services')
-      .update(updates)
-      .eq('organization_id', organization_id)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    logger.info({ serviceId: id }, 'Service updated');
-    res.json(data);
+    const service = await ServicesService.updateService(organization_id, id, updates);
+    res.json(service);
   } catch (error: any) {
     logger.error({ error }, 'Error in PUT /api/services/:id');
     res.status(500).json({ error: error.message });
@@ -157,18 +126,61 @@ router.delete('/:id', async (req, res) => {
       return res.status(400).json({ error: 'organization_id required' });
     }
 
-    const { error } = await supabase
-      .from('services')
-      .update({ is_active: false })
-      .eq('organization_id', organization_id)
-      .eq('id', id);
-
-    if (error) throw error;
-
-    logger.info({ serviceId: id }, 'Service deleted');
-    res.json({ success: true });
+    const result = await ServicesService.deleteService(organization_id as string, id);
+    res.json(result);
   } catch (error: any) {
     logger.error({ error }, 'Error in DELETE /api/services/:id');
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/services/analytics/popular
+ * Buscar serviços mais populares
+ */
+router.get('/analytics/popular', async (req, res) => {
+  try {
+    const { organization_id, date_from, date_to, limit } = req.query;
+
+    if (!organization_id) {
+      return res.status(400).json({ error: 'organization_id required' });
+    }
+
+    const services = await ServicesService.getPopularServices(
+      organization_id as string,
+      date_from as string,
+      date_to as string,
+      limit ? parseInt(limit as string) : 10
+    );
+
+    res.json(services);
+  } catch (error: any) {
+    logger.error({ error }, 'Error in GET /api/services/analytics/popular');
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/services/analytics/revenue
+ * Calcular receita por serviço
+ */
+router.get('/analytics/revenue', async (req, res) => {
+  try {
+    const { organization_id, date_from, date_to } = req.query;
+
+    if (!organization_id || !date_from || !date_to) {
+      return res.status(400).json({ error: 'organization_id, date_from and date_to required' });
+    }
+
+    const revenue = await ServicesService.getServiceRevenue(
+      organization_id as string,
+      date_from as string,
+      date_to as string
+    );
+
+    res.json(revenue);
+  } catch (error: any) {
+    logger.error({ error }, 'Error in GET /api/services/analytics/revenue');
     res.status(500).json({ error: error.message });
   }
 });

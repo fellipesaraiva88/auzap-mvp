@@ -12,6 +12,7 @@ import whatsappRoutes from './routes/whatsapp.routes';
 import webhookRoutes from './routes/webhook.routes';
 import authRoutes from './routes/auth.routes';
 import contactsRoutes from './routes/contacts.routes';
+import petsRoutes from './routes/pets.routes';
 import bookingsRoutes from './routes/bookings.routes';
 import servicesRoutes from './routes/services.routes';
 import { startWorkers, stopWorkers } from './workers';
@@ -56,6 +57,7 @@ app.get('/health', (_req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/contacts', contactsRoutes);
+app.use('/api/pets', petsRoutes);
 app.use('/api/bookings', bookingsRoutes);
 app.use('/api/services', servicesRoutes);
 app.use('/api/whatsapp', whatsappRoutes);

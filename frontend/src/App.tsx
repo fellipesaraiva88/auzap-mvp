@@ -7,6 +7,8 @@ import Dashboard from './pages/Dashboard';
 import Conversations from './pages/Conversations';
 import Bookings from './pages/Bookings';
 import Clients from './pages/Clients';
+import Contacts from './pages/Contacts';
+import Pets from './pages/Pets';
 import WhatsApp from './pages/WhatsApp';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
@@ -90,6 +92,8 @@ function App() {
           <Route path="/conversations" element={<Conversations />} />
           <Route path="/bookings" element={<Bookings />} />
           <Route path="/clients" element={<Clients />} />
+          <Route path="/contacts" element={<Contacts />} />
+          <Route path="/pets" element={<Pets />} />
           <Route path="/whatsapp" element={<WhatsApp />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />

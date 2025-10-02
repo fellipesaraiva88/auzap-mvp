@@ -1,0 +1,29 @@
+# Dependencies
+node_modules
+package-lock.json
+
+# Build outputs
+dist
+build
+.next
+out
+
+# Logs
+*.log
+logs
+
+# Environment
+.env
+.env.*
+
+# Cache
+.cache
+.turbo
+
+# Generated
+*.generated.*
+*.min.js
+*.min.css
+
+# Markdown docs (preserve formatting)
+*.md
