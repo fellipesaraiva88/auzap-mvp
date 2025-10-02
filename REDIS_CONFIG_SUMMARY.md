@@ -35,7 +35,7 @@ Adicionar variável de ambiente `REDIS_URL` no serviço Render para habilitar:
 ## 🔑 CREDENCIAIS REDIS
 
 ```bash
-REDIS_URL=redis://default:AUKFAAIncDJmNjQ5ZmNhODc1ZjQ0YzI4Nzg5YjQ1OWJiNTBjN2RhcDIxNzAyOQ@prime-mullet-17029.upstash.io:6379
+REDIS_URL=redis://default:[REDACTED_UPSTASH_TOKEN]@prime-mullet-17029.upstash.io:6379
 ```
 
 **Origem**: Upstash Free Tier
@@ -109,7 +109,7 @@ REDIS_URL
 
 **Value:**
 ```
-redis://default:AUKFAAIncDJmNjQ5ZmNhODc1ZjQ0YzI4Nzg5YjQ1OWJiNTBjN2RhcDIxNzAyOQ@prime-mullet-17029.upstash.io:6379
+redis://default:[REDACTED_UPSTASH_TOKEN]@prime-mullet-17029.upstash.io:6379
 ```
 
 ### Passo 4: Aguardar Redeploy

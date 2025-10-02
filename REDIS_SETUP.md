@@ -21,14 +21,14 @@ Workers do backend estão desabilitados porque a variável de ambiente `REDIS_UR
 ## 📋 CREDENCIAIS REDIS (Upstash)
 
 ```bash
-REDIS_URL=redis://default:AUKFAAIncDJmNjQ5ZmNhODc1ZjQ0YzI4Nzg5YjQ1OWJiNTBjN2RhcDIxNzAyOQ@prime-mullet-17029.upstash.io:6379
+REDIS_URL=redis://default:[REDACTED_UPSTASH_TOKEN]@prime-mullet-17029.upstash.io:6379
 ```
 
 **Detalhes:**
 - Host: `prime-mullet-17029.upstash.io`
 - Port: `6379`
 - User: `default`
-- Password: `AUKFAAIncDJmNjQ5ZmNhODc1ZjQ0YzI4Nzg5YjQ1OWJiNTBjN2RhcDIxNzAyOQ`
+- Password: `[REDACTED_UPSTASH_TOKEN]`
 
 ---
 
@@ -58,7 +58,7 @@ REDIS_URL
 
 **Value:**
 ```
-redis://default:AUKFAAIncDJmNjQ5ZmNhODc1ZjQ0YzI4Nzg5YjQ1OWJiNTBjN2RhcDIxNzAyOQ@prime-mullet-17029.upstash.io:6379
+redis://default:[REDACTED_UPSTASH_TOKEN]@prime-mullet-17029.upstash.io:6379
 ```
 
 3. Clicar em **"Add"** ou **"Save"**

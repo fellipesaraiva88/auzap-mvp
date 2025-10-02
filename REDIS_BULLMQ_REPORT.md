@@ -99,7 +99,7 @@ const connection = process.env.REDIS_URL
 ```bash
 # Upstash Redis (Production)
 UPSTASH_REDIS_REST_URL=https://prime-mullet-17029.upstash.io
-UPSTASH_REDIS_REST_TOKEN=AUKFAAIncD...
+UPSTASH_REDIS_REST_TOKEN=[REDACTED_UPSTASH_TOKEN]...
 REDIS_URL=redis://default:TOKEN@prime-mullet-17029.upstash.io:6379
 ```
 
@@ -192,7 +192,7 @@ Baileys.sendMessage()
 2. Selecionar serviço backend
 3. Environment → Add Environment Variable
 4. **Key:** `REDIS_URL`
-5. **Value:** `redis://default:AUKFAAIncDJmNjQ5ZmNhODc3NWY0NGMyODc4OWI0NTliYjUwYzdkYXAyMTcwMjk@prime-mullet-17029.upstash.io:6379`
+5. **Value:** `redis://default:[REDACTED_UPSTASH_TOKEN]@prime-mullet-17029.upstash.io:6379`
 6. Save → Rebuild automaticamente
 
 ### 5.3 Validação Pós-Deploy

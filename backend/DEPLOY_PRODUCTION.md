@@ -16,7 +16,7 @@ Atualmente os workers estão DESABILITADOS em produção porque `REDIS_URL` não
 4. Clicar em **Add Environment Variable**
 5. Adicionar:
    - **Key:** `REDIS_URL`
-   - **Value:** `redis://default:AUKFAAIncDJmNjQ5ZmNhODc3NWY0NGMyODc4OWI0NTliYjUwYzdkYXAyMTcwMjk@prime-mullet-17029.upstash.io:6379`
+   - **Value:** `redis://default:[REDACTED_UPSTASH_TOKEN]@prime-mullet-17029.upstash.io:6379`
 6. Clicar em **Save Changes**
 
 **Nota:** O Render irá rebuildar automaticamente após salvar.

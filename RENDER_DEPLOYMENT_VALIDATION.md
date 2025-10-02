@@ -82,7 +82,7 @@ Cache-Control: public, max-age=0, s-maxage=300
 | `SUPABASE_URL` | ✅ | URL do projeto Supabase |
 | `SUPABASE_ANON_KEY` | ✅ | Chave pública Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Chave de serviço Supabase |
-| `OPENAI_API_KEY` | ✅ | Key REAL GPT-4o (sk-proj-6iPiZe...) |
+| `OPENAI_API_KEY` | ✅ | Key REAL GPT-4o ([REDACTED_OPENAI_KEY]) |
 | `UPSTASH_REDIS_REST_URL` | ✅ | https://prime-mullet-17029.upstash.io |
 | `UPSTASH_REDIS_REST_TOKEN` | ✅ | Token REST Upstash |
 | `NODE_ENV` | ✅ | production |
@@ -392,7 +392,7 @@ curl https://auzap-api.onrender.com/api/whatsapp/instances \
 5. Resposta enviada via WhatsApp
 6. Tudo salvo no Supabase
 
-**Key Configurada**: `sk-proj-6iPiZeKWzsh7...` (REAL API key)
+**Key Configurada**: `[REDACTED_OPENAI_KEY]` (REAL API key)
 
 ---
 
@@ -553,7 +553,7 @@ curl -X POST https://auzap-api.onrender.com/api/whatsapp/connect \
 
 ```bash
 # 1. Verificar API Key
-# Render Environment → OPENAI_API_KEY = sk-proj-6iPiZe...
+# Render Environment → OPENAI_API_KEY = [REDACTED_OPENAI_KEY]
 
 # 2. Verificar logs do backend
 # Deve mostrar chamadas para OpenAI API
@@ -598,7 +598,7 @@ curl -X POST https://auzap-api.onrender.com/api/whatsapp/connect \
 | **Backend API** | ✅ LIVE | https://auzap-api.onrender.com |
 | **Frontend** | ✅ LIVE | https://auzap-mvp-frontend.onrender.com |
 | **Database** | ✅ OK | Supabase (cdndnwglcieylfgzbwts) |
-| **OpenAI** | ✅ OK | GPT-4o (sk-proj-6iPiZe...) |
+| **OpenAI** | ✅ OK | GPT-4o ([REDACTED_OPENAI_KEY]) |
 | **Redis** | ⚠️ REST | Upstash (workers desabilitados) |
 | **Auto Deploy** | ✅ ON | GitHub → Render webhook |
 | **Health Check** | ✅ OK | Responde em < 200ms |

@@ -23,7 +23,7 @@ const upstashRedis = new UpstashRedis({
 **Credenciais (.env):**
 ```bash
 UPSTASH_REDIS_REST_URL=https://prime-mullet-17029.upstash.io
-UPSTASH_REDIS_REST_TOKEN=AUKFAAIncDJmNjQ5ZmNhODc3NWY0NGMyODc4OWI0NTliYjUwYzdkYXAyMTcwMjk
+UPSTASH_REDIS_REST_TOKEN=[REDACTED_UPSTASH_TOKEN]
 ```
 
 **Status:** ✅ TESTADO E FUNCIONANDO
@@ -274,7 +274,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.REDIS_URL) {
 ```bash
 # Já existe no .env:
 UPSTASH_REDIS_REST_URL=https://prime-mullet-17029.upstash.io
-UPSTASH_REDIS_REST_TOKEN=AUKFAAIncDJmNjQ5ZmNhODc3NWY0NGMyODc4OWI0NTliYjUwYzdkYXAyMTcwMjk
+UPSTASH_REDIS_REST_TOKEN=[REDACTED_UPSTASH_TOKEN]
 ```
 
 **Pendente:**

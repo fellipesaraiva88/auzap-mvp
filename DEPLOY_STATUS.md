@@ -60,16 +60,16 @@
 ```bash
 # Supabase
 SUPABASE_URL=https://cdndnwglcieylfgzbwts.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_ANON_KEY=[REDACTED_SUPABASE_KEY]
+SUPABASE_SERVICE_ROLE_KEY=[REDACTED_SUPABASE_KEY]
 
 # OpenAI
-OPENAI_API_KEY=sk-proj-YOUR_OPENAI_KEY_HERE
+OPENAI_API_KEY=[REDACTED_OPENAI_KEY]
 
 # Redis (Upstash Production)
 UPSTASH_REDIS_REST_URL=https://prime-mullet-17029.upstash.io
-UPSTASH_REDIS_REST_TOKEN=AUKFAAIncDJmNjQ5ZmNhODc3NWY0NGMyODc4...
-REDIS_URL=redis://default:AUKFAAIncDJ...@prime-mullet-17029.upstash.io:6379
+UPSTASH_REDIS_REST_TOKEN=[REDACTED_UPSTASH_TOKEN]...
+REDIS_URL=redis://default:[REDACTED_UPSTASH_TOKEN]...@prime-mullet-17029.upstash.io:6379
 
 # Server
 NODE_ENV=production
@@ -82,7 +82,7 @@ LOG_LEVEL=info
 ### Frontend (3 variáveis)
 ```bash
 VITE_SUPABASE_URL=https://cdndnwglcieylfgzbwts.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+VITE_SUPABASE_ANON_KEY=[REDACTED_SUPABASE_KEY]
 VITE_API_URL=https://auzap-backend-api-production.up.railway.app
 ```
 

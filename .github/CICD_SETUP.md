@@ -35,10 +35,10 @@ SUPABASE_URL
 Valor: https://[seu-projeto].supabase.co
 
 SUPABASE_ANON_KEY
-Valor: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Valor: [REDACTED_SUPABASE_KEY]
 
 SUPABASE_SERVICE_ROLE_KEY
-Valor: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Valor: [REDACTED_SUPABASE_KEY]
 ```
 
 > 📍 **Onde encontrar**: Supabase Dashboard > Project Settings > API
@@ -59,7 +59,7 @@ Valor: redis://default:[senha]@[host]:6379
 
 ```
 OPENAI_API_KEY
-Valor: sk-proj-...
+Valor: [REDACTED_OPENAI_KEY]...
 
 WHATSAPP_WEBHOOK_SECRET
 Valor: [seu-webhook-secret]

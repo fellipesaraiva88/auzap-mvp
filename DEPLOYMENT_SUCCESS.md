@@ -30,7 +30,7 @@
 ## 🔑 APIs Configuradas
 
 ### OpenAI GPT-4o
-✅ Key REAL: `sk-proj-6iPiZeKWzsh7...`
+✅ Key REAL: `[REDACTED_OPENAI_KEY]`
 
 ### Supabase
 ✅ URL: `https://cdndnwglcieylfgzbwts.supabase.co`
