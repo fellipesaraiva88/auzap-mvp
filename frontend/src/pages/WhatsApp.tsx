@@ -188,7 +188,17 @@ export default function WhatsApp() {
       await loadInstances();
     } catch (err: any) {
       console.error('Error connecting:', err);
-      setError(err.message);
+      
+      // Diferenciar tipos de erro para melhor UX
+      if (err.message === 'Failed to fetch') {
+        setError('Não foi possível conectar ao servidor. Verifique sua conexão com a internet.');
+      } else if (err.message.includes('Instance not found')) {
+        setError('A instância não foi criada corretamente. Por favor, tente novamente.');
+      } else if (err.message.includes('CORS')) {
+        setError('Erro de configuração do servidor. Entre em contato com o suporte.');
+      } else {
+        setError(err.message || 'Erro desconhecido ao conectar');
+      }
     } finally {
       setConnecting(false);
     }
