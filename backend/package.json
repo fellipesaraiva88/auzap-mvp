@@ -42,7 +42,7 @@
     "bullmq": "^5.28.1",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
-    "cron": "^3.1.7",
+    "cron": "^4.3.3",
     "dotenv": "^16.4.7",
     "express": "^4.21.1",
     "express-rate-limit": "^8.1.0",
