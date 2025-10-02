@@ -8,6 +8,7 @@ import { clientAIService } from '../services/ai/client-ai.service.js';
 import { auroraService } from '../services/aurora/aurora.service.js';
 import { contactsService } from '../services/contacts/contacts.service.js';
 import { baileysService } from '../services/baileys/baileys.service.js';
+import { contextBuilderService } from '../services/context/context-builder.service.js';
 
 /**
  * Worker para processar mensagens WhatsApp
@@ -145,15 +146,20 @@ export class MessageProcessorWorker {
       contact.id
     );
 
-    // Buscar histórico de conversa
-    const history = await this.getConversationHistory(conversation.id);
+    // Construir contexto enriquecido (últimas 5 msgs + pets + bookings)
+    const clientContext = await contextBuilderService.buildClientContext(
+      organizationId,
+      contact.id,
+      conversation.id
+    );
 
-    // Processar com IA Cliente
+    // Processar com IA Cliente (GPT-4o-mini)
     const response = await clientAIService.processMessage(
       {
         organizationId,
         contactId: contact.id,
-        conversationHistory: history
+        conversationId: conversation.id,
+        context: clientContext
       },
       content
     );
@@ -218,24 +224,6 @@ export class MessageProcessorWorker {
     return newConv;
   }
 
-  /**
-   * Busca histórico da conversa
-   */
-  private async getConversationHistory(conversationId: string): Promise<any[]> {
-    const { data } = await supabaseAdmin
-      .from('messages')
-      .select('direction, content')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
-      .limit(20);
-
-    if (!data) return [];
-
-    return data.map(msg => ({
-      role: msg.direction === 'inbound' ? 'user' : 'assistant',
-      content: msg.content
-    }));
-  }
 
   /**
    * Salva mensagens no banco

@@ -2,16 +2,15 @@ import { openai, AI_MODELS, calculateCost } from '../../config/openai.js';
 import { logger } from '../../config/logger.js';
 import { supabaseAdmin } from '../../config/supabase.js';
 import type { TablesInsert } from '../../types/database.types.js';
-import { contactsService } from '../contacts/contacts.service.js';
 import { petsService } from '../pets/pets.service.js';
 import { bookingsService } from '../bookings/bookings.service.js';
+import { contextBuilderService, type ClientContext } from '../context/context-builder.service.js';
 
 interface AIContext {
   organizationId: string;
   contactId: string;
-  conversationHistory: { role: 'user' | 'assistant'; content: string }[];
-  contactData?: any;
-  petsData?: any[];
+  conversationId: string;
+  context?: ClientContext;
 }
 
 export class ClientAIService {
@@ -48,21 +47,27 @@ Informações que você pode coletar:
     try {
       logger.info({ contactId: context.contactId }, 'Processing client message with AI');
 
-      // Buscar dados do cliente e pets
-      const contact = await contactsService.findById(context.contactId);
-      const pets = await petsService.listByContact(context.contactId);
+      // Buscar contexto enriquecido se não foi fornecido
+      let clientContext = context.context;
+      if (!clientContext) {
+        clientContext = await contextBuilderService.buildClientContext(
+          context.organizationId,
+          context.contactId,
+          context.conversationId
+        );
+      }
 
-      // Construir contexto
-      const contextInfo = this.buildContextInfo(contact, pets);
+      // Construir contexto formatado
+      const contextInfo = contextBuilderService.formatContextForPrompt(clientContext);
 
-      // Criar mensagens para o GPT
+      // Criar mensagens para o GPT (usa últimas 5 msgs do contexto)
       const messages: any[] = [
         { role: 'system', content: this.systemPrompt + '\n\n' + contextInfo },
-        ...context.conversationHistory.slice(-10), // Últimas 10 mensagens
+        ...clientContext.recentMessages,
         { role: 'user', content: message }
       ];
 
-      // Chamar OpenAI com Function Calling
+      // Chamar OpenAI com Function Calling (GPT-4o-mini)
       const response = await openai.chat.completions.create({
         model: AI_MODELS.CLIENT,
         messages,
@@ -320,25 +325,6 @@ Informações que você pode coletar:
     };
   }
 
-  private buildContextInfo(contact: any, pets: any[]): string {
-    let info = '\nContexto do Cliente:\n';
-    
-    if (contact) {
-      info += `- Nome: ${contact.full_name || 'Não informado'}\n`;
-      info += `- Telefone: ${contact.phone_number}\n`;
-    }
-
-    if (pets && pets.length > 0) {
-      info += '\nPets cadastrados:\n';
-      pets.forEach(pet => {
-        info += `- ${pet.name} (${pet.species}${pet.breed ? ', ' + pet.breed : ''})\n`;
-      });
-    } else {
-      info += '\nNenhum pet cadastrado ainda.\n';
-    }
-
-    return info;
-  }
 
   private async logInteraction(
     context: AIContext,
