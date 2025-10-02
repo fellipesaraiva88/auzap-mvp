@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { BookingsService } from '../services/bookings/bookings.service.js';
 import { logger } from '../config/logger.js';
 
@@ -45,7 +45,7 @@ router.get('/:id', async (req, res): Promise<void> => {
 });
 
 // Check availability
-router.post('/check-availability', async (req, res) => {
+router.post('/check-availability', async (req: Request, res: Response): Promise<void> => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
     const { start, end, excludeBookingId } = req.body;
@@ -65,7 +65,7 @@ router.post('/check-availability', async (req, res) => {
 });
 
 // Create booking
-router.post('/', async (req, res) => {
+router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
     const bookingData = { ...req.body, organization_id: organizationId };
@@ -79,7 +79,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update booking
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const booking = await bookingsService.update(id, req.body);
@@ -92,7 +92,7 @@ router.patch('/:id', async (req, res) => {
 });
 
 // Cancel booking
-router.post('/:id/cancel', async (req, res) => {
+router.post('/:id/cancel', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { reason } = req.body;

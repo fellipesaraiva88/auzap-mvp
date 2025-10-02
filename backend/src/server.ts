@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import { Server } from 'socket.io';
 import { createServer } from 'http';
@@ -24,7 +24,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // CORS
-app.use((req, res, next): void => {
+app.use((req: Request, res: Response, next: NextFunction): void => {
   res.header('Access-Control-Allow-Origin', process.env.FRONTEND_URL || '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -44,7 +44,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Health checks
-app.get('/health', (_req, res) => {
+app.get('/health', (_req: Request, res: Response): void => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -53,7 +53,7 @@ app.get('/health', (_req, res) => {
   });
 });
 
-app.get('/health/redis', async (_req, res) => {
+app.get('/health/redis', async (_req: Request, res: Response): Promise<void> => {
   try {
     const { redisCache } = await import('./config/redis.js');
     await redisCache.ping();
@@ -63,7 +63,7 @@ app.get('/health/redis', async (_req, res) => {
   }
 });
 
-app.get('/health/supabase', async (_req, res) => {
+app.get('/health/supabase', async (_req: Request, res: Response): Promise<void> => {
   try {
     const { error } = await supabaseAdmin
       .from('organizations')
@@ -101,7 +101,7 @@ io.on('connection', (socket) => {
 });
 
 // Error handling
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: any, _req: Request, res: Response, _next: NextFunction): void => {
   logger.error({ error: err, path: _req.path }, 'Unhandled error');
   res.status(err.status || 500).json({
     error: err.message || 'Internal server error'
@@ -109,7 +109,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 // 404
-app.use((_req, res) => {
+app.use((_req: Request, res: Response): void => {
   res.status(404).json({ error: 'Not found' });
 });
 

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { baileysService } from '../services/baileys/baileys.service.js';
 import { logger } from '../config/logger.js';
 
@@ -8,7 +8,7 @@ const router = Router();
  * POST /api/whatsapp/instances
  * Cria uma nova instância WhatsApp
  */
-router.post('/instances', async (req, res) => {
+router.post('/instances', async (req: Request, res: Response): Promise<void> => {
   try {
     const { organizationId, instanceId, phoneNumber } = req.body;
 
@@ -29,7 +29,7 @@ router.post('/instances', async (req, res) => {
  * POST /api/whatsapp/send
  * Envia mensagem de texto
  */
-router.post('/send', async (req, res) => {
+router.post('/send', async (req: Request, res: Response): Promise<void> => {
   try {
     const { instanceId, to, message } = req.body;
 
@@ -46,7 +46,7 @@ router.post('/send', async (req, res) => {
  * GET /api/whatsapp/instances/:instanceId/status
  * Verifica status da conexão
  */
-router.get('/instances/:instanceId/status', async (req, res) => {
+router.get('/instances/:instanceId/status', async (req: Request, res: Response): Promise<void> => {
   try {
     const { instanceId } = req.params;
     const isConnected = baileysService.isConnected(instanceId);
@@ -62,7 +62,7 @@ router.get('/instances/:instanceId/status', async (req, res) => {
  * DELETE /api/whatsapp/instances/:instanceId
  * Desconecta instância
  */
-router.delete('/instances/:instanceId', async (req, res) => {
+router.delete('/instances/:instanceId', async (req: Request, res: Response): Promise<void> => {
   try {
     const { instanceId } = req.params;
     await baileysService.disconnect(instanceId);

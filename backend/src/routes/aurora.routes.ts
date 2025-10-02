@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { AuroraService } from '../services/aurora/aurora.service.js';
 import { logger } from '../config/logger.js';
 
@@ -6,7 +6,7 @@ const router = Router();
 const auroraService = new AuroraService();
 
 // Generate daily summary
-router.post('/summary/daily', async (req, res) => {
+router.post('/summary/daily', async (req: Request, res: Response): Promise<void> => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
     const summary = await auroraService.generateDailySummary(organizationId);
@@ -19,7 +19,7 @@ router.post('/summary/daily', async (req, res) => {
 });
 
 // Get analytics insights
-router.get('/analytics', async (req, res) => {
+router.get('/analytics', async (req: Request, res: Response): Promise<void> => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
     const summary = await auroraService.generateDailySummary(organizationId);
@@ -32,7 +32,7 @@ router.get('/analytics', async (req, res) => {
 });
 
 // Suggest campaigns
-router.post('/campaigns/suggest', async (req, res) => {
+router.post('/campaigns/suggest', async (req: Request, res: Response): Promise<void> => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
     const { phoneNumber, ownerName } = req.body;
@@ -54,7 +54,7 @@ router.post('/campaigns/suggest', async (req, res) => {
 });
 
 // Identify opportunities
-router.get('/opportunities', async (req, res) => {
+router.get('/opportunities', async (req: Request, res: Response): Promise<void> => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
     const { phoneNumber, ownerName } = req.query;
@@ -76,7 +76,7 @@ router.get('/opportunities', async (req, res) => {
 });
 
 // Process owner message (from WhatsApp)
-router.post('/message', async (req, res) => {
+router.post('/message', async (req: Request, res: Response): Promise<void> => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
     const { phoneNumber, message, ownerName } = req.body;

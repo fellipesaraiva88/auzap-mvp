@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { ContactsService } from '../services/contacts/contacts.service.js';
 import { logger } from '../config/logger.js';
 
@@ -42,7 +42,7 @@ router.get('/:id', async (req, res): Promise<void> => {
 });
 
 // Create contact
-router.post('/', async (req, res) => {
+router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
     const contactData = { ...req.body, organization_id: organizationId };
@@ -63,7 +63,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update contact
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const contact = await contactsService.update(id, req.body);
@@ -76,7 +76,7 @@ router.patch('/:id', async (req, res) => {
 });
 
 // Add tags to contact
-router.post('/:id/tags', async (req, res) => {
+router.post('/:id/tags', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { tags } = req.body;

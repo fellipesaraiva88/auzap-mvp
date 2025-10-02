@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { PetsService } from '../services/pets/pets.service.js';
 import { logger } from '../config/logger.js';
 
@@ -6,7 +6,7 @@ const router = Router();
 const petsService = new PetsService();
 
 // List pets by contact
-router.get('/contact/:contactId', async (req, res) => {
+router.get('/contact/:contactId', async (req: Request, res: Response): Promise<void> => {
   try {
     const { contactId } = req.params;
     const pets = await petsService.listByContact(contactId);
@@ -19,7 +19,7 @@ router.get('/contact/:contactId', async (req, res) => {
 });
 
 // List pets by organization
-router.get('/organization', async (req, res) => {
+router.get('/organization', async (req: Request, res: Response): Promise<void> => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
     const { search, species } = req.query;
@@ -55,7 +55,7 @@ router.get('/:id', async (req, res): Promise<void> => {
 });
 
 // Create pet
-router.post('/', async (req, res) => {
+router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
     const petData = { ...req.body, organization_id: organizationId };
@@ -69,7 +69,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update pet
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const pet = await petsService.update(id, req.body);
