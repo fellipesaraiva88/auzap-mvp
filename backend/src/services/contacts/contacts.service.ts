@@ -79,12 +79,12 @@ export class ContactsService {
         .select()
         .single() as { data: Contact | null; error: any };
 
-      if (createError) {
-        throw createError;
+      if (createError || !newContact) {
+        throw createError || new Error('Failed to create contact');
       }
 
       logger.info({ contactId: newContact.id, phoneNumber }, 'New contact created');
-      return newContact as Contact;
+      return newContact;
     } catch (error) {
       logger.error({ error, phoneNumber }, 'Error finding/creating contact');
       throw error;

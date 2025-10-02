@@ -282,7 +282,7 @@ Informações que você pode coletar:
     }
   }
 
-  private async consultarHorarios(organizationId: string, data: any): Promise<any> {
+  private async consultarHorarios(_organizationId: string, _data: any): Promise<any> {
     // Buscar horários disponíveis (implementação simplificada)
     return {
       success: true,
@@ -342,7 +342,7 @@ Informações que você pode coletar:
 
   private async logInteraction(
     context: AIContext,
-    message: string,
+    _message: string,
     choice: any,
     cost: number
   ): Promise<void> {

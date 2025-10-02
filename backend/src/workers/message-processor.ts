@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq';
-import { redisConnection, messageQueue } from '../config/redis.js';
+import { redisConnection } from '../config/redis.js';
 import { logger } from '../config/logger.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import type { TablesInsert, Tables } from '../types/database.types.js';
@@ -243,17 +243,17 @@ export class MessageProcessorWorker {
    */
   private async saveMessage(
     organizationId: string,
-    instanceId: string,
-    phoneNumber: string,
+    _instanceId: string,
+    _phoneNumber: string,
     inboundContent: string,
     outboundContent: string,
-    isOwner: boolean,
+    _isOwner: boolean,
     conversationId?: string
   ): Promise<void> {
     const messages: TablesInsert<'messages'>[] = [
       {
         organization_id: organizationId,
-        conversation_id: conversationId,
+        conversation_id: conversationId || '',
         direction: 'inbound',
         content: inboundContent,
         sent_by_ai: false,
@@ -261,7 +261,7 @@ export class MessageProcessorWorker {
       },
       {
         organization_id: organizationId,
-        conversation_id: conversationId,
+        conversation_id: conversationId || '',
         direction: 'outbound',
         content: outboundContent,
         sent_by_ai: true,

@@ -6,7 +6,7 @@ const router = Router();
 const bookingsService = new BookingsService();
 
 // List bookings by organization
-router.get('/', async (req, res) => {
+router.get('/', async (req, res): Promise<void> => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
     const { startDate, endDate, status, contactId, petId } = req.query;
@@ -27,13 +27,14 @@ router.get('/', async (req, res) => {
 });
 
 // Get booking by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', async (req, res): Promise<void> => {
   try {
     const { id } = req.params;
     const booking = await bookingsService.findById(id);
 
     if (!booking) {
-      return res.status(404).json({ error: 'Booking not found' });
+      res.status(404).json({ error: 'Booking not found' });
+      return;
     }
 
     res.json({ booking });

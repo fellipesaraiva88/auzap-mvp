@@ -6,7 +6,7 @@ const router = Router();
 const contactsService = new ContactsService();
 
 // List all contacts for organization
-router.get('/', async (req, res) => {
+router.get('/', async (req, res): Promise<void> => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
     const { search, tags } = req.query;
@@ -24,13 +24,14 @@ router.get('/', async (req, res) => {
 });
 
 // Get contact by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', async (req, res): Promise<void> => {
   try {
     const { id } = req.params;
     const contact = await contactsService.findById(id);
 
     if (!contact) {
-      return res.status(404).json({ error: 'Contact not found' });
+      res.status(404).json({ error: 'Contact not found' });
+      return;
     }
 
     res.json({ contact });

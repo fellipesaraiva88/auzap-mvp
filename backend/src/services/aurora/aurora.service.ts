@@ -1,6 +1,5 @@
-import { openai, AI_MODELS, calculateCost } from '../../config/openai.js';
+import { openai, AI_MODELS } from '../../config/openai.js';
 import { logger } from '../../config/logger.js';
-import { supabaseAdmin } from '../../config/supabase.js';
 import { bookingsService } from '../bookings/bookings.service.js';
 import { contactsService } from '../contacts/contacts.service.js';
 

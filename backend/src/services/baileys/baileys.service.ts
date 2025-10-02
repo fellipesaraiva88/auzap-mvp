@@ -192,7 +192,7 @@ export class BaileysService {
   }
 
   /**
-   * Envia botões
+   * Envia botões (fallback to plain text - buttons not supported in current Baileys)
    */
   async sendButtonMessage(
     instanceId: string,
@@ -207,27 +207,22 @@ export class BaileysService {
     }
 
     const jid = this.formatJid(to);
-    const sent = await instance.sock.sendMessage(jid, {
-      text,
-      footer,
-      buttons: buttons.map(btn => ({
-        buttonId: btn.id,
-        buttonText: { displayText: btn.text },
-        type: 1
-      })),
-      headerType: 1
-    });
+    // Buttons não são suportados - enviando como texto formatado
+    const buttonText = buttons.map((btn, i) => `${i + 1}. ${btn.text}`).join('\n');
+    const fullMessage = `${text}\n\n${buttonText}${footer ? `\n\n${footer}` : ''}`;
+
+    const sent = await instance.sock.sendMessage(jid, { text: fullMessage });
     return sent!;
   }
 
   /**
-   * Envia lista
+   * Envia lista (fallback to plain text - lists not supported in current Baileys)
    */
   async sendListMessage(
     instanceId: string,
     to: string,
     text: string,
-    buttonText: string,
+    _buttonText: string,
     sections: { title: string; rows: { id: string; title: string; description?: string }[] }[]
   ): Promise<proto.WebMessageInfo> {
     const instance = this.getInstanceByInstanceId(instanceId);
@@ -236,12 +231,16 @@ export class BaileysService {
     }
 
     const jid = this.formatJid(to);
-    const sent = await instance.sock.sendMessage(jid, {
-      text,
-      buttonText,
-      sections,
-      listType: 1
-    });
+    // Listas não são suportadas - enviando como texto formatado
+    const listText = sections.map(section => {
+      const rows = section.rows.map((row, i) =>
+        `${i + 1}. ${row.title}${row.description ? ` - ${row.description}` : ''}`
+      ).join('\n');
+      return `*${section.title}*\n${rows}`;
+    }).join('\n\n');
+
+    const fullMessage = `${text}\n\n${listText}`;
+    const sent = await instance.sock.sendMessage(jid, { text: fullMessage });
     return sent!;
   }
 
@@ -276,7 +275,7 @@ export class BaileysService {
   // Métodos privados
 
   private getInstanceByInstanceId(instanceId: string): BaileysInstance | undefined {
-    for (const [key, instance] of this.instances.entries()) {
+    for (const [_key, instance] of this.instances.entries()) {
       if (instance.instanceId === instanceId) {
         return instance;
       }

@@ -6,7 +6,7 @@ import type { TablesInsert, Organization, Tables } from '../types/database.types
 const router = Router();
 
 // Register organization and first user
-router.post('/register', async (req, res) => {
+router.post('/register', async (req, res): Promise<void> => {
   try {
     const { organizationName, email, password, fullName } = req.body;
 
@@ -18,8 +18,9 @@ router.post('/register', async (req, res) => {
     });
 
     if (authError) {
-      logger.error('Auth user creation failed', authError);
-      return res.status(400).json({ error: authError.message });
+      logger.error({ err: authError }, 'Auth user creation failed');
+      res.status(400).json({ error: authError.message });
+      return;
     }
 
     // Create organization
@@ -37,7 +38,8 @@ router.post('/register', async (req, res) => {
     if (orgError || !org) {
       logger.error('Organization creation failed', orgError);
       await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
-      return res.status(400).json({ error: orgError?.message || 'Failed to create organization' });
+      res.status(400).json({ error: orgError?.message || 'Failed to create organization' });
+      return;
     }
 
     // Create user record
@@ -56,7 +58,8 @@ router.post('/register', async (req, res) => {
 
     if (userError || !user) {
       logger.error('User creation failed', userError);
-      return res.status(400).json({ error: userError?.message || 'Failed to create user' });
+      res.status(400).json({ error: userError?.message || 'Failed to create user' });
+      return;
     }
 
     // Create organization settings
@@ -79,7 +82,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', async (req, res): Promise<void> => {
   try {
     const { email, password } = req.body;
 
@@ -89,7 +92,8 @@ router.post('/login', async (req, res) => {
     });
 
     if (error) {
-      return res.status(401).json({ error: error.message });
+      res.status(401).json({ error: error.message });
+      return;
     }
 
     res.json({
@@ -104,18 +108,20 @@ router.post('/login', async (req, res) => {
 });
 
 // Get current user profile
-router.get('/me', async (req, res) => {
+router.get('/me', async (req, res): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
-      return res.status(401).json({ error: 'No authorization header' });
+      res.status(401).json({ error: 'No authorization header' });
+      return;
     }
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !user) {
-      return res.status(401).json({ error: 'Invalid token' });
+      res.status(401).json({ error: 'Invalid token' });
+      return;
     }
 
     const { data: profile } = await supabaseAdmin

@@ -37,13 +37,14 @@ router.get('/organization', async (req, res) => {
 });
 
 // Get pet by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', async (req, res): Promise<void> => {
   try {
     const { id } = req.params;
     const pet = await petsService.findById(id);
 
     if (!pet) {
-      return res.status(404).json({ error: 'Pet not found' });
+      res.status(404).json({ error: 'Pet not found' });
+      return;
     }
 
     res.json({ pet });

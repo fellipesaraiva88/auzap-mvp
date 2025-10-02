@@ -75,12 +75,12 @@ export class BookingsService {
         .select()
         .single() as { data: Booking | null; error: any };
 
-      if (error) {
-        throw error;
+      if (error || !booking) {
+        throw error || new Error('Failed to create booking');
       }
 
       logger.info({ bookingId: booking.id }, 'Booking created');
-      return booking as Booking;
+      return booking;
     } catch (error) {
       logger.error({ error, data }, 'Error creating booking');
       throw error;

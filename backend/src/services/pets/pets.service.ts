@@ -75,12 +75,12 @@ export class PetsService {
         .select()
         .single() as { data: Pet | null; error: any };
 
-      if (error) {
-        throw error;
+      if (error || !pet) {
+        throw error || new Error('Failed to create pet');
       }
 
       logger.info({ petId: pet.id, name: data.name }, 'Pet created');
-      return pet as Pet;
+      return pet;
     } catch (error) {
       logger.error({ error, data }, 'Error creating pet');
       throw error;

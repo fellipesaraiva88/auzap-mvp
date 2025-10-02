@@ -23,12 +23,13 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // CORS
-app.use((req, res, next) => {
+app.use((req, res, next): void => {
   res.header('Access-Control-Allow-Origin', process.env.FRONTEND_URL || '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    res.sendStatus(200);
+    return;
   }
   next();
 });
@@ -42,7 +43,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Health checks
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -51,7 +52,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/health/redis', async (req, res) => {
+app.get('/health/redis', async (_req, res) => {
   try {
     const { redisCache } = await import('./config/redis.js');
     await redisCache.ping();
@@ -61,15 +62,15 @@ app.get('/health/redis', async (req, res) => {
   }
 });
 
-app.get('/health/supabase', async (req, res) => {
+app.get('/health/supabase', async (_req, res) => {
   try {
-    const { data, error } = await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from('organizations')
       .select('id')
       .limit(1);
-    
+
     if (error) throw error;
-    
+
     res.json({ status: 'ok', database: { connected: true } });
   } catch (error) {
     res.status(503).json({ status: 'error', database: { connected: false, error } });
@@ -99,15 +100,15 @@ io.on('connection', (socket) => {
 });
 
 // Error handling
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  logger.error({ error: err, path: req.path }, 'Unhandled error');
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  logger.error({ error: err, path: _req.path }, 'Unhandled error');
   res.status(err.status || 500).json({
     error: err.message || 'Internal server error'
   });
 });
 
 // 404
-app.use((req, res) => {
+app.use((_req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
