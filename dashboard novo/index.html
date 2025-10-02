@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>AuZap - Dashboard Inteligente para Petshops</title>
+    <meta name="description" content="Dashboard com IA autônoma que gerencia seu petshop enquanto você foca no que importa. Atendimento 24h, agendamentos automáticos e muito mais.">
+    <meta name="keywords" content="petshop, IA, dashboard, gestão, atendimento automático, agendamento, pets">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="AuZap - Dashboard Inteligente para Petshops">
+    <meta property="og:description" content="IA que trabalha por você 24h. Atende clientes, agenda serviços e gerencia seu petshop automaticamente.">
+    
+    <!-- Twitter -->
+    <meta name="twitter:title" content="AuZap - Dashboard Inteligente para Petshops">
+    <meta name="twitter:description" content="IA que trabalha por você 24h. Atende clientes, agenda serviços e gerencia seu petshop automaticamente.">
+
+    <script src="https://resource.trickle.so/vendor_lib/unpkg/react@18/umd/react.production.min.js"></script>
+    <script src="https://resource.trickle.so/vendor_lib/unpkg/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://resource.trickle.so/vendor_lib/unpkg/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://resource.trickle.so/vendor_lib/unpkg/lucide-static@0.516.0/font/lucide.css" rel="stylesheet">
+
+    <style type="text/tailwindcss">
+    @layer theme {
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #f1f5f9;
+            --accent-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --shadow-primary: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --gradient-primary: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+        }
+    }
+
+    @layer base {
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #f8fafc;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+    }
+
+    @layer components {
+        .card {
+            @apply bg-white rounded-lg shadow-sm border border-[var(--border-color)] p-6;
+        }
+        
+        .btn-primary {
+            @apply bg-[var(--primary-color)] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium;
+        }
+        
+        .btn-secondary {
+            @apply bg-[var(--secondary-color)] text-[var(--text-primary)] px-4 py-2 rounded-lg hover:bg-slate-300 transition-colors font-medium;
+        }
+        
+        .impact-card {
+            @apply bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200 rounded-xl p-6;
+        }
+        
+        .metric-card {
+            @apply bg-white rounded-lg p-6 border border-[var(--border-color)] hover:shadow-md transition-shadow;
+        }
+    }
+
+    @layer utilities {
+        .text-gradient {
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel" src="components/Sidebar.js"></script>
+    <script type="text/babel" src="components/Header.js"></script>
+    <script type="text/babel" src="components/ImpactPanel.js"></script>
+    <script type="text/babel" src="components/MetricCards.js"></script>
+    <script type="text/babel" src="components/ImpactCharts.js"></script>
+    <script type="text/babel" src="utils/mockData.js"></script>
+    <script type="text/babel" src="app.js"></script>
+</body>
+</html>
