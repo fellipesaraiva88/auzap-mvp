@@ -55,9 +55,9 @@ export class ClientAIService {
         messages: [
           {
             role: 'system',
-            content: this.getClientAISystemPrompt(settings, services, contact),
+            content: this.getClientAISystemPrompt(settings, services || [], contact),
           },
-          ...conversationHistory,
+          ...(conversationHistory || []),
           {
             role: 'user',
             content,
@@ -97,9 +97,9 @@ export class ClientAIService {
           messages: [
             {
               role: 'system',
-              content: this.getClientAISystemPrompt(settings, services, contact),
+              content: this.getClientAISystemPrompt(settings, services || [], contact),
             },
-            ...conversationHistory,
+            ...(conversationHistory || []),
             { role: 'user', content },
             assistantMessage,
             ...functionResults.map((result) => ({

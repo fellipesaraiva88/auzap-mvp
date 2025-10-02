@@ -309,8 +309,9 @@ export class BookingsService {
           (analytics.by_status[booking.status] || 0) + 1;
 
         // Por tipo de serviço
-        const serviceType = booking.service?.service_type || 'outros';
-        analytics.by_service[serviceType] = 
+        const service = booking.service as any;
+        const serviceType = service?.service_type || 'outros';
+        analytics.by_service[serviceType] =
           (analytics.by_service[serviceType] || 0) + 1;
       });
 

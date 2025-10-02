@@ -39,7 +39,7 @@ app.use(morgan('combined', {
 }));
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
@@ -69,7 +69,7 @@ io.on('connection', (socket) => {
 export { io };
 
 // Error handling
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, req: express.Request, res: express.Response) => {
   logger.error({ error: err, path: req.path }, 'Unhandled error');
   res.status(500).json({ error: 'Internal server error' });
 });
