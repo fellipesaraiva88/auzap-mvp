@@ -41,9 +41,9 @@ export class CapacityController {
       if (bookingsError) throw bookingsError;
 
       // Calculate metrics for each service
-      const serviceMetrics = (services || []).map((service: Service) => {
-        const serviceBookings = (bookings || []).filter(
-          (b) => b.service_id === service.id
+      const serviceMetrics = ((services || []) as any[]).map((service: Service) => {
+        const serviceBookings = ((bookings || []) as any[]).filter(
+          (b: any) => b.service_id === service.id
         );
         const occupied = serviceBookings.length;
         const total = service.total_capacity || 10;
@@ -135,7 +135,7 @@ export class CapacityController {
       const slots = [];
       for (let hour = 8; hour < 18; hour++) {
         const time = `${hour.toString().padStart(2, '0')}:00`;
-        const booking = (bookings || []).find((b) =>
+        const booking = ((bookings || []) as any[]).find((b: any) =>
           b.booking_time?.startsWith(time.split(':')[0])
         );
 
@@ -143,7 +143,7 @@ export class CapacityController {
           time,
           available: !booking,
           petId: booking?.pet_id,
-          petName: booking?.pets?.name,
+          petName: booking?.pets?.[0]?.name,
         });
       }
 

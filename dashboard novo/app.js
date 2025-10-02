@@ -44,8 +44,7 @@ function App() {
           return (
             <div className="space-y-6" data-name="dashboard-content" data-file="app.js">
               <ImpactPanel />
-              <MetricCards />
-              <ImpactCharts />
+              <AIInAction />
             </div>
           );
         case 'conversas':

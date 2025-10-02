@@ -39,7 +39,7 @@ export class MetricsController {
       // Calculate AI resolution rate
       const _totalConversations = conversations?.length || 0;
       const aiResolvedConversations =
-        conversations?.filter((c) => c.status === 'closed').length || 0;
+        Array.isArray(conversations) ? conversations.filter((c: any) => c.status === 'resolved').length : 0;
 
       // Calculate time saved (assume 15 min per conversation)
       const minutesSaved = aiResolvedConversations * 15;
@@ -102,7 +102,7 @@ export class MetricsController {
           },
         },
         chartsData: {
-          timeSavedData: this.generateWeeklyData(conversations || []),
+          timeSavedData: this.generateWeeklyData((conversations || []) as any[]),
           conversionsData: this.generateHourlyData(hourlyConversions),
           metricsComparison: this.generateComparisonData(),
         },
@@ -195,7 +195,7 @@ export class MetricsController {
 
       const total = conversations?.length || 0;
       const resolved =
-        conversations?.filter((c) => c.status === 'closed').length || 0;
+        Array.isArray(conversations) ? conversations.filter((c: any) => c.status === 'resolved').length : 0;
 
       const resolutionRate = total > 0 ? (resolved / total) * 100 : 0;
 
