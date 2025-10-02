@@ -5,7 +5,6 @@ import makeWASocket, {
   Browsers,
   delay,
   makeCacheableSignalKeyStore,
-  useMultiFileAuthState,
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import { supabase } from '../config/supabase';
@@ -13,6 +12,10 @@ import { messageQueue } from '../config/redis';
 import { logger } from '../config/logger';
 import { BaileysInstance, SessionData, PairingMethod } from '../types';
 import { io } from '../index';
+import { ConversationsService } from './conversations.service';
+import { ContactsService } from './contacts.service';
+import { BaileysHealthService } from './baileys-health.service';
+import { BaileysReconnectService } from './baileys-reconnect.service';
 
 const instances = new Map<string, BaileysInstance>();
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -104,7 +107,7 @@ export class BaileysService {
       // Gerar pairing code se método preferido
       if (preferredMethod === 'code' && phoneNumber) {
         const code = await socket.requestPairingCode(phoneNumber);
-        
+
         await supabase
           .from('whatsapp_instances')
           .update({
@@ -113,6 +116,13 @@ export class BaileysService {
             status: 'qr_pending',
           })
           .eq('id', instanceId);
+
+        // Emitir pairing code via Socket.IO
+        io.to(`org-${organizationId}`).emit('whatsapp:pairing-code', {
+          instanceId,
+          code,
+          timestamp: new Date().toISOString(),
+        });
 
         return { success: true, pairingCode: code, method: 'code' };
       }
@@ -166,7 +176,7 @@ export class BaileysService {
         if (shouldReconnect && instance.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
           instance.reconnectAttempts++;
           await delay(RECONNECT_DELAY_MS * instance.reconnectAttempts);
-          
+
           await supabase
             .from('whatsapp_instances')
             .update({ status: 'connecting' })
@@ -176,18 +186,36 @@ export class BaileysService {
             .from('whatsapp_instances')
             .update({ status: 'disconnected' })
             .eq('id', instance.instanceId);
+
+          // Emitir evento de desconexão
+          io.to(`org-${instance.organizationId}`).emit('whatsapp:disconnected', {
+            instanceId: instance.instanceId,
+            reason: lastDisconnect?.error?.message || 'Unknown',
+            timestamp: new Date().toISOString(),
+          });
         }
       } else if (connection === 'open') {
         logger.info('Connection opened');
         instance.reconnectAttempts = 0;
-        
+
+        // Buscar número do telefone conectado
+        const phoneNumber = socket.user?.id?.split(':')[0] || 'unknown';
+
         await supabase
           .from('whatsapp_instances')
           .update({
             status: 'connected',
             last_connected_at: new Date().toISOString(),
+            phone_number: phoneNumber,
           })
           .eq('id', instance.instanceId);
+
+        // Emitir evento de conexão via Socket.IO
+        io.to(`org-${instance.organizationId}`).emit('whatsapp:connected', {
+          instanceId: instance.instanceId,
+          phoneNumber,
+          timestamp: new Date().toISOString(),
+        });
       }
     });
 
@@ -248,5 +276,139 @@ export class BaileysService {
    */
   static getInstance(organizationId: string, instanceId: string): BaileysInstance | undefined {
     return instances.get(`${organizationId}:${instanceId}`);
+  }
+
+  /**
+   * Processar mensagem recebida (usado pelo event handler)
+   */
+  static async handleIncomingMessage(
+    organizationId: string,
+    instanceId: string,
+    message: any
+  ): Promise<void> {
+    try {
+      // Extrair dados da mensagem
+      const from = message.key.remoteJid;
+      const messageId = message.key.id;
+      const messageType = Object.keys(message.message || {})[0];
+
+      logger.info(
+        {
+          from,
+          messageId,
+          messageType,
+          organizationId,
+          instanceId,
+        },
+        '[BAILEYS] Incoming message received'
+      );
+
+      // Extrair conteúdo
+      let content = '';
+      let contentType: 'text' | 'image' | 'audio' | 'video' | 'document' = 'text';
+      let mediaUrl: string | undefined;
+
+      // Processar diferentes tipos de mensagem
+      if (messageType === 'conversation') {
+        content = message.message.conversation;
+        contentType = 'text';
+      } else if (messageType === 'extendedTextMessage') {
+        content = message.message.extendedTextMessage.text;
+        contentType = 'text';
+      } else if (messageType === 'imageMessage') {
+        content = message.message.imageMessage.caption || '[Imagem]';
+        contentType = 'image';
+        // TODO: implementar download de mídia
+      } else if (messageType === 'audioMessage') {
+        content = '[Áudio]';
+        contentType = 'audio';
+      } else if (messageType === 'videoMessage') {
+        content = message.message.videoMessage.caption || '[Vídeo]';
+        contentType = 'video';
+      } else if (messageType === 'documentMessage') {
+        content = message.message.documentMessage.fileName || '[Documento]';
+        contentType = 'document';
+      }
+
+      if (!content) {
+        logger.warn(
+          { messageType, organizationId, instanceId },
+          '[BAILEYS] No content extracted from message'
+        );
+        return;
+      }
+
+      // Limpar número do remetente
+      const senderPhone = from.split('@')[0];
+
+      // Buscar ou criar contato
+      let contact = await ContactsService.getContactByPhone(organizationId, senderPhone);
+
+      if (!contact) {
+        contact = await ContactsService.createContact({
+          organization_id: organizationId,
+          phone: senderPhone,
+          name: senderPhone, // Será atualizado depois
+        });
+      }
+
+      // Buscar ou criar conversa
+      const conversation = await ConversationsService.findOrCreateConversation(
+        organizationId,
+        contact.id,
+        instanceId
+      );
+
+      // Salvar mensagem
+      await ConversationsService.saveIncomingMessage(
+        organizationId,
+        conversation.id,
+        {
+          whatsapp_message_id: messageId,
+          sender_phone: senderPhone,
+          content,
+          content_type: contentType,
+          media_url: mediaUrl,
+          metadata: {
+            message_type: messageType,
+            timestamp: message.messageTimestamp,
+          },
+        }
+      );
+
+      logger.info(
+        {
+          contactId: contact.id,
+          conversationId: conversation.id,
+          contentType,
+          organizationId,
+        },
+        '[BAILEYS] Message saved successfully'
+      );
+
+      // Emitir evento via Socket.IO para o frontend
+      io.to(`org-${organizationId}`).emit('whatsapp:message', {
+        conversationId: conversation.id,
+        contactId: contact.id,
+        message: {
+          id: messageId,
+          content,
+          contentType,
+          direction: 'incoming',
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      logger.info(
+        { organizationId, conversationId: conversation.id },
+        '[BAILEYS] Message event emitted to frontend'
+      );
+    } catch (error: any) {
+      logger.error(
+        { error, organizationId, instanceId },
+        '[BAILEYS] Error handling incoming message'
+      );
+      throw error;
+    }
   }
 }

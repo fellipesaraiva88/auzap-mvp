@@ -16,7 +16,17 @@
     "test:queue": "dotenv -e .env.test -- jest tests/queue.test.ts",
     "test:verbose": "dotenv -e .env.test -- jest --verbose",
     "test:redis": "ts-node src/scripts/test-redis-bullmq.ts",
-    "upstash:info": "ts-node src/scripts/get-upstash-connection.ts"
+    "test:worker": "ts-node src/scripts/validate-message-worker.ts",
+    "test:worker-logs": "ts-node src/scripts/test-worker-logs.ts",
+    "test:routing": "ts-node src/scripts/test-routing.ts",
+    "routing:status": "ts-node src/scripts/show-routing-status.ts",
+    "upstash:info": "ts-node src/scripts/get-upstash-connection.ts",
+    "whatsapp:send": "ts-node scripts/send-test-message.ts",
+    "whatsapp:inspect": "ts-node scripts/inspect-instance.ts",
+    "whatsapp:simulate": "ts-node scripts/simulate-message.ts",
+    "whatsapp:dashboard": "ts-node scripts/whatsapp-dashboard.ts",
+    "whatsapp:health": "ts-node scripts/health-check.ts",
+    "whatsapp:list": "ts-node scripts/list-instances.ts"
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",

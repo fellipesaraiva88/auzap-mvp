@@ -47,7 +47,13 @@ const worker = new Worker(
 
       if (auroraContext.isOwner) {
         // ===== PROCESSAMENTO AURORA =====
-        logger.info({ from: cleanFrom }, '👔 Owner message - Aurora processing');
+        logger.info({
+          from: cleanFrom,
+          type: 'OWNER',
+          agentType: 'aurora',
+          userId: auroraContext.userId,
+          messageContent: content.substring(0, 50)
+        }, '[AURORA] Processing owner message');
         isOwnerMessage = true;
 
         response = await AuroraService.processOwnerMessage({
@@ -67,9 +73,20 @@ const worker = new Worker(
           status: 'sent',
           sent_at: new Date().toISOString(),
         });
+
+        logger.info({
+          from: cleanFrom,
+          agentType: 'aurora',
+          responseLength: response.length
+        }, '[AURORA] Response sent successfully');
       } else {
         // ===== PROCESSAMENTO IA CLIENTE =====
-        logger.info({ from: cleanFrom }, '👤 Client message - AI processing');
+        logger.info({
+          from: cleanFrom,
+          type: 'CLIENT',
+          agentType: 'client-ai',
+          messageContent: content.substring(0, 50)
+        }, '[CLIENT-AI] Processing client message');
 
         // Buscar ou criar contato
         let { data: contact } = await supabase
@@ -180,6 +197,14 @@ const worker = new Worker(
           from_me: true,
           sent_by_ai: true,
         });
+
+        logger.info({
+          from: cleanFrom,
+          agentType: 'client-ai',
+          contactId,
+          conversationId,
+          responseLength: response.length
+        }, '[CLIENT-AI] Response sent successfully');
       }
 
       // Enviar resposta via WhatsApp

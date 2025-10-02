@@ -82,6 +82,7 @@ export class ClientAIService {
           organization_id: organizationId,
           conversation_id: conversationId,
           ai_type: 'client',
+          agent_type: 'client-ai',
           model: settings?.ai_config?.model || 'gpt-4o-mini',
           prompt_tokens: response.usage?.prompt_tokens || 0,
           completion_tokens: response.usage?.completion_tokens || 0,
@@ -118,6 +119,7 @@ export class ClientAIService {
         organization_id: organizationId,
         conversation_id: conversationId,
         ai_type: 'client',
+        agent_type: 'client-ai',
         model: settings?.ai_config?.model || 'gpt-4o-mini',
         prompt_tokens: response.usage?.prompt_tokens || 0,
         completion_tokens: response.usage?.completion_tokens || 0,
@@ -127,7 +129,19 @@ export class ClientAIService {
 
       return assistantMessage.content || 'Desculpe, não entendi.';
     } catch (error) {
-      logger.error({ error, organizationId, contactId }, 'Error processing client message');
+      logger.error({ error, organizationId, contactId }, '[CLIENT-AI] Error processing client message');
+
+      // Salvar erro
+      await supabase.from('ai_interactions').insert({
+        organization_id: organizationId,
+        conversation_id: conversationId,
+        ai_type: 'client',
+        agent_type: 'client-ai',
+        model: 'gpt-4o-mini',
+        status: 'error',
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+      });
+
       return 'Desculpe, ocorreu um erro. Por favor, tente novamente.';
     }
   }

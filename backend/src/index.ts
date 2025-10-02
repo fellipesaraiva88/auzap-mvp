@@ -9,9 +9,11 @@ import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { logger } from './config/logger';
 import whatsappRoutes from './routes/whatsapp.routes';
+import whatsappHealthRoutes from './routes/whatsapp-health.routes';
 import webhookRoutes from './routes/webhook.routes';
 import authRoutes from './routes/auth.routes';
 import contactsRoutes from './routes/contacts.routes';
+import conversationsRoutes from './routes/conversations.routes';
 import petsRoutes from './routes/pets.routes';
 import bookingsRoutes from './routes/bookings.routes';
 import servicesRoutes from './routes/services.routes';
@@ -57,10 +59,12 @@ app.get('/health', (_req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/contacts', contactsRoutes);
+app.use('/api/conversations', conversationsRoutes);
 app.use('/api/pets', petsRoutes);
 app.use('/api/bookings', bookingsRoutes);
 app.use('/api/services', servicesRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/whatsapp', whatsappHealthRoutes);
 app.use('/webhook', webhookRoutes);
 
 // Socket.IO para real-time

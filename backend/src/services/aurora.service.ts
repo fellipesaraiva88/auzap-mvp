@@ -8,7 +8,7 @@ export class AuroraService {
    * Processa mensagem do dono
    */
   static async processOwnerMessage(message: AuroraMessage): Promise<string> {
-    const { organizationId, content, context } = message;
+    const { organizationId, content, context, ownerNumberId } = message;
 
     try {
       // Buscar contexto da empresa
@@ -40,6 +40,21 @@ export class AuroraService {
           organizationId
         );
 
+        // Salvar interação Aurora com function calling
+        await supabase.from('ai_interactions').insert({
+          organization_id: organizationId,
+          owner_number_id: ownerNumberId,
+          ai_type: 'aurora',
+          agent_type: 'aurora',
+          model: 'gpt-4o',
+          prompt_tokens: response.usage?.prompt_tokens || 0,
+          completion_tokens: response.usage?.completion_tokens || 0,
+          total_tokens: response.usage?.total_tokens || 0,
+          function_calls: assistantMessage.tool_calls,
+          function_results: functionResults,
+          status: 'success',
+        });
+
         // Chamar IA novamente com resultados
         const finalResponse = await openai.chat.completions.create({
           model: 'gpt-4o',
@@ -61,9 +76,34 @@ export class AuroraService {
         return finalResponse.choices[0].message.content || 'Desculpe, não consegui processar.';
       }
 
+      // Salvar interação Aurora sem function calling
+      await supabase.from('ai_interactions').insert({
+        organization_id: organizationId,
+        owner_number_id: ownerNumberId,
+        ai_type: 'aurora',
+        agent_type: 'aurora',
+        model: 'gpt-4o',
+        prompt_tokens: response.usage?.prompt_tokens || 0,
+        completion_tokens: response.usage?.completion_tokens || 0,
+        total_tokens: response.usage?.total_tokens || 0,
+        status: 'success',
+      });
+
       return assistantMessage.content || 'Desculpe, não consegui processar.';
     } catch (error) {
-      logger.error({ error, organizationId }, 'Error processing owner message');
+      logger.error({ error, organizationId }, '[AURORA] Error processing owner message');
+
+      // Salvar erro
+      await supabase.from('ai_interactions').insert({
+        organization_id: organizationId,
+        owner_number_id: ownerNumberId,
+        ai_type: 'aurora',
+        agent_type: 'aurora',
+        model: 'gpt-4o',
+        status: 'error',
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+      });
+
       throw error;
     }
   }
