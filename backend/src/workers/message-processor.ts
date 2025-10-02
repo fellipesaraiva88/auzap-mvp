@@ -110,12 +110,7 @@ export class MessageProcessorWorker {
     );
 
     // Enviar resposta
-    await baileysService.sendTextMessage({
-      instanceId,
-      to: phoneNumber,
-      text: response,
-      organizationId
-    });
+    await baileysService.sendTextMessage(instanceId, phoneNumber, response);
 
     // Salvar mensagem no banco
     await this.saveMessage(organizationId, instanceId, phoneNumber, content, response, true);
@@ -166,12 +161,7 @@ export class MessageProcessorWorker {
     );
 
     // Enviar resposta
-    await baileysService.sendTextMessage({
-      instanceId,
-      to: jid,
-      text: response,
-      organizationId
-    });
+    await baileysService.sendTextMessage(instanceId, jid, response);
 
     // Salvar mensagens
     await this.saveMessage(organizationId, instanceId, phoneNumber, content, response, false, conversation.id);

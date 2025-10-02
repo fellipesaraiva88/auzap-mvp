@@ -21,7 +21,7 @@ router.get('/', async (req, res): Promise<void> => {
         id,
         contact_id,
         scheduled_for,
-        message,
+        message_template,
         status,
         created_at,
         sent_at,

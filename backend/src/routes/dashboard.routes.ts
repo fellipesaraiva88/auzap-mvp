@@ -251,7 +251,7 @@ router.get('/revenue-timeline', async (req, res): Promise<void> => {
     // Get bookings in last 24h
     const { data: bookings } = await supabaseAdmin
       .from('bookings')
-      .select('created_at, total_price')
+      .select('created_at, price_cents')
       .eq('organization_id', organizationId)
       .eq('status', 'confirmed')
       .gte('created_at', last24h.toISOString());
@@ -269,8 +269,8 @@ router.get('/revenue-timeline', async (req, res): Promise<void> => {
         return created >= slotStart && created < slotEnd;
       });
 
-      // TODO: Add total_price field to bookings table
-      const value = slotBookings.length * 100; // Placeholder: count * average price
+      // Calculate total revenue in cents, convert to reais
+      const value = slotBookings.reduce((sum, b) => sum + (b.price_cents || 0), 0) / 100;
 
       timeline.push({
         time: `${String(slotStart.getHours()).padStart(2, '0')}h`,
