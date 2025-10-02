@@ -1,46 +1,61 @@
-# ⚡ Performance Optimization Worktree
+# 📱 Baileys WhatsApp Integration
 
 ## Branch
-`refactor/performance-optimization`
+`feature/baileys-whatsapp`
 
 ## Objetivo
-Otimizar performance do sistema para <200ms p95 response time.
+Integração completa do Baileys com autenticação via pairing code, persistência de sessão e multi-tenancy.
 
-## Targets
-- ✅ p95 response time < 200ms
-- ✅ Database queries < 50ms
-- ✅ Rate limiting implementado
-- ✅ Índices otimizados
+## Stack
+- @whiskeysockets/baileys (latest)
+- Node.js + TypeScript
+- Redis (session storage)
+- Render Persistent Disk (/app/sessions)
 
-## Áreas de Foco
-1. **Database**
-   - Índices compostos otimizados
-   - Queries RLS simplificadas
-   - Particionamento de tabelas grandes
+## Arquivos Principais
+- `backend/src/services/whatsapp/baileys.service.ts` - Core Baileys
+- `backend/src/services/whatsapp/session-manager.ts` - Gerenciamento de sessões
+- `backend/src/services/whatsapp/connection-handler.ts` - Reconnection logic
+- `backend/src/middleware/whatsapp-auth.middleware.ts` - Validação de instância
+- `backend/src/controllers/whatsapp.controller.ts` - Endpoints
 
-2. **API**
-   - Rate limiting por endpoint
-   - Response caching
-   - Connection pooling
-
-3. **Frontend**
-   - Code splitting
-   - Lazy loading
-   - Image optimization
+## Features Críticas
+1. **Pairing Code** (8 dígitos) como método PRINCIPAL
+2. **Persistência** em `/app/sessions/${organizationId}/${instanceId}`
+3. **Multi-tenant** - uma instância por organization_id
+4. **Auto-reconnect** com exponential backoff
+5. **Event forwarding** para BullMQ (não processamento síncrono)
 
 ## Prompt Inicial
 ```
-Adiciona índices otimizados no SQL, rate limiting no Express, otimiza queries RLS. Target: <200ms p95 response time, <50ms queries.
+Implementa integração Baileys WhatsApp completa. Cria backend/src/services/whatsapp/baileys.service.ts com pairing code (método principal), session-manager.ts para persistir em /app/sessions, connection-handler.ts com auto-reconnect. SEMPRE usar multi-tenant (organization_id). NUNCA processar mensagens síncronamente - enviar para BullMQ. Stack: @whiskeysockets/baileys + TypeScript + Redis.
 ```
 
-## Comandos Úteis
+## Events para Capturar
+```typescript
+// SEMPRE encaminhar para queue, NÃO processar diretamente
+- 'messages.upsert' → messageQueue.add()
+- 'connection.update' → emit via Socket.IO
+- 'creds.update' → persist to disk + Redis
+- 'presence.update' → real-time via Socket.IO
+- 'groups.update' → sync to Supabase
+```
+
+## Validações Obrigatórias
+- ✅ Número no formato internacional (@c.us ou @g.us)
+- ✅ Session válida antes de enviar
+- ✅ Organization_id presente em TODA operação
+- ✅ Rate limit: 20 msgs/min por instância
+- ✅ Fallback para QR se pairing code falhar (raro)
+
+## Comandos
 ```bash
-# Sincronizar com main
-git pull --rebase origin main
+# Test connection
+npm run test:whatsapp
 
-# Benchmark
-npm run benchmark
+# Generate pairing code
+npm run whatsapp:pair -- --org=org_123
 
-# Analyze bundle
-npm run analyze
+# Debug session
+npm run whatsapp:debug-session -- --org=org_123
 ```

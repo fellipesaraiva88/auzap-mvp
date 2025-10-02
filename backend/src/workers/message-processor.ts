@@ -3,19 +3,11 @@ import { redisConnection } from '../config/redis.js';
 import { logger } from '../config/logger.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import type { TablesInsert, Tables } from '../types/database.types.js';
+import type { IncomingMessageData } from '../types/whatsapp.types.js';
 import { clientAIService } from '../services/ai/client-ai.service.js';
 import { auroraService } from '../services/aurora/aurora.service.js';
 import { contactsService } from '../services/contacts/contacts.service.js';
 import { baileysService } from '../services/baileys/baileys.service.js';
-
-interface MessageJob {
-  organizationId: string;
-  instanceId: string;
-  from: string;
-  content: string;
-  messageId?: string;
-  timestamp?: number;
-}
 
 /**
  * Worker para processar mensagens WhatsApp
@@ -27,7 +19,7 @@ export class MessageProcessorWorker {
   constructor() {
     this.worker = new Worker(
       'message-processing',
-      async (job: Job<MessageJob>) => await this.processMessage(job),
+      async (job: Job<IncomingMessageData>) => await this.processMessage(job),
       {
         connection: redisConnection,
         concurrency: 5,
@@ -49,14 +41,11 @@ export class MessageProcessorWorker {
     logger.info('Message processor worker started');
   }
 
-  private async processMessage(job: Job<MessageJob>): Promise<void> {
-    const { organizationId, instanceId, from, content } = job.data;
+  private async processMessage(job: Job<IncomingMessageData>): Promise<void> {
+    const { organizationId, instanceId, phoneNumber, from, content, messageType } = job.data;
 
     try {
-      logger.info({ organizationId, from }, 'Processing incoming message');
-
-      // Extrair número de telefone limpo
-      const phoneNumber = from.split('@')[0];
+      logger.info({ organizationId, phoneNumber, messageType }, 'Processing incoming message');
 
       // Verificar se é número de dono autorizado
       const isOwner = await this.checkIfOwner(organizationId, phoneNumber);
@@ -119,7 +108,12 @@ export class MessageProcessorWorker {
     );
 
     // Enviar resposta
-    await baileysService.sendTextMessage(instanceId, phoneNumber, response);
+    await baileysService.sendTextMessage({
+      instanceId,
+      to: phoneNumber,
+      text: response,
+      organizationId
+    });
 
     // Salvar mensagem no banco
     await this.saveMessage(organizationId, instanceId, phoneNumber, content, response, true);
@@ -165,7 +159,12 @@ export class MessageProcessorWorker {
     );
 
     // Enviar resposta
-    await baileysService.sendTextMessage(instanceId, jid, response);
+    await baileysService.sendTextMessage({
+      instanceId,
+      to: jid,
+      text: response,
+      organizationId
+    });
 
     // Salvar mensagens
     await this.saveMessage(organizationId, instanceId, phoneNumber, content, response, false, conversation.id);
