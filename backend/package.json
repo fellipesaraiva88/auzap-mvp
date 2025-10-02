@@ -12,7 +12,8 @@
     "lint": "eslint src --ext .ts",
     "test": "vitest",
     "migration:create": "tsx src/scripts/create-migration.ts",
-    "migration:run": "tsx src/scripts/run-migrations.ts"
+    "migration:run": "tsx src/scripts/run-migrations.ts",
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
