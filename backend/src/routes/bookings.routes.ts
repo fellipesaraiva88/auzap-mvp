@@ -14,7 +14,7 @@ router.use(['/', '/:id'], (req, _res, next) => {
   if (req.method !== 'GET') {
     return criticalLimiter(req, _res, next);
   }
-  next();
+  return next();
 });
 
 // List bookings by organization

@@ -24,7 +24,6 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
     const {
       status,
-      assignee,
       search,
       page = '1',
       limit = '20'

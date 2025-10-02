@@ -265,6 +265,7 @@ router.get('/revenue-timeline', async (req, res): Promise<void> => {
       slotEnd.setHours(slotEnd.getHours() + 2);
 
       const slotBookings = (bookings || []).filter(b => {
+        if (!b.created_at) return false;
         const created = new Date(b.created_at);
         return created >= slotStart && created < slotEnd;
       });

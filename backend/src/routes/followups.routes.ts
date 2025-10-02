@@ -111,9 +111,9 @@ router.post('/', async (req, res): Promise<void> => {
       .insert({
         contact_id,
         scheduled_for,
-        message_template: message, // Use message_template instead of message
-        type: 'reminder',
-        status: 'pending'
+        message_template: message,
+        status: 'pending',
+        organization_id: organizationId
       })
       .select()
       .single();
