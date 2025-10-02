@@ -1,0 +1,902 @@
+openapi: 3.1.0
+info:
+  title: AuZap WhatsApp API
+  description: |
+    Complete API documentation for AuZap's WhatsApp integration platform.
+
+    This API enables pet care businesses to integrate WhatsApp messaging for customer communication,
+    automated bookings, and real-time notifications.
+
+    ## Features
+    - Multi-instance WhatsApp connection management
+    - Real-time message processing via Socket.IO
+    - Automatic contact and booking creation
+    - Pairing code and QR code authentication methods
+    - Message sending and conversation tracking
+
+    ## Authentication
+    Most endpoints require Bearer token authentication. Obtain a token via `/api/auth/login`.
+
+    ## Rate Limits
+    - 100 requests per minute per IP
+    - 1000 requests per hour per organization
+
+  version: 1.0.0
+  contact:
+    name: AuZap Support
+    email: support@auzap.com
+    url: https://auzap.com/support
+  license:
+    name: Proprietary
+    url: https://auzap.com/license
+
+servers:
+  - url: https://auzap-mvp-backend.onrender.com
+    description: Production server
+  - url: http://localhost:3000
+    description: Development server
+
+tags:
+  - name: WhatsApp Instances
+    description: Manage WhatsApp instance connections
+  - name: WhatsApp Messages
+    description: Send and receive WhatsApp messages
+  - name: WhatsApp Health
+    description: Monitor instance health and metrics
+  - name: Contacts
+    description: Manage customer contacts
+  - name: Conversations
+    description: Message conversation threads
+  - name: Authentication
+    description: User authentication endpoints
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /api/auth/login
+
+  schemas:
+    WhatsAppInstance:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Instance unique identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        organization_id:
+          type: string
+          format: uuid
+          description: Organization owning this instance
+          example: "660e8400-e29b-41d4-a716-446655440001"
+        instance_name:
+          type: string
+          description: Human-readable instance name
+          example: "Main Support"
+        phone_number:
+          type: string
+          nullable: true
+          description: Connected WhatsApp phone number (owner)
+          example: "5511999887766"
+        status:
+          type: string
+          enum: [disconnected, connecting, qr_pending, connected]
+          description: Current connection status
+          example: "connected"
+        pairing_method:
+          type: string
+          enum: [code, qr]
+          description: Authentication method used
+          example: "code"
+        pairing_code:
+          type: string
+          nullable: true
+          description: Current pairing code (if method is 'code')
+          example: "ABCD1234"
+        pairing_code_expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Pairing code expiration timestamp
+          example: "2025-10-02T10:31:00Z"
+        qr_code:
+          type: string
+          nullable: true
+          description: Current QR code string (if method is 'qr')
+        session_data:
+          type: object
+          nullable: true
+          description: Encrypted Baileys session data
+        last_connected_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last successful connection timestamp
+          example: "2025-10-02T10:30:00Z"
+        messages_sent_count:
+          type: integer
+          description: Total messages sent via this instance
+          example: 1247
+        messages_received_count:
+          type: integer
+          description: Total messages received via this instance
+          example: 892
+        created_at:
+          type: string
+          format: date-time
+          description: Instance creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    WhatsAppMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Message unique identifier
+        conversation_id:
+          type: string
+          format: uuid
+          description: Parent conversation ID
+        whatsapp_message_id:
+          type: string
+          description: WhatsApp's original message ID
+          example: "3EB0C127E0B3F49C29E5"
+        sender_phone:
+          type: string
+          description: Sender's phone number
+          example: "5511988776655"
+        content:
+          type: string
+          description: Message text content
+          example: "Olá! Gostaria de agendar um banho para meu pet."
+        content_type:
+          type: string
+          enum: [text, image, audio, video, document]
+          description: Type of message content
+          example: "text"
+        direction:
+          type: string
+          enum: [incoming, outgoing]
+          description: Message direction
+          example: "incoming"
+        media_url:
+          type: string
+          format: uri
+          nullable: true
+          description: Media file URL (for non-text messages)
+        metadata:
+          type: object
+          nullable: true
+          description: Additional message metadata
+        created_at:
+          type: string
+          format: date-time
+          description: Message timestamp
+
+    Contact:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Contact unique identifier
+        organization_id:
+          type: string
+          format: uuid
+          description: Organization owning this contact
+        phone:
+          type: string
+          description: Contact's phone number
+          example: "5511988776655"
+        name:
+          type: string
+          description: Contact's name
+          example: "João Silva"
+        email:
+          type: string
+          format: email
+          nullable: true
+          description: Contact's email address
+        notes:
+          type: string
+          nullable: true
+          description: Internal notes about this contact
+        created_at:
+          type: string
+          format: date-time
+          description: Contact creation timestamp
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Conversation unique identifier
+        organization_id:
+          type: string
+          format: uuid
+          description: Organization owning this conversation
+        contact_id:
+          type: string
+          format: uuid
+          description: Contact participating in conversation
+        instance_id:
+          type: string
+          format: uuid
+          description: WhatsApp instance used for conversation
+        status:
+          type: string
+          enum: [active, archived, closed]
+          description: Conversation status
+          example: "active"
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp of last message
+        created_at:
+          type: string
+          format: date-time
+          description: Conversation creation timestamp
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Instance not found"
+        code:
+          type: string
+          description: Error code for programmatic handling
+          example: "INSTANCE_NOT_FOUND"
+        details:
+          type: object
+          nullable: true
+          description: Additional error details
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success indicator
+          example: true
+        message:
+          type: string
+          nullable: true
+          description: Success message
+          example: "Instance connected successfully"
+
+paths:
+  /api/whatsapp/instances:
+    post:
+      tags:
+        - WhatsApp Instances
+      summary: Create WhatsApp instance
+      description: |
+        Creates a new WhatsApp instance for your organization.
+
+        The instance will be in 'disconnected' status initially.
+        Use the `/connect` endpoint to initiate WhatsApp connection.
+      operationId: createInstance
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - organization_id
+                - instance_name
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+                  description: Your organization's UUID
+                instance_name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: Descriptive name for this instance
+                  example: "Main Support"
+                phone_number:
+                  type: string
+                  pattern: '^[0-9]{10,15}$'
+                  description: Owner's phone number (optional, used for routing)
+                  example: "5511999887766"
+            examples:
+              basic:
+                summary: Basic instance creation
+                value:
+                  organization_id: "660e8400-e29b-41d4-a716-446655440001"
+                  instance_name: "Main Support"
+              withPhone:
+                summary: Instance with owner phone
+                value:
+                  organization_id: "660e8400-e29b-41d4-a716-446655440001"
+                  instance_name: "Main Support"
+                  phone_number: "5511999887766"
+      responses:
+        '200':
+          description: Instance created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  instance:
+                    $ref: '#/components/schemas/WhatsAppInstance'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingFields:
+                  summary: Missing required fields
+                  value:
+                    error: "Missing required fields"
+                    code: "VALIDATION_ERROR"
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags:
+        - WhatsApp Instances
+      summary: List WhatsApp instances
+      description: Get all WhatsApp instances for your organization
+      operationId: listInstances
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: organization_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Organization UUID to filter by
+      responses:
+        '200':
+          description: List of instances
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WhatsAppInstance'
+
+  /api/whatsapp/instances/{id}/connect:
+    post:
+      tags:
+        - WhatsApp Instances
+      summary: Connect WhatsApp instance
+      description: |
+        Initiates connection to WhatsApp using either pairing code or QR code method.
+
+        **Pairing Code Method:**
+        - Requires `phone_number` parameter
+        - Returns 8-character code in response
+        - Code expires in 60 seconds
+        - User enters code in WhatsApp app
+
+        **QR Code Method:**
+        - No phone number required
+        - QR code sent via Socket.IO event `whatsapp:qr`
+        - User scans QR with WhatsApp app
+        - QR refreshes every 60 seconds until scanned
+      operationId: connectInstance
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Instance UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone_number:
+                  type: string
+                  pattern: '^[0-9]{10,15}$'
+                  description: Phone number (required for 'code' method)
+                  example: "5511999887766"
+                method:
+                  type: string
+                  enum: [code, qr]
+                  default: code
+                  description: Connection method
+                  example: "code"
+            examples:
+              pairingCode:
+                summary: Connect with pairing code
+                value:
+                  phone_number: "5511999887766"
+                  method: "code"
+              qrCode:
+                summary: Connect with QR code
+                value:
+                  method: "qr"
+      responses:
+        '200':
+          description: Connection initiated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      pairingCode:
+                        type: string
+                        example: "ABCD1234"
+                        description: 8-character pairing code
+                      method:
+                        type: string
+                        example: "code"
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      method:
+                        type: string
+                        example: "qr"
+                      message:
+                        type: string
+                        example: "QR Code will be sent via Socket.IO when generated"
+              examples:
+                pairingCode:
+                  summary: Pairing code response
+                  value:
+                    success: true
+                    pairingCode: "ABCD1234"
+                    method: "code"
+                qrCode:
+                  summary: QR code response
+                  value:
+                    success: true
+                    method: "qr"
+                    message: "QR Code will be sent via Socket.IO when generated"
+        '404':
+          description: Instance not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/whatsapp/instances/{id}/status:
+    get:
+      tags:
+        - WhatsApp Instances
+      summary: Get instance status
+      description: |
+        Retrieves the current status and metrics of a WhatsApp instance.
+
+        Use this endpoint to:
+        - Check if instance is connected
+        - Monitor message counts
+        - Verify last connection time
+        - Confirm Baileys instance is running in memory
+      operationId: getInstanceStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Instance UUID
+      responses:
+        '200':
+          description: Instance status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  instance:
+                    $ref: '#/components/schemas/WhatsAppInstance'
+                  is_running:
+                    type: boolean
+                    description: Is Baileys instance active in memory
+                    example: true
+              examples:
+                connected:
+                  summary: Connected instance
+                  value:
+                    instance:
+                      id: "550e8400-e29b-41d4-a716-446655440000"
+                      status: "connected"
+                      phone_number: "5511999887766"
+                      messages_sent_count: 1247
+                      messages_received_count: 892
+                      last_connected_at: "2025-10-02T10:30:00Z"
+                    is_running: true
+                disconnected:
+                  summary: Disconnected instance
+                  value:
+                    instance:
+                      id: "550e8400-e29b-41d4-a716-446655440000"
+                      status: "disconnected"
+                      last_connected_at: "2025-10-01T08:00:00Z"
+                    is_running: false
+        '404':
+          description: Instance not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/whatsapp/instances/{id}/send:
+    post:
+      tags:
+        - WhatsApp Messages
+      summary: Send WhatsApp message
+      description: |
+        Sends a text message via the specified WhatsApp instance.
+
+        **Requirements:**
+        - Instance must be in 'connected' status
+        - Target number must be valid WhatsApp number
+        - Message content is required
+
+        **Formatting:**
+        - Phone number with or without @s.whatsapp.net suffix
+        - International format recommended: 5511999887766
+      operationId: sendMessage
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Instance UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - to
+                - message
+              properties:
+                to:
+                  type: string
+                  description: Recipient's phone number
+                  example: "5511988776655"
+                message:
+                  type: string
+                  minLength: 1
+                  maxLength: 4096
+                  description: Message text content
+                  example: "Olá! Seu agendamento foi confirmado para amanhã às 14h."
+            examples:
+              simple:
+                summary: Simple text message
+                value:
+                  to: "5511988776655"
+                  message: "Hello from AuZap!"
+              withJid:
+                summary: Message with @s.whatsapp.net suffix
+                value:
+                  to: "5511988776655@s.whatsapp.net"
+                  message: "Hello from AuZap!"
+      responses:
+        '200':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid request (missing fields)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Instance not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Send error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/whatsapp/instances/{id}:
+    delete:
+      tags:
+        - WhatsApp Instances
+      summary: Disconnect instance
+      description: |
+        Disconnects a WhatsApp instance and marks it as 'disconnected'.
+
+        **Note:** This does not delete the instance from database,
+        it only disconnects and updates status.
+
+        Session data is preserved for future reconnection.
+      operationId: deleteInstance
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Instance UUID
+      responses:
+        '200':
+          description: Instance disconnected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '500':
+          description: Disconnect error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/whatsapp/instances/{id}/health:
+    get:
+      tags:
+        - WhatsApp Health
+      summary: Get instance health metrics
+      description: |
+        Returns comprehensive health metrics for a WhatsApp instance.
+
+        Includes:
+        - Connection status and uptime
+        - Message counts and rates
+        - Error rates
+        - Last activity timestamps
+        - Health score (0-100)
+      operationId: getInstanceHealth
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Instance UUID
+      responses:
+        '200':
+          description: Health metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  instanceId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                  healthScore:
+                    type: integer
+                    minimum: 0
+                    maximum: 100
+                    description: Overall health score
+                  uptime:
+                    type: integer
+                    description: Seconds since last connection
+                  metrics:
+                    type: object
+                    properties:
+                      messagesReceived:
+                        type: integer
+                      messagesSent:
+                        type: integer
+                      errorRate:
+                        type: number
+                        format: float
+                        description: Error rate percentage
+                      lastActivity:
+                        type: string
+                        format: date-time
+
+  /api/conversations:
+    get:
+      tags:
+        - Conversations
+      summary: List conversations
+      description: Get all conversations for an organization
+      operationId: listConversations
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: organization_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, archived, closed]
+          description: Filter by conversation status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+  /api/conversations/{id}/messages:
+    get:
+      tags:
+        - Conversations
+      summary: Get conversation messages
+      description: Retrieve all messages in a conversation
+      operationId: getConversationMessages
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Conversation UUID
+      responses:
+        '200':
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WhatsAppMessage'
+
+  /api/contacts:
+    post:
+      tags:
+        - Contacts
+      summary: Create contact
+      description: Create a new customer contact
+      operationId: createContact
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - organization_id
+                - phone
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+                phone:
+                  type: string
+                  pattern: '^[0-9]{10,15}$'
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                notes:
+                  type: string
+      responses:
+        '201':
+          description: Contact created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+
+  /health:
+    get:
+      tags:
+        - WhatsApp Health
+      summary: API health check
+      description: Check if the API is running
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-10-02T10:30:00.000Z"
+
+externalDocs:
+  description: Complete WhatsApp Integration Guide
+  url: https://docs.auzap.com/whatsapp-integration
