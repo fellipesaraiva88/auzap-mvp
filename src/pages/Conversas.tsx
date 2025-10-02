@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { MessageSquare, Bot, User, AlertCircle, Phone, Dog, Cat, Send, Sparkles, Clock, CheckCircle2, Loader2 } from "lucide-react";
-import { useConversations, useConversation, useConversationMessages } from "@/hooks/useConversations";
+import { useConversations, useConversation, useConversationMessages, useConversationAIActions } from "@/hooks/useConversations";
+import { useConversationsSocketUpdates } from "@/hooks/useSocket";
 import { format } from "date-fns";
 
 export default function Conversas() {
@@ -15,6 +16,9 @@ export default function Conversas() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
   const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>();
   const [messageInput, setMessageInput] = useState("");
+
+  // Enable real-time Socket.io updates
+  useConversationsSocketUpdates();
 
   const { conversations, isLoading: loadingConversations, assumeConversation } = useConversations({
     status: statusFilter,
@@ -26,8 +30,11 @@ export default function Conversas() {
 
   const { messages, sendMessage, isSending } = useConversationMessages(selectedConversationId);
 
+  const { aiActions, isLoading: loadingAIActions } = useConversationAIActions(selectedConversationId);
+
   const filteredConversations = conversations.filter((conv) =>
-    conv.contact?.name.toLowerCase().includes(searchQuery.toLowerCase())
+    conv.contact?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    conv.contact?.phone_number?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Selecionar automaticamente a primeira conversa
@@ -160,15 +167,15 @@ export default function Conversas() {
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-ocean-blue to-sky-blue flex items-center justify-center text-white font-semibold shadow-lg">
-                              {(conv.contact?.name || "?").charAt(0)}
+                              {(conv.contacts?.full_name || "?").charAt(0)}
                             </div>
                             <div>
                               <p className="font-semibold text-sm group-hover:text-ocean-blue transition-colors">
-                                {conv.contact?.name || "Desconhecido"}
+                                {conv.contacts?.full_name || "Desconhecido"}
                               </p>
                               <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                                 <Clock className="w-3 h-3" />
-                                {format(new Date(conv.lastMessageAt), "HH:mm")}
+                                {format(new Date(conv.last_message_at), "HH:mm")}
                               </p>
                             </div>
                           </div>
@@ -182,7 +189,7 @@ export default function Conversas() {
                           </div>
                         </div>
                         <p className="text-xs text-muted-foreground line-clamp-2 ml-12">
-                          {conv.lastMessage}
+                          {conv.last_message || "Sem mensagens"}
                         </p>
                       </div>
                     ))}
@@ -207,16 +214,16 @@ export default function Conversas() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-ocean-blue to-sky-blue flex items-center justify-center text-white font-bold text-lg shadow-xl">
-                      {(selectedConversation.contact?.name || "?").charAt(0)}
+                      {(selectedConversation.contacts?.full_name || "?").charAt(0)}
                     </div>
                     <div>
                       <h3 className="font-bold text-xl font-display">
-                        {selectedConversation.contact?.name || "Desconhecido"}
+                        {selectedConversation.contacts?.full_name || "Desconhecido"}
                       </h3>
                       <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
                         <Phone className="w-3 h-3" />
-                        {selectedConversation.contact?.phone || "Sem telefone"}
-                        {selectedConversation.aiActive && (
+                        {selectedConversation.contacts?.phone_number || "Sem telefone"}
+                        {selectedConversation.status === 'active' && (
                           <Badge variant="secondary" className="ml-2 gap-1 bg-ocean-blue/10 text-ocean-blue border-ocean-blue/20">
                             <Sparkles className="w-3 h-3" />
                             IA Ativa
@@ -346,10 +353,21 @@ export default function Conversas() {
                         <User className="w-3 h-3" />
                         CLIENTE
                       </p>
-                      <p className="font-semibold mb-2">{selectedConversation.contact?.name || "Desconhecido"}</p>
+                      <p className="font-semibold mb-2">{selectedConversation.contacts?.full_name || "Desconhecido"}</p>
                       <Badge variant="default" className="bg-green-500/20 text-green-600 border-green-500/30">
-                        {selectedConversation.contact?.email ? "Cliente Cadastrado" : "Novo Cliente"}
+                        {selectedConversation.contacts?.email ? "Cliente Cadastrado" : "Novo Cliente"}
                       </Badge>
+                      {selectedConversation.contacts?.pets && selectedConversation.contacts.pets.length > 0 && (
+                        <div className="mt-3 space-y-1">
+                          <p className="text-xs text-muted-foreground">Pets:</p>
+                          {selectedConversation.contacts.pets.map((pet: any, idx: number) => (
+                            <div key={idx} className="flex items-center gap-1 text-xs">
+                              {pet.species === 'dog' ? <Dog className="w-3 h-3" /> : <Cat className="w-3 h-3" />}
+                              <span>{pet.name} ({pet.breed})</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {selectedConversation.intent && (
@@ -366,18 +384,25 @@ export default function Conversas() {
                     <div className="p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 hover-lift">
                       <p className="text-xs font-semibold text-green-600 mb-3 flex items-center gap-1">
                         <Sparkles className="w-3 h-3" />
-                        AÇÕES EXECUTADAS
+                        AÇÕES DA IA
                       </p>
-                      {selectedConversation.aiActions?.length > 0 ? (
+                      {loadingAIActions ? (
+                        <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+                      ) : aiActions.length > 0 ? (
                         <div className="space-y-2">
-                          {selectedConversation.aiActions.map((action, idx) => (
+                          {aiActions.slice(0, 5).map((action: any, idx: number) => (
                             <div
-                              key={idx}
+                              key={action.id || idx}
                               className="flex items-center gap-2 text-xs text-green-600 p-2 rounded-lg bg-green-500/10 slide-in"
                               style={{ animationDelay: `${idx * 0.1}s` }}
                             >
                               <CheckCircle2 className="w-3 h-3 flex-shrink-0" />
-                              <span className="font-medium">{action}</span>
+                              <div>
+                                <span className="font-medium">{action.action_type}</span>
+                                {action.result_data && (
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">{JSON.stringify(action.result_data).slice(0, 50)}</p>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>

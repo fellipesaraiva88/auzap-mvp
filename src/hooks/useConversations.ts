@@ -13,7 +13,8 @@ export function useConversations(params?: ListConversationsParams) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['conversations', params],
     queryFn: () => conversationsService.list(params),
-    refetchInterval: 5000, // Atualizar a cada 5 segundos
+    staleTime: 10000, // Consider data fresh for 10s
+    refetchInterval: 15000, // Atualizar a cada 15 segundos
   });
 
   const assumeMutation = useMutation({
@@ -75,7 +76,10 @@ export function useConversations(params?: ListConversationsParams) {
 
   return {
     conversations: data?.conversations || [],
-    total: data?.total || 0,
+    count: data?.count || 0,
+    total: data?.count || 0, // Backward compatibility
+    page: data?.page || 1,
+    totalPages: data?.totalPages || 1,
     isLoading,
     error,
     assumeConversation: assumeMutation.mutate,
@@ -89,11 +93,28 @@ export function useConversation(conversationId?: string) {
     queryKey: ['conversation', conversationId],
     queryFn: () => conversationsService.getById(conversationId!),
     enabled: !!conversationId,
-    refetchInterval: 3000, // Atualizar a cada 3 segundos
+    staleTime: 5000, // Consider data fresh for 5s
+    refetchInterval: 10000, // Atualizar a cada 10 segundos
   });
 
   return {
     conversation: data,
+    isLoading,
+    error,
+  };
+}
+
+export function useConversationAIActions(conversationId?: string) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['conversation-ai-actions', conversationId],
+    queryFn: () => conversationsService.getAIActions(conversationId!),
+    enabled: !!conversationId,
+    staleTime: 15000, // Consider data fresh for 15s
+    refetchInterval: 30000, // Atualizar a cada 30 segundos
+  });
+
+  return {
+    aiActions: data || [],
     isLoading,
     error,
   };
@@ -107,7 +128,8 @@ export function useConversationMessages(conversationId?: string) {
     queryKey: ['conversation-messages', conversationId],
     queryFn: () => conversationsService.getMessages(conversationId!),
     enabled: !!conversationId,
-    refetchInterval: 2000, // Atualizar mensagens a cada 2 segundos
+    staleTime: 3000, // Consider data fresh for 3s
+    refetchInterval: 5000, // Atualizar mensagens a cada 5 segundos
   });
 
   const sendMessageMutation = useMutation({

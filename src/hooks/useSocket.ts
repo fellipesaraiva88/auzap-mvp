@@ -122,3 +122,65 @@ export function useDashboardSocketUpdates() {
     };
   }, [on, off, queryClient]);
 }
+
+// Hook específico para real-time updates na Central de Conversas
+export function useConversationsSocketUpdates() {
+  const queryClient = useQueryClient();
+  const { on, off } = useSocket();
+
+  useEffect(() => {
+    // New message received
+    const handleNewMessage = (data: { conversationId: string; messageId: string; from: string }) => {
+      console.log('💬 New message in conversation', data);
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', data.conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversation-messages', data.conversationId] });
+    };
+
+    // Message sent successfully
+    const handleMessageSent = (data: { conversationId: string; messageId: string }) => {
+      console.log('✉️ Message sent successfully', data);
+      queryClient.invalidateQueries({ queryKey: ['conversation-messages', data.conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    };
+
+    // Conversation status changed
+    const handleConversationStatusChanged = (data: { conversationId: string; status: string; reason?: string }) => {
+      console.log('🔄 Conversation status changed', data);
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', data.conversationId] });
+    };
+
+    // AI action executed in conversation
+    const handleAIActionExecuted = (data: { conversationId: string; actionType: string; description: string }) => {
+      console.log('🤖 AI action executed', data);
+      queryClient.invalidateQueries({ queryKey: ['conversation-ai-actions', data.conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', data.conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    };
+
+    // Conversation escalated to human
+    const handleConversationEscalated = (data: { conversationId: string; contactId: string; reason: string }) => {
+      console.log('⚠️ Conversation escalated to human', data);
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', data.conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    };
+
+    // Register listeners
+    on('new-message', handleNewMessage);
+    on('message-sent', handleMessageSent);
+    on('conversation-status-changed', handleConversationStatusChanged);
+    on('ai-action-executed', handleAIActionExecuted);
+    on('conversation-escalated', handleConversationEscalated);
+
+    // Cleanup
+    return () => {
+      off('new-message', handleNewMessage);
+      off('message-sent', handleMessageSent);
+      off('conversation-status-changed', handleConversationStatusChanged);
+      off('ai-action-executed', handleAIActionExecuted);
+      off('conversation-escalated', handleConversationEscalated);
+    };
+  }, [on, off, queryClient]);
+}

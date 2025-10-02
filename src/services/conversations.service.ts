@@ -40,21 +40,30 @@ export interface ListConversationsParams {
 
 class ConversationsService {
   async list(params?: ListConversationsParams) {
-    const { data } = await api.get<{ conversations: Conversation[]; total: number }>(
-      '/conversations',
+    const { data } = await api.get<{ conversations: Conversation[]; count: number; page: number; totalPages: number }>(
+      '/api/conversations',
       { params }
     );
     return data;
   }
 
   async getById(id: string) {
-    const { data } = await api.get<Conversation>(`/conversations/${id}`);
+    const { data } = await api.get<Conversation>(`/api/conversations/${id}`);
     return data;
   }
 
   async getMessages(conversationId: string) {
-    const { data } = await api.get<Message[]>(`/conversations/${conversationId}/messages`);
-    return data;
+    const { data } = await api.get<{ conversationId: string; messages: Message[]; count: number }>(
+      `/api/conversations/${conversationId}/messages`
+    );
+    return data.messages;
+  }
+
+  async getAIActions(conversationId: string) {
+    const { data } = await api.get<{ conversationId: string; contactId: string; actions: any[]; count: number }>(
+      `/api/conversations/${conversationId}/ai-actions`
+    );
+    return data.actions;
   }
 
   async sendMessage(conversationId: string, content: string) {
