@@ -222,25 +222,6 @@ export class MessageWorker {
   }
 
   /**
-   * Busca histórico da conversa
-   */
-  private async getConversationHistory(conversationId: string): Promise<any[]> {
-    const { data } = await supabaseAdmin
-      .from('messages')
-      .select('direction, content')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
-      .limit(20);
-
-    if (!data) return [];
-
-    return data.map(msg => ({
-      role: msg.direction === 'inbound' ? 'user' : 'assistant',
-      content: msg.content
-    }));
-  }
-
-  /**
    * Salva mensagens no banco
    */
   private async saveMessage(

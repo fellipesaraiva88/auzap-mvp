@@ -79,7 +79,7 @@ export class TenantMiddleware {
    * Extrai organization_id de API key (para integrações)
    * TODO: Implementar quando tabela api_keys for criada
    */
-  static async fromAPIKey(req: TenantRequest, res: Response, _next: NextFunction): Promise<void> {
+  static async fromAPIKey(_req: TenantRequest, res: Response, _next: NextFunction): Promise<void> {
     res.status(501).json({ error: 'API key authentication not yet implemented' });
   }
 
@@ -131,7 +131,7 @@ export class TenantMiddleware {
           return;
         }
 
-        if (data.organization_id !== organizationId) {
+        if ((data as any).organization_id !== organizationId) {
           logger.warn(
             { organizationId, resourceId, resourceTable },
             'Unauthorized resource access attempt'
