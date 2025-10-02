@@ -31,6 +31,8 @@
     "test:flow": "dotenv -e .env -- ts-node src/scripts/test-complete-flow.ts"
   },
   "dependencies": {
+    "@bull-board/api": "^6.13.0",
+    "@bull-board/express": "^6.13.0",
     "@hapi/boom": "^10.0.1",
     "@supabase/supabase-js": "^2.45.4",
     "@types/cors": "^2.8.19",
