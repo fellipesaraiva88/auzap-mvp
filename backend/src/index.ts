@@ -20,6 +20,8 @@ import conversationsRoutes from './routes/conversations.routes';
 import petsRoutes from './routes/pets.routes';
 import bookingsRoutes from './routes/bookings.routes';
 import servicesRoutes from './routes/services.routes';
+import metricsRoutes from './routes/metrics.routes';
+import capacityRoutes from './routes/capacity.routes';
 import { startWorkers, stopWorkers } from './workers';
 
 const app = express();
@@ -84,6 +86,8 @@ app.use('/api/conversations', tenantMiddleware, conversationsRoutes);
 app.use('/api/pets', tenantMiddleware, petsRoutes);
 app.use('/api/bookings', tenantMiddleware, bookingsRoutes);
 app.use('/api/services', tenantMiddleware, servicesRoutes);
+app.use('/api/metrics', tenantMiddleware, metricsRoutes);
+app.use('/api/capacity', tenantMiddleware, capacityRoutes);
 app.use('/api/whatsapp', tenantMiddleware, whatsappRoutes);
 app.use('/api/whatsapp', tenantMiddleware, whatsappHealthRoutes);
 
@@ -108,10 +112,17 @@ io.on('connection', (socket) => {
 export { io };
 
 // Error handling
-app.use((err: any, req: express.Request, res: express.Response) => {
-  logger.error({ error: err, path: req.path }, 'Unhandled error');
-  res.status(500).json({ error: 'Internal server error' });
-});
+app.use(
+  (
+    err: unknown,
+    req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction
+  ) => {
+    logger.error({ error: err, path: req.path }, 'Unhandled error');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+);
 
 // Start server
 const PORT = process.env.PORT || 3000;
