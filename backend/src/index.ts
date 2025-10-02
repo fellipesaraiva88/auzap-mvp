@@ -126,9 +126,10 @@ app.use(
 
 // Start server
 const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0'; // Railway requires binding to 0.0.0.0
 
-httpServer.listen(PORT, () => {
-  logger.info(`🚀 AuZap API server running on port ${PORT}`);
+httpServer.listen(PORT, HOST, () => {
+  logger.info(`🚀 AuZap API server running on ${HOST}:${PORT}`);
   logger.info(`📡 Socket.IO server ready`);
   logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 
