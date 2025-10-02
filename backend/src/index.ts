@@ -10,6 +10,7 @@ import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { logger } from './config/logger';
+import { tenantMiddleware } from './middleware/tenant.middleware';
 import whatsappRoutes from './routes/whatsapp.routes';
 import whatsappHealthRoutes from './routes/whatsapp-health.routes';
 import webhookRoutes from './routes/webhook.routes';
@@ -68,21 +69,23 @@ app.use(
   })
 );
 
-// Health check
+// Health check (sem tenant middleware)
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Routes
+// Public routes (sem tenant middleware)
 app.use('/api/auth', authRoutes);
-app.use('/api/contacts', contactsRoutes);
-app.use('/api/conversations', conversationsRoutes);
-app.use('/api/pets', petsRoutes);
-app.use('/api/bookings', bookingsRoutes);
-app.use('/api/services', servicesRoutes);
-app.use('/api/whatsapp', whatsappRoutes);
-app.use('/api/whatsapp', whatsappHealthRoutes);
 app.use('/webhook', webhookRoutes);
+
+// Protected routes (COM tenant middleware)
+app.use('/api/contacts', tenantMiddleware, contactsRoutes);
+app.use('/api/conversations', tenantMiddleware, conversationsRoutes);
+app.use('/api/pets', tenantMiddleware, petsRoutes);
+app.use('/api/bookings', tenantMiddleware, bookingsRoutes);
+app.use('/api/services', tenantMiddleware, servicesRoutes);
+app.use('/api/whatsapp', tenantMiddleware, whatsappRoutes);
+app.use('/api/whatsapp', tenantMiddleware, whatsappHealthRoutes);
 
 // Socket.IO para real-time
 io.on('connection', (socket) => {
