@@ -47,13 +47,16 @@ const worker = new Worker(
 
       if (auroraContext.isOwner) {
         // ===== PROCESSAMENTO AURORA =====
-        logger.info({
-          from: cleanFrom,
-          type: 'OWNER',
-          agentType: 'aurora',
-          userId: auroraContext.userId,
-          messageContent: content.substring(0, 50)
-        }, '[AURORA] Processing owner message');
+        logger.info(
+          {
+            from: cleanFrom,
+            type: 'OWNER',
+            agentType: 'aurora',
+            userId: auroraContext.userId,
+            messageContent: content.substring(0, 50),
+          },
+          '[AURORA] Processing owner message'
+        );
         isOwnerMessage = true;
 
         response = await AuroraService.processOwnerMessage({
@@ -74,22 +77,28 @@ const worker = new Worker(
           sent_at: new Date().toISOString(),
         });
 
-        logger.info({
-          from: cleanFrom,
-          agentType: 'aurora',
-          responseLength: response.length
-        }, '[AURORA] Response sent successfully');
+        logger.info(
+          {
+            from: cleanFrom,
+            agentType: 'aurora',
+            responseLength: response.length,
+          },
+          '[AURORA] Response sent successfully'
+        );
       } else {
         // ===== PROCESSAMENTO IA CLIENTE =====
-        logger.info({
-          from: cleanFrom,
-          type: 'CLIENT',
-          agentType: 'client-ai',
-          messageContent: content.substring(0, 50)
-        }, '[CLIENT-AI] Processing client message');
+        logger.info(
+          {
+            from: cleanFrom,
+            type: 'CLIENT',
+            agentType: 'client-ai',
+            messageContent: content.substring(0, 50),
+          },
+          '[CLIENT-AI] Processing client message'
+        );
 
         // Buscar ou criar contato
-        let { data: contact } = await supabase
+        const { data: contact } = await supabase
           .from('contacts')
           .select('*')
           .eq('organization_id', organizationId)
@@ -115,7 +124,7 @@ const worker = new Worker(
           contactId = newContact.id;
         } else {
           contactId = contact.id;
-          
+
           // Atualizar last_contact_at
           await supabase
             .from('contacts')
@@ -124,7 +133,7 @@ const worker = new Worker(
         }
 
         // Buscar ou criar conversa
-        let { data: conversation } = await supabase
+        const { data: conversation } = await supabase
           .from('conversations')
           .select('*')
           .eq('organization_id', organizationId)
@@ -165,19 +174,15 @@ const worker = new Worker(
         }
 
         // Salvar mensagem recebida
-        const { data: savedMessage } = await supabase
-          .from('messages')
-          .insert({
-            organization_id: organizationId,
-            conversation_id: conversationId,
-            whatsapp_message_id: messageId,
-            direction: 'incoming',
-            content,
-            message_type: 'text',
-            from_me: false,
-          })
-          .select()
-          .single();
+        await supabase.from('messages').insert({
+          organization_id: organizationId,
+          conversation_id: conversationId,
+          whatsapp_message_id: messageId,
+          direction: 'incoming',
+          content,
+          message_type: 'text',
+          from_me: false,
+        });
 
         // Processar com IA
         response = await ClientAIService.processClientMessage(
@@ -198,17 +203,25 @@ const worker = new Worker(
           sent_by_ai: true,
         });
 
-        logger.info({
-          from: cleanFrom,
-          agentType: 'client-ai',
-          contactId,
-          conversationId,
-          responseLength: response.length
-        }, '[CLIENT-AI] Response sent successfully');
+        logger.info(
+          {
+            from: cleanFrom,
+            agentType: 'client-ai',
+            contactId,
+            conversationId,
+            responseLength: response.length,
+          },
+          '[CLIENT-AI] Response sent successfully'
+        );
       }
 
       // Enviar resposta via WhatsApp
-      await BaileysService.sendMessage(organizationId, instanceId, cleanFrom, response);
+      await BaileysService.sendMessage(
+        organizationId,
+        instanceId,
+        cleanFrom,
+        response
+      );
 
       logger.info({ jobId: job.id }, 'Message processed successfully');
 
@@ -218,15 +231,24 @@ const worker = new Worker(
         response: response.substring(0, 100),
       };
     } catch (error: any) {
-      logger.error({ error, jobId: job.id, organizationId }, 'Error processing message');
+      logger.error(
+        { error, jobId: job.id, organizationId },
+        'Error processing message'
+      );
       throw error;
     }
   },
   {
     connection,
-    concurrency: 5,
+    concurrency: process.env.WORKER_CONCURRENCY
+      ? parseInt(process.env.WORKER_CONCURRENCY)
+      : 5, // Ajustável via env
     removeOnComplete: { count: 100 },
     removeOnFail: { count: 500 },
+    limiter: {
+      max: 10, // Max 10 jobs por segundo
+      duration: 1000,
+    },
   }
 );
 
