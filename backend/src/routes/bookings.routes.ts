@@ -1,9 +1,21 @@
 import { Router, Request, Response } from 'express';
 import { BookingsService } from '../services/bookings/bookings.service.js';
 import { logger } from '../config/logger.js';
+import { readLimiter, criticalLimiter } from '../middleware/rate-limiter.js';
 
 const router = Router();
 const bookingsService = new BookingsService();
+
+// GET routes: read limiter (120 req/min)
+router.use(['/', '/:id'], readLimiter);
+
+// POST/PUT/DELETE routes: critical limiter (10 req/min)
+router.use(['/', '/:id'], (req, _res, next) => {
+  if (req.method !== 'GET') {
+    return criticalLimiter(req, _res, next);
+  }
+  next();
+});
 
 // List bookings by organization
 router.get('/', async (req, res): Promise<void> => {
