@@ -10,6 +10,9 @@ import { supabaseAdmin } from './config/supabase.js';
 const app = express();
 const httpServer = createServer(app);
 
+// Trust proxy - necessário para Render e rate limiting
+app.set('trust proxy', 1);
+
 // Socket.io setup
 export const io = new Server(httpServer, {
   cors: {
