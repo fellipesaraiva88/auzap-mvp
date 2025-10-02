@@ -315,14 +315,14 @@ export class BaileysService {
       }, 'Incoming WhatsApp message');
 
       // Adicionar à fila de processamento
-      const { messageQueue } = await import('../../config/redis.js');
-      await messageQueue.add('process-message', {
+      const { addMessageJob } = await import('../../queue/queue-manager.js');
+      await addMessageJob({
         organizationId,
         instanceId,
         from,
         content,
-        messageId: message.key.id,
-        timestamp: message.messageTimestamp
+        messageId: message.key.id || undefined,
+        timestamp: (message.messageTimestamp as number) || Date.now()
       });
     }
   }
