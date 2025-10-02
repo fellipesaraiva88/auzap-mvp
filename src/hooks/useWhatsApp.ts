@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { apiClient } from '@/lib/api';
-import { socket } from '@/lib/socket';
+import { socketManager } from '@/lib/socket';
 import { useAuth } from './useAuth';
 
 export type WhatsAppStatus =
@@ -85,7 +85,7 @@ export function useWhatsAppStatus(instanceId: string, enabled = true) {
     const organizationId = user.organization_id;
 
     // Conectar Socket.IO
-    socket.connect();
+    // Socket connection is managed by socketManager
 
     // Eventos WhatsApp
     const handleStatusUpdate = (data: any) => {
@@ -112,14 +112,14 @@ export function useWhatsAppStatus(instanceId: string, enabled = true) {
     };
 
     // Subscribe aos eventos
-    socket.on(`/org/${organizationId}:whatsapp:status`, handleStatusUpdate);
-    socket.on(`/org/${organizationId}:whatsapp:connected`, handleConnected);
-    socket.on(`/org/${organizationId}:whatsapp:disconnected`, handleDisconnected);
+    socketManager.on(`/org/${organizationId}:whatsapp:status`, handleStatusUpdate);
+    socketManager.on(`/org/${organizationId}:whatsapp:connected`, handleConnected);
+    socketManager.on(`/org/${organizationId}:whatsapp:disconnected`, handleDisconnected);
 
     return () => {
-      socket.off(`/org/${organizationId}:whatsapp:status`, handleStatusUpdate);
-      socket.off(`/org/${organizationId}:whatsapp:connected`, handleConnected);
-      socket.off(`/org/${organizationId}:whatsapp:disconnected`, handleDisconnected);
+      socketManager.off(`/org/${organizationId}:whatsapp:status`, handleStatusUpdate);
+      socketManager.off(`/org/${organizationId}:whatsapp:connected`, handleConnected);
+      socketManager.off(`/org/${organizationId}:whatsapp:disconnected`, handleDisconnected);
     };
   }, [instanceId, enabled, user, queryClient]);
 
