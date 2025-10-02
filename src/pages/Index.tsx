@@ -9,25 +9,25 @@ const Index = () => {
     <div className="min-h-screen bg-background paw-pattern">
       <div className="container mx-auto p-6 max-w-7xl">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+        <div className="mb-8 fade-in">
+          <h1 className="text-4xl font-bold gradient-text mb-2">
             Oi Maria! 👋
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-lg">
             A IA já atendeu <span className="text-primary font-semibold">23 clientes</span> hoje!
           </p>
         </div>
 
-        {/* Impact Hero Section */}
+        {/* Impact Hero Section - Tempo Recuperado */}
         <ImpactHero />
 
-        {/* Impact Cards */}
+        {/* Impact Cards - Métricas de Impacto */}
         <ImpactCards />
 
-        {/* AI Timeline */}
+        {/* AI Timeline - O que aconteceu enquanto você vivia sua vida */}
         <AITimeline />
 
-        {/* Impact Charts */}
+        {/* Impact Charts - Gráficos de Significado */}
         <ImpactCharts />
 
         {/* Only You Can Resolve Section */}
