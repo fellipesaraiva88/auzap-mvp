@@ -230,7 +230,7 @@ const worker = new Worker(
         isOwner: isOwnerMessage,
         response: response.substring(0, 100),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(
         { error, jobId: job.id, organizationId },
         'Error processing message'
@@ -248,6 +248,12 @@ const worker = new Worker(
     limiter: {
       max: 10, // Max 10 jobs por segundo
       duration: 1000,
+    },
+    settings: {
+      backoffStrategy: (attemptsMade: number) => {
+        // Exponential backoff: 2s, 4s, 8s
+        return Math.min(Math.pow(2, attemptsMade) * 1000, 10000);
+      },
     },
   }
 );
