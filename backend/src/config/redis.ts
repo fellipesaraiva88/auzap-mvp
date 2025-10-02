@@ -11,9 +11,18 @@ const upstashRedis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_R
   : null;
 
 // Conexão Redis (ioredis para BullMQ)
+// Em produção sem REDIS_URL, usar configuração mínima (workers síncronos)
 const connection = process.env.REDIS_URL
   ? new IORedis(process.env.REDIS_URL, {
       maxRetriesPerRequest: null,
+    })
+  : process.env.NODE_ENV === 'production'
+  ? new IORedis({
+      host: 'localhost',
+      port: 6379,
+      maxRetriesPerRequest: null,
+      lazyConnect: true, // Não conectar imediatamente em produção
+      enableOfflineQueue: false,
     })
   : new IORedis({
       host: process.env.REDIS_HOST || 'localhost',
@@ -22,7 +31,9 @@ const connection = process.env.REDIS_URL
       maxRetriesPerRequest: null,
     });
 
-// Fila de mensagens
-export const messageQueue = new Queue('messages', { connection });
+// Fila de mensagens (opcional em produção sem Redis)
+export const messageQueue = process.env.NODE_ENV === 'production' && !process.env.REDIS_URL
+  ? null
+  : new Queue('messages', { connection });
 
 export { connection, upstashRedis };

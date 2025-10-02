@@ -7,6 +7,18 @@ import { logger } from '../config/logger';
  * Inicializar todos os workers
  */
 export function startWorkers() {
+  // Skip workers em produção sem Redis
+  if (process.env.NODE_ENV === 'production' && !process.env.REDIS_URL) {
+    logger.warn('⚠️  Redis not configured - workers disabled in production');
+    logger.info('💡 Messages will be processed synchronously');
+    return {
+      messageProcessor: null,
+      followupScheduler: null,
+      auroraProactive: null,
+      cronJobs: null,
+    };
+  }
+
   logger.info('🚀 Starting all workers...');
 
   // Worker de mensagens
