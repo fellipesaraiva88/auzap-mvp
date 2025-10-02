@@ -195,28 +195,98 @@ fix/xxx         # Bug fixes
 
 ### Commits
 
-Seguimos [Conventional Commits](https://www.conventionalcommits.org/):
+Seguimos [Conventional Commits](https://www.conventionalcommits.org/) **obrigatoriamente** com validação automática via Commitlint.
+
+#### Formato Obrigatório
+
+```
+<type>(<scope>): <subject>
+
+[optional body]
+
+[optional footer]
+```
+
+#### Types Permitidos
+
+- `feat`: Nova funcionalidade
+- `fix`: Correção de bug
+- `docs`: Mudanças na documentação
+- `style`: Formatação, falta de ponto e vírgula, etc (sem mudança de código)
+- `refactor`: Refatoração de código (sem fix ou feat)
+- `perf`: Melhoria de performance
+- `test`: Adicionar ou corrigir testes
+- `build`: Mudanças no sistema de build ou dependências externas
+- `ci`: Mudanças em arquivos de CI/CD
+- `chore`: Outras mudanças que não modificam src ou test
+- `revert`: Reverter commit anterior
+
+#### Exemplos Válidos
 
 ```bash
-feat: adicionar suporte a áudio
-fix: corrigir erro de conexão WhatsApp
-docs: atualizar README
-refactor: reorganizar serviços
-test: adicionar testes de integração
+feat: adicionar suporte a áudio nas mensagens
+feat(whatsapp): implementar envio de documentos PDF
+fix: corrigir erro de conexão com WhatsApp após timeout
+fix(aurora): resolver bug em análise de métricas semanais
+docs: atualizar guia de deploy no README
+docs(api): adicionar documentação dos endpoints de webhook
+refactor(services): reorganizar lógica de processamento de mensagens
+test: adicionar testes E2E para fluxo de agendamento
+ci: configurar GitHub Actions para deploy automático
+chore(deps): atualizar dependências do backend
+```
+
+#### Exemplos Inválidos ❌
+
+```bash
+# ❌ Falta tipo
+"adicionar suporte a áudio"
+
+# ❌ Sujeito começa com maiúscula
+"feat: Adicionar suporte"
+
+# ❌ Sujeito termina com ponto
+"fix: corrigir bug."
+
+# ❌ Tipo inválido
+"feature: nova funcionalidade"
+
+# ❌ Header muito longo (>100 caracteres)
+"feat: adicionar suporte completo a envio de áudio, vídeo, imagens e documentos via WhatsApp com compressão automática"
+```
+
+#### Commit Message com Body e Footer
+
+```bash
+git commit -m "feat(ai): adicionar contexto histórico nas conversas
+
+A IA agora mantém contexto das últimas 10 mensagens para
+melhorar a qualidade das respostas e continuidade da conversa.
+
+Closes #123
+BREAKING CHANGE: formato da mensagem alterado no banco de dados"
 ```
 
 ### Pull Requests
 
 1. Crie uma branch: `git checkout -b feature/minha-feature`
 2. Commite suas mudanças: `git commit -m "feat: ..."`
+   - ⚠️ **Commitlint irá validar automaticamente**
+   - Se o commit for inválido, será rejeitado
 3. Push: `git push origin feature/minha-feature`
 4. Abra PR no GitHub
 5. Aguarde code review
 
-**Pre-commit hooks** rodam automaticamente:
-- ESLint
-- Prettier
-- Type check
+**Git Hooks Automáticos** (via Husky):
+
+**Pre-commit** (antes do commit):
+- ✓ ESLint (lint-staged)
+- ✓ Prettier (lint-staged)
+- ✓ Arquivos formatados automaticamente
+
+**Commit-msg** (validação de mensagem):
+- ✓ Commitlint (valida formato Conventional Commits)
+- ✓ Rejeita commits fora do padrão
 
 ---
 

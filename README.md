@@ -1,5 +1,13 @@
 # 🐾 AuZap - WhatsApp Automation com Dupla IA
 
+[![CI](https://github.com/fellipesaraiva88/auzap-mvp/workflows/CI/badge.svg)](https://github.com/fellipesaraiva88/auzap-mvp/actions/workflows/ci.yml)
+[![Security](https://github.com/fellipesaraiva88/auzap-mvp/workflows/Security%20Scanning/badge.svg)](https://github.com/fellipesaraiva88/auzap-mvp/actions/workflows/security.yml)
+[![Deploy](https://github.com/fellipesaraiva88/auzap-mvp/workflows/Deploy%20to%20Production/badge.svg)](https://github.com/fellipesaraiva88/auzap-mvp/actions/workflows/deploy.yml)
+[![codecov](https://codecov.io/gh/fellipesaraiva88/auzap-mvp/branch/main/graph/badge.svg)](https://codecov.io/gh/fellipesaraiva88/auzap-mvp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
+
 Sistema SaaS completo de automação WhatsApp para petshops e clínicas veterinárias com **dois agentes de IA independentes**:
 
 - **IA Cliente**: Atende clientes finais via WhatsApp
@@ -9,9 +17,10 @@ Sistema SaaS completo de automação WhatsApp para petshops e clínicas veterin�
 
 ## 🎯 Status do Projeto
 
-✅ **Banco de Dados**: 15 tabelas criadas com RLS  
-✅ **Backend**: API Express + Baileys + OpenAI + Workers  
-✅ **Frontend**: React + Vite + Tailwind + shadcn/ui  
+✅ **Banco de Dados**: 15 tabelas criadas com RLS
+✅ **Backend**: API Express + Baileys + OpenAI + Workers
+✅ **Frontend**: React + Vite + Tailwind + shadcn/ui
+✅ **CI/CD**: GitHub Actions + Dependabot + Security Scanning
 ⏳ **Deploy**: Pendente (Render + Upstash Redis)  
 
 ---
