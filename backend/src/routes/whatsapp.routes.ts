@@ -43,7 +43,8 @@ router.post('/instances', async (req, res) => {
 
 /**
  * POST /api/whatsapp/instances/:id/connect
- * Conectar instância com pairing code
+ * Conectar instância com pairing code ou QR
+ * QR Code será enviado via Socket.IO quando gerado
  */
 router.post('/instances/:id/connect', async (req, res) => {
   try {
@@ -68,6 +69,15 @@ router.post('/instances/:id/connect', async (req, res) => {
       phone_number,
       method
     );
+
+    // Para método QR, informar que será enviado via Socket.IO
+    if (method === 'qr' && result.success) {
+      return res.json({
+        success: true,
+        method: 'qr',
+        message: 'QR Code will be sent via Socket.IO when generated',
+      });
+    }
 
     res.json(result);
   } catch (error: any) {

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/auth';
 import type { WhatsAppInstance } from '@/types';
+import { io, Socket } from 'socket.io-client';
 import {
   Smartphone,
   QrCode,
@@ -46,6 +47,7 @@ export default function WhatsApp() {
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   // Load instances from database
   const loadInstances = useCallback(async () => {
@@ -74,7 +76,7 @@ export default function WhatsApp() {
 
     loadInstances();
 
-    // Subscribe to changes
+    // Subscribe to Supabase changes
     const channel = supabase
       .channel('whatsapp_instances_changes')
       .on(
@@ -92,8 +94,35 @@ export default function WhatsApp() {
       )
       .subscribe();
 
+    // Connect to Socket.IO
+    const socketConnection = io(API_URL, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+    });
+
+    socketConnection.on('connect', () => {
+      console.log('Socket.IO connected:', socketConnection.id);
+      // Join organization room
+      socketConnection.emit('join-organization', organization.id);
+    });
+
+    // Listen for QR code events
+    socketConnection.on('whatsapp:qr', (data: { instanceId: string; qr: string; timestamp: string }) => {
+      console.log('QR Code received:', data);
+      setQrCode(data.qr);
+      // Reload instances to update status
+      loadInstances();
+    });
+
+    socketConnection.on('disconnect', () => {
+      console.log('Socket.IO disconnected');
+    });
+
+    setSocket(socketConnection);
+
     return () => {
       supabase.removeChannel(channel);
+      socketConnection.disconnect();
     };
   }, [organization?.id, loadInstances]);
 
@@ -150,8 +179,9 @@ export default function WhatsApp() {
       // 3. Handle pairing code or QR code
       if (pairingMethod === 'code' && result.pairingCode) {
         setPairingCode(result.pairingCode);
-      } else if (pairingMethod === 'qr' && result.qr) {
-        setQrCode(result.qr);
+      } else if (pairingMethod === 'qr') {
+        // QR code will be received via Socket.IO
+        console.log('Waiting for QR code via Socket.IO...');
       }
 
       // Reload instances
@@ -410,8 +440,20 @@ export default function WhatsApp() {
                 <QrCode className="w-12 h-12 text-blue-600 mx-auto mb-3" />
                 <p className="text-sm text-blue-900 mb-4">Scan this QR code with WhatsApp</p>
                 <div className="bg-white p-4 rounded-lg inline-block">
-                  <img src={qrCode} alt="QR Code" className="w-64 h-64" />
+                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(qrCode)}`} alt="QR Code" className="w-64 h-64" />
                 </div>
+                <p className="text-xs text-blue-700 mt-3">
+                  Open WhatsApp → Settings → Linked Devices → Link a Device
+                </p>
+              </div>
+            )}
+            
+            {/* Waiting for QR */}
+            {pairingMethod === 'qr' && !qrCode && connecting && (
+              <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                <Loader2 className="w-12 h-12 text-blue-600 mx-auto mb-3 animate-spin" />
+                <p className="text-sm text-blue-900 font-medium">Generating QR Code...</p>
+                <p className="text-xs text-blue-700 mt-2">Please wait while we connect to WhatsApp</p>
               </div>
             )}
 
@@ -509,6 +551,7 @@ export default function WhatsApp() {
                   setQrCode(null);
                   setInstanceName('');
                   setPhoneNumber('');
+                  setConnecting(false);
                 }}
                 className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
               >

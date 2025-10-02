@@ -12,6 +12,7 @@ import { supabase } from '../config/supabase';
 import { messageQueue } from '../config/redis';
 import { logger } from '../config/logger';
 import { BaileysInstance, SessionData, PairingMethod } from '../types';
+import { io } from '../index';
 
 const instances = new Map<string, BaileysInstance>();
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -133,7 +134,28 @@ export class BaileysService {
   ) {
     // Connection updates
     socket.ev.on('connection.update', async (update) => {
-      const { connection, lastDisconnect } = update;
+      const { connection, lastDisconnect, qr } = update;
+
+      // Capturar e emitir QR Code
+      if (qr) {
+        logger.info({ instanceId: instance.instanceId }, 'QR Code generated');
+        
+        // Salvar QR no banco
+        await supabase
+          .from('whatsapp_instances')
+          .update({
+            qr_code: qr,
+            status: 'qr_pending',
+          })
+          .eq('id', instance.instanceId);
+
+        // Emitir QR via Socket.IO para o frontend
+        io.to(`org-${instance.organizationId}`).emit('whatsapp:qr', {
+          instanceId: instance.instanceId,
+          qr,
+          timestamp: new Date().toISOString(),
+        });
+      }
 
       if (connection === 'close') {
         const shouldReconnect =
