@@ -2,95 +2,109 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* 🐾 AuZap Design System - Apple-Inspired Blue Pet Theme
+   All colors MUST be HSL. Glassmorphism + Neumorphism focus.
 */
 
 @layer base {
   :root {
+    /* Ocean Blue - Apple Signature Primary */
+    --ocean-blue: 215 100% 50%;
+    --sky-blue: 211 100% 50%;
+    --arctic-blue: 210 100% 97%;
+    --glacier-blue: 210 100% 98%;
+    --sapphire-glow: 218 100% 44%;
+    --midnight-blue: 218 100% 15%;
+
+    /* AI Action Colors */
+    --ai-success: 122 39% 49%;
+    --ai-pending: 45 100% 51%;
+    --ai-escalated: 4 90% 58%;
+    
+    /* Status Colors */
+    --status-success: 122 39% 49%;
+    --status-warning: 45 100% 51%;
+    --status-error: 4 90% 58%;
+    --status-info: 207 90% 54%;
+
+    /* Base Theme */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 218 100% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 218 100% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 218 100% 15%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 215 100% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 210 100% 97%;
+    --secondary-foreground: 218 100% 15%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 210 100% 98%;
+    --muted-foreground: 218 20% 50%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 211 100% 50%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 4 90% 58%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 215 100% 50%;
 
-    --radius: 0.5rem;
+    --radius: 1rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* Glassmorphism Effects */
+    --glass-bg: 215 100% 50% / 0.08;
+    --glass-border: 215 100% 50% / 0.15;
+    --glass-shadow: 215 50% 30% / 0.1;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Sidebar */
+    --sidebar-background: 218 100% 15%;
+    --sidebar-foreground: 210 100% 98%;
+    --sidebar-primary: 215 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 218 100% 20%;
+    --sidebar-accent-foreground: 210 100% 98%;
+    --sidebar-border: 218 100% 12%;
+    --sidebar-ring: 215 100% 50%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 218 100% 4%;
+    --foreground: 210 100% 98%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 218 100% 6%;
+    --card-foreground: 210 100% 98%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 218 100% 6%;
+    --popover-foreground: 210 100% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 215 100% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 218 100% 12%;
+    --secondary-foreground: 210 100% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 218 100% 10%;
+    --muted-foreground: 218 20% 65%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 211 100% 50%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 4 90% 58%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 218 100% 12%;
+    --input: 218 100% 12%;
+    --ring: 215 100% 50%;
+
+    --glass-bg: 215 100% 50% / 0.12;
+    --glass-border: 215 100% 50% / 0.2;
   }
 }
 
@@ -101,5 +115,75 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  }
+}
+
+@layer components {
+  /* Glassmorphism Card */
+  .glass-card {
+    @apply bg-white/60 backdrop-blur-xl border border-white/20 shadow-lg;
+  }
+
+  .dark .glass-card {
+    @apply bg-primary/10 backdrop-blur-xl border-primary/20;
+  }
+
+  /* Neumorphism Effect */
+  .neuro-card {
+    @apply bg-gradient-to-br from-white to-arctic-blue shadow-[8px_8px_16px_rgba(0,102,255,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)];
+  }
+
+  /* Hero Gradient */
+  .hero-gradient {
+    @apply bg-gradient-to-br from-primary via-accent to-sapphire-glow;
+  }
+
+  /* Paw Print Pattern Background */
+  .paw-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 25c-2 0-3-1-3-3s1-3 3-3 3 1 3 3-1 3-3 3zm-6-8c-1 0-2-1-2-2s1-2 2-2 2 1 2 2-1 2-2 2zm12 0c-1 0-2-1-2-2s1-2 2-2 2 1 2 2-1 2-2 2zm-10 4c-1 0-2-1-2-2s1-2 2-2 2 1 2 2-1 2-2 2zm8 0c-1 0-2-1-2-2s1-2 2-2 2 1 2 2-1 2-2 2z' fill='%230066FF' fill-opacity='0.03'/%3E%3C/svg%3E");
+  }
+
+  /* AI Action Badge */
+  .ai-badge-success {
+    @apply bg-ai-success/10 text-ai-success border border-ai-success/20;
+  }
+
+  .ai-badge-pending {
+    @apply bg-ai-pending/10 text-ai-pending border border-ai-pending/20;
+  }
+
+  .ai-badge-escalated {
+    @apply bg-ai-escalated/10 text-ai-escalated border border-ai-escalated/20;
+  }
+
+  /* Smooth Animations */
+  .smooth-transition {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  /* Hover Scale */
+  .hover-scale {
+    @apply smooth-transition hover:scale-[1.02] hover:shadow-xl;
+  }
+
+  /* Glow Effect */
+  .glow-primary {
+    @apply shadow-[0_0_20px_rgba(0,102,255,0.3)];
+  }
+}
+
+@layer utilities {
+  /* Custom Scrollbar */
+  .scrollbar-custom::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-track {
+    @apply bg-muted rounded-full;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-thumb {
+    @apply bg-primary/30 rounded-full hover:bg-primary/50;
   }
 }
