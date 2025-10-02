@@ -1,0 +1,83 @@
+import { Router } from 'express';
+import { PetsService } from '../services/pets/pets.service.js';
+import { logger } from '../config/logger.js';
+
+const router = Router();
+const petsService = new PetsService();
+
+// List pets by contact
+router.get('/contact/:contactId', async (req, res) => {
+  try {
+    const { contactId } = req.params;
+    const pets = await petsService.listByContact(contactId);
+
+    res.json({ pets });
+  } catch (error: any) {
+    logger.error('List pets error', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// List pets by organization
+router.get('/organization', async (req, res) => {
+  try {
+    const organizationId = req.headers['x-organization-id'] as string;
+    const { search, species } = req.query;
+
+    const pets = await petsService.listByOrganization(organizationId, {
+      search: search as string,
+      species: species as any
+    });
+
+    res.json({ pets });
+  } catch (error: any) {
+    logger.error('List organization pets error', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get pet by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pet = await petsService.getById(id);
+
+    if (!pet) {
+      return res.status(404).json({ error: 'Pet not found' });
+    }
+
+    res.json({ pet });
+  } catch (error: any) {
+    logger.error('Get pet error', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create pet
+router.post('/', async (req, res) => {
+  try {
+    const organizationId = req.headers['x-organization-id'] as string;
+    const petData = { ...req.body, organization_id: organizationId };
+
+    const pet = await petsService.create(petData);
+    res.status(201).json({ pet });
+  } catch (error: any) {
+    logger.error('Create pet error', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update pet
+router.patch('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pet = await petsService.update(id, req.body);
+
+    res.json({ pet });
+  } catch (error: any) {
+    logger.error('Update pet error', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+export default router;
