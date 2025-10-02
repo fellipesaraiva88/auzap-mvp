@@ -29,7 +29,8 @@ export default function Login() {
         description: 'Bem-vindo de volta 🎉',
       });
 
-      navigate('/');
+      // Use window.location to force reload and trigger useAuth
+      window.location.href = '/';
     } catch (error: any) {
       toast({
         variant: 'destructive',

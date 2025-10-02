@@ -189,6 +189,10 @@ export const authLimiter = rateLimit({
     const identifier = req.body?.email || req.body?.phone || req.ip || 'unknown';
     return `auth:${identifier}`;
   },
+  skip: (req: Request) => {
+    // Bypass rate limiting in development
+    return process.env.NODE_ENV === 'development';
+  },
   handler: (req: Request, res: Response) => {
     logger.warn({
       ip: req.ip,

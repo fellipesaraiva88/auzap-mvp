@@ -32,8 +32,18 @@ export function useAuth() {
 
     loadUser()
 
+    // Listen for storage changes (when token is set/removed)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'auth_token') {
+        loadUser()
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+
     return () => {
       socketManager.disconnect()
+      window.removeEventListener('storage', handleStorageChange)
     }
   }, [])
 
