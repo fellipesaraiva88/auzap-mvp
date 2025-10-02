@@ -92,6 +92,7 @@ app.use('/api/bookings', (await import('./routes/bookings.routes.js')).default);
 app.use('/api/followups', (await import('./routes/followups.routes.js')).default);
 app.use('/api/settings', (await import('./routes/settings.routes.js')).default);
 app.use('/api/automations', (await import('./routes/automations.routes.js')).default);
+app.use('/api/conversations', (await import('./routes/conversations.routes.js')).default);
 
 // Socket.io connection handling with JWT authentication
 io.use(async (socket, next) => {
