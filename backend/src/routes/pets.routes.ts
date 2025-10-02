@@ -25,7 +25,7 @@ router.get('/organization', async (req, res) => {
     const { search, species } = req.query;
 
     const pets = await petsService.listByOrganization(organizationId, {
-      search: search as string,
+      searchQuery: search as string,
       species: species as any
     });
 
@@ -40,7 +40,7 @@ router.get('/organization', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const pet = await petsService.getById(id);
+    const pet = await petsService.findById(id);
 
     if (!pet) {
       return res.status(404).json({ error: 'Pet not found' });

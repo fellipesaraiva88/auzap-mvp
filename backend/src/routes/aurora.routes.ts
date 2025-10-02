@@ -22,15 +22,9 @@ router.post('/summary/daily', async (req, res) => {
 router.get('/analytics', async (req, res) => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
-    const { startDate, endDate } = req.query;
+    const summary = await auroraService.generateDailySummary(organizationId);
 
-    const insights = await auroraService.getAnalyticsInsights(
-      organizationId,
-      startDate as string,
-      endDate as string
-    );
-
-    res.json({ insights });
+    res.json({ summary });
   } catch (error: any) {
     logger.error('Get analytics error', error);
     res.status(500).json({ error: error.message });
@@ -41,9 +35,18 @@ router.get('/analytics', async (req, res) => {
 router.post('/campaigns/suggest', async (req, res) => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
-    const suggestions = await auroraService.suggestCampaigns(organizationId);
+    const { phoneNumber, ownerName } = req.body;
 
-    res.json({ suggestions });
+    const response = await auroraService.processOwnerMessage(
+      {
+        organizationId,
+        ownerPhone: phoneNumber || '5511999999999',
+        ownerName: ownerName || 'Proprietário'
+      },
+      'Sugira campanhas de marketing para aumentar o faturamento'
+    );
+
+    res.json({ suggestions: response });
   } catch (error: any) {
     logger.error('Suggest campaigns error', error);
     res.status(500).json({ error: error.message });
@@ -54,9 +57,18 @@ router.post('/campaigns/suggest', async (req, res) => {
 router.get('/opportunities', async (req, res) => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
-    const opportunities = await auroraService.identifyOpportunities(organizationId);
+    const { phoneNumber, ownerName } = req.query;
 
-    res.json({ opportunities });
+    const response = await auroraService.processOwnerMessage(
+      {
+        organizationId,
+        ownerPhone: phoneNumber as string || '5511999999999',
+        ownerName: ownerName as string || 'Proprietário'
+      },
+      'Identifique oportunidades de crescimento e aumento de faturamento'
+    );
+
+    res.json({ opportunities: response });
   } catch (error: any) {
     logger.error('Identify opportunities error', error);
     res.status(500).json({ error: error.message });
@@ -67,11 +79,14 @@ router.get('/opportunities', async (req, res) => {
 router.post('/message', async (req, res) => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
-    const { phoneNumber, message } = req.body;
+    const { phoneNumber, message, ownerName } = req.body;
 
     const response = await auroraService.processOwnerMessage(
-      organizationId,
-      phoneNumber,
+      {
+        organizationId,
+        ownerPhone: phoneNumber,
+        ownerName: ownerName || 'Proprietário'
+      },
       message
     );
 

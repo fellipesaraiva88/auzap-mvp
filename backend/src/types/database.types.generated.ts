@@ -20,34 +20,8 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-      }
-      users: {
-        Row: {
-          id: string
-          organization_id: string
-          email: string
-          full_name: string
-          role: string
-          auth_user_id: string | null
-          created_at: string
-          updated_at: string
-        }
-      }
-      organization_settings: {
-        Row: {
-          id: string
-          organization_id: string
-          ai_client_enabled: boolean
-          ai_client_model: string
-          ai_client_temperature: number
-          aurora_enabled: boolean
-          aurora_model: string
-          aurora_daily_summary_time: string
-          business_hours: Json
-          services_config: Json
-          created_at: string
-          updated_at: string
-        }
+        Insert: Omit<Database['public']['Tables']['organizations']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['organizations']['Insert']>
       }
       services: {
         Row: {
@@ -205,15 +179,6 @@ export interface Database {
 }
 
 export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
-
-// Insert types - fields required for creating new records
-export type TablesInsert<T extends keyof Database['public']['Tables']> =
-  Omit<Database['public']['Tables'][T]['Row'], 'id' | 'created_at' | 'updated_at'>
-
-// Update types - all fields optional except id
-export type TablesUpdate<T extends keyof Database['public']['Tables']> =
-  Partial<Omit<Database['public']['Tables'][T]['Row'], 'id' | 'created_at' | 'updated_at'>>
-
 export type Organization = Tables<'organizations'>
 export type Service = Tables<'services'>
 export type Contact = Tables<'contacts'>

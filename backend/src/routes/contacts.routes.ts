@@ -9,13 +9,11 @@ const contactsService = new ContactsService();
 router.get('/', async (req, res) => {
   try {
     const organizationId = req.headers['x-organization-id'] as string;
-    const { search, tags, limit, offset } = req.query;
+    const { search, tags } = req.query;
 
     const contacts = await contactsService.listByOrganization(organizationId, {
-      search: search as string,
-      tags: tags ? (tags as string).split(',') : undefined,
-      limit: limit ? parseInt(limit as string) : undefined,
-      offset: offset ? parseInt(offset as string) : undefined
+      searchQuery: search as string,
+      tags: tags ? (tags as string).split(',') : undefined
     });
 
     res.json({ contacts });
@@ -29,7 +27,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const contact = await contactsService.getById(id);
+    const contact = await contactsService.findById(id);
 
     if (!contact) {
       return res.status(404).json({ error: 'Contact not found' });
@@ -48,7 +46,14 @@ router.post('/', async (req, res) => {
     const organizationId = req.headers['x-organization-id'] as string;
     const contactData = { ...req.body, organization_id: organizationId };
 
-    const contact = await contactsService.create(contactData);
+    const contact = await contactsService.findOrCreateByPhone(
+      organizationId,
+      contactData.phone_number,
+      contactData.whatsapp_instance_id
+    );
+    if (contactData.full_name || contactData.email || contactData.address || contactData.notes) {
+      await contactsService.update(contact.id, contactData);
+    }
     res.status(201).json({ contact });
   } catch (error: any) {
     logger.error('Create contact error', error);

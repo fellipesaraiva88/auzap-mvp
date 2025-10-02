@@ -2,7 +2,6 @@ import makeWASocket, {
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
-  makeInMemoryStore,
   useMultiFileAuthState,
   WASocket,
   proto,
@@ -17,7 +16,6 @@ import { supabaseAdmin } from '../../config/supabase.js';
 
 interface BaileysInstance {
   sock: WASocket;
-  store: ReturnType<typeof makeInMemoryStore>;
   organizationId: string;
   instanceId: string;
   phoneNumber?: string;
@@ -53,9 +51,6 @@ export class BaileysService {
       // Auth state
       const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
 
-      // Store para mensagens
-      const store = makeInMemoryStore({ logger: logger as any });
-
       // Fetch latest version
       const { version, isLatest } = await fetchLatestBaileysVersion();
       logger.info({ version, isLatest }, 'Using Baileys version');
@@ -70,15 +65,8 @@ export class BaileysService {
           keys: makeCacheableSignalKeyStore(state.keys, logger as any)
         },
         browser: Browsers.ubuntu('Chrome'),
-        generateHighQualityLinkPreview: true,
-        getMessage: async (key) => {
-          const msg = await store.loadMessage(key.remoteJid!, key.id!);
-          return msg?.message || undefined;
-        }
+        generateHighQualityLinkPreview: true
       });
-
-      // Salvar store
-      store.bind(sock.ev);
 
       // Event handlers
       sock.ev.on('creds.update', saveCreds);
@@ -116,7 +104,6 @@ export class BaileysService {
       // Guardar instância
       this.instances.set(instanceKey, {
         sock,
-        store,
         organizationId,
         instanceId,
         phoneNumber

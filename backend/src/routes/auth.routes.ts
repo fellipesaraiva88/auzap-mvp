@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../config/supabase.js';
 import { logger } from '../config/logger.js';
+import type { TablesInsert } from '../types/database.types.js';
 
 const router = Router();
 
@@ -22,9 +23,14 @@ router.post('/register', async (req, res) => {
     }
 
     // Create organization
+    const orgData: TablesInsert<'organizations'> = {
+      name: organizationName,
+      email,
+      settings: {}
+    };
     const { data: org, error: orgError } = await supabaseAdmin
       .from('organizations')
-      .insert({ name: organizationName, email })
+      .insert(orgData)
       .select()
       .single();
 
@@ -35,15 +41,16 @@ router.post('/register', async (req, res) => {
     }
 
     // Create user record
+    const userData: TablesInsert<'users'> = {
+      organization_id: org.id,
+      email,
+      full_name: fullName,
+      role: 'owner',
+      auth_user_id: authUser.user.id
+    };
     const { data: user, error: userError } = await supabaseAdmin
       .from('users')
-      .insert({
-        organization_id: org.id,
-        email,
-        full_name: fullName,
-        role: 'owner',
-        auth_user_id: authUser.user.id
-      })
+      .insert(userData)
       .select()
       .single();
 
@@ -53,9 +60,12 @@ router.post('/register', async (req, res) => {
     }
 
     // Create organization settings
+    const settingsData: TablesInsert<'organization_settings'> = {
+      organization_id: org.id
+    };
     await supabaseAdmin
       .from('organization_settings')
-      .insert({ organization_id: org.id });
+      .insert(settingsData);
 
     res.json({
       success: true,
