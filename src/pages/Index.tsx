@@ -4,8 +4,28 @@ import { AITimeline } from "@/components/AITimeline";
 import { ImpactCharts } from "@/components/ImpactCharts";
 import { AlertCircle, Clock, TrendingUp, Zap } from "lucide-react";
 import { QuickActions } from "@/components/QuickActions";
+import { useDashboardStats } from "@/hooks/useDashboard";
+import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
+  const { user } = useAuth();
+  const { data: stats, isLoading } = useDashboardStats();
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const userName = user?.full_name?.split(' ')[0] || 'Usuário';
+  const isWhatsAppOnline = stats?.whatsappStatus === 'connected';
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-4 md:p-6 max-w-7xl space-y-6">
@@ -15,16 +35,18 @@ const Index = () => {
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold gradient-text mb-2">
-                Oi Maria! 👋
+                Oi {userName}! 👋
               </h1>
               <p className="text-muted-foreground text-base md:text-lg">
-                A IA já atendeu <span className="text-primary font-bold">23 clientes</span> hoje e está trabalhando agora
+                A IA já atendeu <span className="text-primary font-bold">{stats?.conversationsToday || 0} clientes</span> hoje e está trabalhando agora
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-4 py-2 bg-ai-success/10 border border-ai-success/20 rounded-xl">
-                <div className="w-2 h-2 rounded-full bg-ai-success animate-pulse"></div>
-                <span className="text-sm font-semibold text-ai-success">IA Online</span>
+              <div className={`flex items-center gap-2 px-4 py-2 ${isWhatsAppOnline ? 'bg-ai-success/10 border-ai-success/20' : 'bg-gray-500/10 border-gray-500/20'} border rounded-xl`}>
+                <div className={`w-2 h-2 rounded-full ${isWhatsAppOnline ? 'bg-ai-success animate-pulse' : 'bg-gray-500'}`}></div>
+                <span className={`text-sm font-semibold ${isWhatsAppOnline ? 'text-ai-success' : 'text-gray-500'}`}>
+                  {isWhatsAppOnline ? 'IA Online' : 'WhatsApp Offline'}
+                </span>
               </div>
               <QuickActions />
             </div>
@@ -38,28 +60,28 @@ const Index = () => {
               <Zap className="w-4 h-4 text-primary" />
               <span className="text-xs text-muted-foreground uppercase tracking-wide">Trabalhando</span>
             </div>
-            <div className="text-2xl font-bold gradient-text">3 agora</div>
+            <div className="text-2xl font-bold gradient-text">{stats?.activeConversations || 0} agora</div>
           </div>
           <div className="glass-card rounded-xl p-4 hover-scale">
             <div className="flex items-center gap-2 mb-2">
               <Clock className="w-4 h-4 text-ai-success" />
-              <span className="text-xs text-muted-foreground uppercase tracking-wide">Economizado</span>
+              <span className="text-xs text-muted-foreground uppercase tracking-wide">Mensagens Hoje</span>
             </div>
-            <div className="text-2xl font-bold text-ai-success">4h 23m</div>
+            <div className="text-2xl font-bold text-ai-success">{stats?.messagesToday || 0}</div>
           </div>
           <div className="glass-card rounded-xl p-4 hover-scale">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="w-4 h-4 text-accent" />
               <span className="text-xs text-muted-foreground uppercase tracking-wide">Taxa IA</span>
             </div>
-            <div className="text-2xl font-bold text-accent">82%</div>
+            <div className="text-2xl font-bold text-accent">{stats?.automationRate || 0}%</div>
           </div>
           <div className="glass-card rounded-xl p-4 hover-scale">
             <div className="flex items-center gap-2 mb-2">
               <AlertCircle className="w-4 h-4 text-ai-escalated" />
               <span className="text-xs text-muted-foreground uppercase tracking-wide">Requer você</span>
             </div>
-            <div className="text-2xl font-bold text-ai-escalated">3 casos</div>
+            <div className="text-2xl font-bold text-ai-escalated">{stats?.escalatedConversations || 0} casos</div>
           </div>
         </div>
 

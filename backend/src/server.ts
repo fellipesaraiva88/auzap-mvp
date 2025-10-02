@@ -83,6 +83,7 @@ app.get('/health/supabase', async (_req: Request, res: Response): Promise<void> 
 
 // Routes
 app.use('/api/auth', (await import('./routes/auth.routes.js')).default);
+app.use('/api/dashboard', (await import('./routes/dashboard.routes.js')).default);
 app.use('/api/whatsapp', (await import('./routes/whatsapp.routes.js')).default);
 app.use('/api/aurora', (await import('./routes/aurora.routes.js')).default);
 app.use('/api/contacts', (await import('./routes/contacts.routes.js')).default);
