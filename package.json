@@ -18,6 +18,12 @@
     "test": "npm run test --workspaces",
     "test:backend": "cd backend && npm test",
     "test:frontend": "cd frontend && npm test",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
+    "playwright:install": "playwright install --with-deps",
     "lint": "npm run lint --workspaces",
     "lint:fix": "npm run lint --workspaces -- --fix",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
@@ -40,6 +46,7 @@
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-conventional": "^20.0.0",
+    "@playwright/test": "^1.55.1",
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.19.1",
     "concurrently": "^9.1.2",
@@ -48,6 +55,7 @@
     "eslint-plugin-prettier": "^5.2.1",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.11",
+    "playwright": "^1.55.1",
     "prettier": "^3.4.2"
   },
   "engines": {
