@@ -1,103 +1,36 @@
 services:
-  # Backend API (Web Service)
   - type: web
-    name: auzap-api
-    env: node
+    name: auzap-api-docker
+    runtime: docker
+    repo: https://github.com/fellipesaraiva88/auzap-mvp
     region: oregon
     plan: starter
-    rootDir: backend
-    buildCommand: npm install --ignore-scripts && npm run build
-    startCommand: npm start
+    branch: main
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
     envVars:
-      # Database
-      - key: DATABASE_URL
-        sync: false
       - key: SUPABASE_URL
+        value: https://cdndnwglcieylfgzbwts.supabase.co
+      - key: SUPABASE_ANON_KEY
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-
-      # Redis/Queue
-      - key: REDIS_URL
-        sync: false
-      - key: UPSTASH_REDIS_REST_URL
-        sync: false
-      - key: UPSTASH_REDIS_REST_TOKEN
-        sync: false
-
-      # OpenAI
       - key: OPENAI_API_KEY
         sync: false
-
-      # WhatsApp/Baileys
-      - key: WEBHOOK_SECRET
-        value: your-webhook-secret-here
-
-      # App Config
+      - key: UPSTASH_REDIS_REST_URL
+        value: https://prime-mullet-17029.upstash.io
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000
-      - key: FRONTEND_URL
-        value: https://auzap-frontend.onrender.com
-
-      # Workers
-      - key: WORKER_CONCURRENCY
-        value: 5
-
-    healthCheckPath: /health
-
-  # Workers (Background Service)
-  - type: worker
-    name: auzap-workers
-    env: node
-    region: oregon
-    plan: starter
-    rootDir: backend
-    buildCommand: npm install --ignore-scripts && npm run build
-    startCommand: npm run worker
-    envVars:
-      # Database
-      - key: DATABASE_URL
-        sync: false
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
-
-      # Redis/Queue
-      - key: REDIS_URL
-        sync: false
-      - key: UPSTASH_REDIS_REST_URL
-        sync: false
-      - key: UPSTASH_REDIS_REST_TOKEN
-        sync: false
-
-      # OpenAI
-      - key: OPENAI_API_KEY
-        sync: false
-
-      # WhatsApp/Baileys
-      - key: WEBHOOK_SECRET
-        value: your-webhook-secret-here
-
-      # App Config
-      - key: NODE_ENV
-        value: production
-      - key: WORKER_CONCURRENCY
-        value: 5
-
-  # Frontend (Static Site)
-  - type: web
-    name: auzap-frontend
-    env: static
-    region: oregon
-    buildCommand: cd frontend && npm install && npm run build
-    staticPublishPath: frontend/dist
-    envVars:
-      - key: VITE_SUPABASE_URL
-        sync: false
-      - key: VITE_SUPABASE_ANON_KEY
-        sync: false
-      - key: VITE_API_URL
-        value: https://auzap-api.onrender.com
+        value: 10000
+      - key: BAILEYS_SESSION_PATH
+        value: /app/sessions
+      - key: LOG_LEVEL
+        value: info
