@@ -45,8 +45,8 @@ export async function setupTestEnvironment(): Promise<TestContext> {
     .from('organizations')
     .insert({
       name: testOrgName,
-      plan: 'starter',
-      status: 'active',
+      slug: `test-${randomUUID().substring(0, 8)}`,
+      business_type: 'petshop',
     })
     .select()
     .single();

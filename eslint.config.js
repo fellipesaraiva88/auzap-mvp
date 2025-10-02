@@ -12,6 +12,11 @@ export default [
       '**/.next/**',
       '**/coverage/**',
       '**/*.min.js',
+      '**/tests/**',
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/*.spec.ts',
+      '**/*.spec.tsx',
     ],
   },
   {
