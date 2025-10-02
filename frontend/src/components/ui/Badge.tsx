@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'info';
+  variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'destructive' | 'info';
   size?: 'sm' | 'md' | 'lg';
   dot?: boolean;
   children: React.ReactNode;
