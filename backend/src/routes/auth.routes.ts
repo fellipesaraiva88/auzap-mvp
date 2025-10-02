@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../config/supabase.js';
 import { logger } from '../config/logger.js';
-import type { TablesInsert } from '../types/database.types.js';
+import type { TablesInsert, Organization, Tables } from '../types/database.types.js';
 
 const router = Router();
 
@@ -32,12 +32,12 @@ router.post('/register', async (req, res) => {
       .from('organizations')
       .insert(orgData)
       .select()
-      .single();
+      .single() as { data: Organization | null; error: any };
 
-    if (orgError) {
+    if (orgError || !org) {
       logger.error('Organization creation failed', orgError);
       await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
-      return res.status(400).json({ error: orgError.message });
+      return res.status(400).json({ error: orgError?.message || 'Failed to create organization' });
     }
 
     // Create user record
@@ -52,11 +52,11 @@ router.post('/register', async (req, res) => {
       .from('users')
       .insert(userData)
       .select()
-      .single();
+      .single() as { data: Tables<'users'> | null; error: any };
 
-    if (userError) {
+    if (userError || !user) {
       logger.error('User creation failed', userError);
-      return res.status(400).json({ error: userError.message });
+      return res.status(400).json({ error: userError?.message || 'Failed to create user' });
     }
 
     // Create organization settings
