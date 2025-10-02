@@ -237,12 +237,11 @@ export const globalLimiter = rateLimit({
  * Middleware to extract organization ID from JWT token
  * Must be used after authentication middleware
  */
-export const extractOrganizationId = async (req: Request, res: Response, next: any) => {
+export const extractOrganizationId = async (req: Request, _res: Response, next: any) => {
   try {
     // Organization ID should be set by auth middleware
     // This is just a helper to ensure it's available for rate limiting
     if (req.headers.authorization) {
-      const token = req.headers.authorization.split(' ')[1];
       // Organization ID extraction happens in auth middleware
       // We just need to ensure it's set for the key generator
     }

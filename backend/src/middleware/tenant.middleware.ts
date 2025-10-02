@@ -61,7 +61,7 @@ export class TenantMiddleware {
       // Injetar contexto no request
       req.organizationId = userData.organization_id;
       req.userId = user.id;
-      req.userRole = userData.role;
+      req.userRole = userData.role as 'owner' | 'admin' | 'agent';
 
       logger.debug(
         { organizationId: req.organizationId, userId: req.userId, role: req.userRole },
@@ -77,46 +77,10 @@ export class TenantMiddleware {
 
   /**
    * Extrai organization_id de API key (para integrações)
+   * TODO: Implementar quando tabela api_keys for criada
    */
-  static async fromAPIKey(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
-    try {
-      // Extrair API key do header
-      const apiKey = req.headers['x-api-key'] as string;
-
-      if (!apiKey) {
-        res.status(401).json({ error: 'Missing API key' });
-        return;
-      }
-
-      // Buscar API key no banco
-      const { data: apiKeyData, error } = await supabaseAdmin
-        .from('api_keys')
-        .select('organization_id, is_active, permissions')
-        .eq('key', apiKey)
-        .single();
-
-      if (error || !apiKeyData) {
-        logger.warn({ error }, 'Invalid API key');
-        res.status(401).json({ error: 'Invalid API key' });
-        return;
-      }
-
-      if (!apiKeyData.is_active) {
-        logger.warn({ apiKey }, 'Inactive API key used');
-        res.status(403).json({ error: 'API key is inactive' });
-        return;
-      }
-
-      // Injetar contexto no request
-      req.organizationId = apiKeyData.organization_id;
-
-      logger.debug({ organizationId: req.organizationId }, 'Tenant context from API key');
-
-      next();
-    } catch (error) {
-      logger.error({ error }, 'API key middleware error');
-      res.status(500).json({ error: 'Internal server error' });
-    }
+  static async fromAPIKey(req: TenantRequest, res: Response, _next: NextFunction): Promise<void> {
+    res.status(501).json({ error: 'API key authentication not yet implemented' });
   }
 
   /**
@@ -157,7 +121,7 @@ export class TenantMiddleware {
 
         // Validar que o recurso pertence à organização
         const { data, error } = await supabaseAdmin
-          .from(resourceTable)
+          .from(resourceTable as any)
           .select('organization_id')
           .eq('id', resourceId)
           .single();
@@ -265,23 +229,16 @@ export class TenantMiddleware {
         return;
       }
 
-      // Incrementar contador de uso (async, não bloquear request)
-      supabaseAdmin
-        .from('organization_usage')
-        .upsert({
-          organization_id: organizationId,
-          last_api_call: new Date().toISOString(),
-          api_calls_count: 1 // Será incrementado via trigger SQL
-        }, {
-          onConflict: 'organization_id',
-          ignoreDuplicates: false
-        })
-        .then(() => {
-          logger.debug({ organizationId }, 'Organization usage tracked');
-        })
-        .catch((error) => {
-          logger.error({ error, organizationId }, 'Failed to track organization usage');
-        });
+      // TODO: Implementar tracking de uso quando tabela organization_usage for criada
+      // supabaseAdmin
+      //   .from('organization_usage')
+      //   .upsert({
+      //     organization_id: organizationId,
+      //     last_api_call: new Date().toISOString(),
+      //     api_calls_count: 1
+      //   })
+      //   .then(() => logger.debug({ organizationId }, 'Organization usage tracked'))
+      //   .catch((error: any) => logger.error({ error, organizationId }, 'Failed to track usage'));
 
       next();
     } catch (error) {

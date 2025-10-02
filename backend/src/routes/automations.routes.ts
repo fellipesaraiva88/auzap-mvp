@@ -46,11 +46,12 @@ router.get('/status', async (req, res): Promise<void> => {
       .gte('created_at', today.toISOString())
       .lt('created_at', tomorrow.toISOString());
 
-    // Count sales registered today
+    // Count sales (confirmed bookings) registered today
     const { count: salesRegistered } = await supabaseAdmin
-      .from('sales')
+      .from('bookings')
       .select('*', { count: 'exact', head: true })
       .eq('organization_id', organizationId)
+      .eq('status', 'confirmed')
       .gte('created_at', today.toISOString())
       .lt('created_at', tomorrow.toISOString());
 
@@ -99,16 +100,14 @@ router.get('/activities', async (req, res): Promise<void> => {
       return;
     }
 
-    // Get recent AI actions from the ai_actions table
+    // Get recent AI actions from the ai_interactions table
     const { data: activities } = await supabaseAdmin
-      .from('ai_actions')
+      .from('ai_interactions')
       .select(`
         id,
-        action_type,
-        entity_type,
-        entity_id,
-        description,
-        metadata,
+        action_taken,
+        intent_detected,
+        contact_id,
         created_at
       `)
       .eq('organization_id', organizationId)

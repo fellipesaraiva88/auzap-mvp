@@ -156,15 +156,12 @@ export class MessageWorker {
       contact.id
     );
 
-    // Buscar histórico de conversa
-    const history = await this.getConversationHistory(conversation.id);
-
-    // Processar com IA Cliente
+    // Processar com IA Cliente (contexto será construído internamente)
     const response = await clientAIService.processMessage(
       {
         organizationId,
         contactId: contact.id,
-        conversationHistory: history
+        conversationId: conversation.id
       },
       content
     );
