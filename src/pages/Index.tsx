@@ -1,5 +1,5 @@
 import { ImpactHero } from "@/components/ImpactHero";
-import { ImpactCards } from "@/components/ImpactCards";
+import { ImpactDashboard } from "@/components/ImpactDashboard";
 import { AITimeline } from "@/components/AITimeline";
 import { ImpactCharts } from "@/components/ImpactCharts";
 import { AlertCircle, Clock, TrendingUp, Zap } from "lucide-react";
@@ -9,12 +9,14 @@ import { PendingFollowupsCard } from "@/components/PendingFollowups";
 import { AIPersonalityCard } from "@/components/AIPersonalityCard";
 import { AutomationBadges } from "@/components/AutomationBadges";
 import { useDashboardStats } from "@/hooks/useDashboard";
+import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboardSocketUpdates } from "@/hooks/useSocket";
 
 const Index = () => {
   const { user } = useAuth();
   const { data: stats, isLoading } = useDashboardStats();
+  const { data: impactMetrics, isLoading: isLoadingMetrics } = useDashboardMetrics();
 
   // Enable real-time updates via Socket.io
   useDashboardSocketUpdates();
@@ -104,8 +106,13 @@ const Index = () => {
         {/* Automation Badges */}
         <AutomationBadges />
 
-        {/* Impact Metrics Cards */}
-        <ImpactCards />
+        {/* Impact Dashboard - Métricas de Valor em Tempo Real */}
+        {impactMetrics && (
+          <ImpactDashboard 
+            metrics={impactMetrics} 
+            isLoading={isLoadingMetrics}
+          />
+        )}
 
         {/* AI Activity Machine */}
         <AITimeline />
