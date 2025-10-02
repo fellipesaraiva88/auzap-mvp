@@ -1,6 +1,7 @@
 import { ImpactPanel } from '@/components/dashboard/ImpactPanel';
 import { MetricCards } from '@/components/dashboard/MetricCards';
 import { ImpactCharts } from '@/components/dashboard/ImpactCharts';
+import { CapacityUsage } from '@/components/dashboard/CapacityUsage';
 
 export default function Dashboard() {
   return (
@@ -13,6 +14,9 @@ export default function Dashboard() {
 
       {/* Gráficos de Performance */}
       <ImpactCharts />
+
+      {/* Ocupação dos Serviços */}
+      <CapacityUsage />
     </div>
   );
 }
