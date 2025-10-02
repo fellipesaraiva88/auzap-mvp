@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Conversas from "./pages/Conversas";
 import Agenda from "./pages/Agenda";
@@ -12,6 +13,9 @@ import Clientes from "./pages/Clientes";
 import Vendas from "./pages/Vendas";
 import IA from "./pages/IA";
 import Ajustes from "./pages/Ajustes";
+import WhatsAppSetup from "./pages/WhatsAppSetup";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,29 +26,43 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <SidebarProvider>
-          <div className="min-h-screen flex w-full">
-            <AppSidebar />
-            <main className="flex-1">
-              <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border">
-                <div className="flex items-center h-16 px-6">
-                  <SidebarTrigger />
-                </div>
-              </div>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/conversas" element={<Conversas />} />
-                <Route path="/agenda" element={<Agenda />} />
-                <Route path="/clientes" element={<Clientes />} />
-                <Route path="/vendas" element={<Vendas />} />
-                <Route path="/ia" element={<IA />} />
-                <Route path="/ajustes" element={<Ajustes />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </main>
-          </div>
-        </SidebarProvider>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          {/* Protected Routes */}
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <SidebarProvider>
+                  <div className="min-h-screen flex w-full">
+                    <AppSidebar />
+                    <main className="flex-1">
+                      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border">
+                        <div className="flex items-center h-16 px-6">
+                          <SidebarTrigger />
+                        </div>
+                      </div>
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/conversas" element={<Conversas />} />
+                        <Route path="/agenda" element={<Agenda />} />
+                        <Route path="/clientes" element={<Clientes />} />
+                        <Route path="/vendas" element={<Vendas />} />
+                        <Route path="/ia" element={<IA />} />
+                        <Route path="/ajustes" element={<Ajustes />} />
+                        <Route path="/whatsapp" element={<WhatsAppSetup />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </main>
+                  </div>
+                </SidebarProvider>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
