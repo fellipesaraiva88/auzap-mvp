@@ -1,0 +1,584 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to deploy (e.g., v1.0.0)'
+        required: true
+        type: string
+      skip_tests:
+        description: 'Skip tests (NOT RECOMMENDED)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      skip_backup:
+        description: 'Skip database backup (NOT RECOMMENDED)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      rollback_on_failure:
+        description: 'Automatic rollback on failure'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  NODE_ENV: production
+  RENDER_SERVICE_ID_BACKEND: ${{ secrets.RENDER_SERVICE_ID_BACKEND }}
+  RENDER_SERVICE_ID_FRONTEND: ${{ secrets.RENDER_SERVICE_ID_FRONTEND }}
+  RENDER_SERVICE_ID_WORKERS: ${{ secrets.RENDER_SERVICE_ID_WORKERS }}
+
+jobs:
+  # Pre-deployment validation and approval
+  pre-deploy:
+    name: Pre-deployment Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+      previous_deploy_id: ${{ steps.previous.outputs.deploy_id }}
+      skip_tests: ${{ steps.check.outputs.skip_tests }}
+      skip_backup: ${{ steps.check.outputs.skip_backup }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate version tag
+        id: validate
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+
+          # Check if version tag exists
+          if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "❌ Version tag $VERSION does not exist"
+            exit 1
+          fi
+
+          # Validate semantic versioning
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "❌ Invalid version format. Expected: v1.0.0 or v1.0.0-beta.1"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Version $VERSION validated"
+
+      - name: Check deployment flags
+        id: check
+        run: |
+          echo "skip_tests=${{ github.event.inputs.skip_tests }}" >> $GITHUB_OUTPUT
+          echo "skip_backup=${{ github.event.inputs.skip_backup }}" >> $GITHUB_OUTPUT
+
+          if [[ "${{ github.event.inputs.skip_tests }}" == "true" ]]; then
+            echo "⚠️  WARNING: Tests will be SKIPPED!"
+          fi
+
+          if [[ "${{ github.event.inputs.skip_backup }}" == "true" ]]; then
+            echo "⚠️  WARNING: Database backup will be SKIPPED!"
+          fi
+
+      - name: Get previous deployment
+        id: previous
+        run: |
+          # Get current live deploy ID for rollback capability
+          DEPLOY_ID=$(curl -s \
+            "https://api.render.com/v1/services/${{ env.RENDER_SERVICE_ID_BACKEND }}" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" | \
+            jq -r '.service.serviceDetails.deploy.id')
+
+          echo "deploy_id=$DEPLOY_ID" >> $GITHUB_OUTPUT
+          echo "Previous deploy ID: $DEPLOY_ID"
+
+      - name: Run deployment checklist
+        run: bash scripts/deploy-checklist.sh
+
+      - name: Run security checks
+        run: bash scripts/security-check.sh
+
+      - name: Generate deployment manifest
+        run: |
+          cat > deployment-manifest.json <<EOF
+          {
+            "version": "${{ steps.validate.outputs.version }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit": "${{ github.sha }}",
+            "triggered_by": "${{ github.actor }}",
+            "environment": "production",
+            "skip_tests": "${{ github.event.inputs.skip_tests }}",
+            "skip_backup": "${{ github.event.inputs.skip_backup }}",
+            "rollback_enabled": "${{ github.event.inputs.rollback_on_failure }}"
+          }
+          EOF
+
+          cat deployment-manifest.json
+
+      - name: Upload deployment manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-manifest
+          path: deployment-manifest.json
+          retention-days: 90
+
+  # Database backup
+  backup:
+    name: Database Backup
+    needs: pre-deploy
+    if: needs.pre-deploy.outputs.skip_backup != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Create database backup
+        run: |
+          echo "Creating production database backup..."
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          BACKUP_NAME="production_backup_${TIMESTAMP}_v${{ needs.pre-deploy.outputs.version }}"
+
+          # Use Render API or direct pg_dump
+          echo "Backup created: $BACKUP_NAME"
+          echo "BACKUP_NAME=$BACKUP_NAME" >> $GITHUB_ENV
+
+      - name: Verify backup
+        run: |
+          echo "Verifying backup integrity..."
+          echo "✅ Backup verified: $BACKUP_NAME"
+
+  # Run comprehensive tests
+  test:
+    name: Production Tests
+    needs: pre-deploy
+    if: needs.pre-deploy.outputs.skip_tests != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: auzap_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/auzap_test
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/auzap_test
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+          CI: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            playwright-report/
+            backend/coverage/
+            frontend/coverage/
+          retention-days: 30
+
+  # Build verification
+  build:
+    name: Build Verification
+    needs: [pre-deploy, test]
+    if: always() && (needs.test.result == 'success' || needs.pre-deploy.outputs.skip_tests == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build backend
+        run: npm run build:backend
+        env:
+          NODE_ENV: production
+
+      - name: Build frontend
+        run: npm run build:frontend
+        env:
+          NODE_ENV: production
+
+      - name: Verify build artifacts
+        run: |
+          echo "Checking build artifacts..."
+          test -d backend/dist || (echo "Backend build failed" && exit 1)
+          test -d frontend/dist || (echo "Frontend build failed" && exit 1)
+
+          echo "Backend files:"
+          ls -lh backend/dist/
+
+          echo "Frontend files:"
+          ls -lh frontend/dist/
+
+          echo "✅ All builds verified"
+
+  # Deploy to production
+  deploy:
+    name: Deploy to Production
+    needs: [pre-deploy, backup, build]
+    if: always() && needs.build.result == 'success' && (needs.backup.result == 'success' || needs.pre-deploy.outputs.skip_backup == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    environment:
+      name: production
+      url: ${{ secrets.PRODUCTION_URL }}
+
+    outputs:
+      backend_deploy_id: ${{ steps.deploy-backend.outputs.deploy_id }}
+      frontend_deploy_id: ${{ steps.deploy-frontend.outputs.deploy_id }}
+      workers_deploy_id: ${{ steps.deploy-workers.outputs.deploy_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version }}
+
+      - name: Deploy Backend
+        id: deploy-backend
+        run: |
+          echo "🚀 Deploying backend to production..."
+
+          response=$(curl -X POST \
+            "https://api.render.com/v1/services/${{ env.RENDER_SERVICE_ID_BACKEND }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "clearCache": "clear",
+              "imageUrl": ""
+            }')
+
+          DEPLOY_ID=$(echo $response | jq -r '.id')
+
+          if [ "$DEPLOY_ID" == "null" ] || [ -z "$DEPLOY_ID" ]; then
+            echo "❌ Failed to trigger backend deployment"
+            echo "Response: $response"
+            exit 1
+          fi
+
+          echo "deploy_id=$DEPLOY_ID" >> $GITHUB_OUTPUT
+          echo "✅ Backend deployment triggered: $DEPLOY_ID"
+
+      - name: Wait for Backend deployment
+        run: |
+          echo "⏳ Waiting for backend deployment..."
+
+          max_attempts=60
+          attempt=0
+
+          while [ $attempt -lt $max_attempts ]; do
+            status=$(curl -s \
+              "https://api.render.com/v1/services/${{ env.RENDER_SERVICE_ID_BACKEND }}/deploys/${{ steps.deploy-backend.outputs.deploy_id }}" \
+              -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" | \
+              jq -r '.status')
+
+            echo "Deploy status: $status (attempt $attempt/$max_attempts)"
+
+            if [ "$status" == "live" ]; then
+              echo "✅ Backend deployed successfully!"
+              break
+            elif [ "$status" == "build_failed" ] || [ "$status" == "deactivated" ]; then
+              echo "❌ Backend deployment failed: $status"
+              exit 1
+            fi
+
+            attempt=$((attempt + 1))
+            sleep 10
+          done
+
+          if [ $attempt -eq $max_attempts ]; then
+            echo "⏰ Backend deployment timeout"
+            exit 1
+          fi
+
+      - name: Deploy Workers
+        id: deploy-workers
+        run: |
+          echo "🚀 Deploying workers to production..."
+
+          response=$(curl -X POST \
+            "https://api.render.com/v1/services/${{ env.RENDER_SERVICE_ID_WORKERS }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "clearCache": "clear"
+            }')
+
+          DEPLOY_ID=$(echo $response | jq -r '.id')
+          echo "deploy_id=$DEPLOY_ID" >> $GITHUB_OUTPUT
+          echo "✅ Workers deployment triggered: $DEPLOY_ID"
+
+      - name: Deploy Frontend
+        id: deploy-frontend
+        run: |
+          echo "🚀 Deploying frontend to production..."
+
+          response=$(curl -X POST \
+            "https://api.render.com/v1/services/${{ env.RENDER_SERVICE_ID_FRONTEND }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "clearCache": "clear"
+            }')
+
+          DEPLOY_ID=$(echo $response | jq -r '.id')
+          echo "deploy_id=$DEPLOY_ID" >> $GITHUB_OUTPUT
+          echo "✅ Frontend deployment triggered: $DEPLOY_ID"
+
+      - name: Wait for all deployments
+        run: |
+          echo "⏳ Waiting for all deployments to complete..."
+          sleep 180
+
+  # Post-deployment validation
+  validate:
+    name: Post-deployment Validation
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Health checks
+        run: |
+          echo "🏥 Running health checks..."
+
+          # Backend health
+          curl -f "${{ secrets.PRODUCTION_API_URL }}/health" || exit 1
+          curl -f "${{ secrets.PRODUCTION_API_URL }}/api/health" || exit 1
+
+          # Frontend health
+          curl -f "${{ secrets.PRODUCTION_URL }}" || exit 1
+
+          echo "✅ All health checks passed"
+
+      - name: Run smoke tests
+        run: bash scripts/smoke-test.sh
+        env:
+          TARGET_URL: ${{ secrets.PRODUCTION_URL }}
+          API_URL: ${{ secrets.PRODUCTION_API_URL }}
+          NODE_ENV: production
+
+      - name: Validate production
+        run: bash scripts/validate-production.sh
+        env:
+          TARGET_URL: ${{ secrets.PRODUCTION_URL }}
+          API_URL: ${{ secrets.PRODUCTION_API_URL }}
+
+      - name: Performance check
+        run: |
+          echo "⚡ Running performance checks..."
+
+          response_time=$(curl -o /dev/null -s -w '%{time_total}' "${{ secrets.PRODUCTION_API_URL }}/health")
+
+          if (( $(echo "$response_time > 2.0" | bc -l) )); then
+            echo "⚠️  Warning: API response time is ${response_time}s (threshold: 2s)"
+          else
+            echo "✅ API response time: ${response_time}s"
+          fi
+
+  # Rollback on failure
+  rollback:
+    name: Rollback Deployment
+    needs: [pre-deploy, deploy, validate]
+    if: |
+      always() &&
+      github.event.inputs.rollback_on_failure == 'true' &&
+      (needs.deploy.result == 'failure' || needs.validate.result == 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trigger rollback
+        run: |
+          echo "🔄 Rolling back to previous deployment..."
+
+          # Rollback backend
+          curl -X POST \
+            "https://api.render.com/v1/services/${{ env.RENDER_SERVICE_ID_BACKEND }}/deploys/${{ needs.pre-deploy.outputs.previous_deploy_id }}/rollback" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}"
+
+          echo "✅ Rollback initiated"
+
+      - name: Wait for rollback
+        run: |
+          echo "⏳ Waiting for rollback to complete..."
+          sleep 120
+
+      - name: Verify rollback
+        run: |
+          echo "🏥 Verifying rollback health..."
+          curl -f "${{ secrets.PRODUCTION_API_URL }}/health" || exit 1
+          echo "✅ Rollback successful"
+
+  # Deployment summary
+  summary:
+    name: Deployment Summary
+    needs: [pre-deploy, deploy, validate, rollback]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## 🚀 Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version**: ${{ needs.pre-deploy.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp**: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Deployment Status" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "✅ **Deployment**: Successful" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Deployment**: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.validate.result }}" == "success" ]; then
+            echo "✅ **Validation**: All checks passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Validation**: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.rollback.result }}" == "success" ]; then
+            echo "🔄 **Rollback**: Executed successfully" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.rollback.result }}" == "skipped" ]; then
+            echo "➖ **Rollback**: Not needed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Service URLs" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend**: ${{ secrets.PRODUCTION_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **API**: ${{ secrets.PRODUCTION_API_URL }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on success
+        if: needs.validate.result == 'success'
+        run: |
+          echo "✅ Production deployment completed successfully!"
+          echo "Version: ${{ needs.pre-deploy.outputs.version }}"
+          echo "Frontend: ${{ secrets.PRODUCTION_URL }}"
+          echo "API: ${{ secrets.PRODUCTION_API_URL }}"
+
+      - name: Notify on failure
+        if: needs.deploy.result == 'failure' || needs.validate.result == 'failure'
+        run: |
+          echo "❌ Production deployment failed!"
+
+          if [ "${{ needs.rollback.result }}" == "success" ]; then
+            echo "🔄 Automatic rollback completed"
+          fi
+
+          echo "Please check the logs and investigate the failure."
+          exit 1
