@@ -52,7 +52,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       .range(offset, offset + limitNum - 1);
 
     // Filtros opcionais
-    if (status) {
+    if (status && typeof status === 'string') {
       query = query.eq('status', status);
     }
 

@@ -112,9 +112,9 @@ router.get('/impact', async (req, res): Promise<void> => {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     // Calculate AI worked hours (average response time * message count / 3600)
-    const { count: aiMessages, data: messages } = await supabaseAdmin
+    const { count: aiMessages } = await supabaseAdmin
       .from('messages')
-      .select('created_at')
+      .select('created_at', { count: 'exact', head: true })
       .eq('organization_id', organizationId)
       .eq('ai_generated', true)
       .gte('created_at', sevenDaysAgo.toISOString());
@@ -217,9 +217,9 @@ router.get('/actions', async (req, res): Promise<void> => {
       return;
     }
 
-    // Get last 10 AI actions
+    // Get last 10 AI actions (from ai_interactions table)
     const { data: actions } = await supabaseAdmin
-      .from('ai_actions')
+      .from('ai_interactions')
       .select('*')
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: false })
@@ -269,7 +269,8 @@ router.get('/revenue-timeline', async (req, res): Promise<void> => {
         return created >= slotStart && created < slotEnd;
       });
 
-      const value = slotBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
+      // TODO: Add total_price field to bookings table
+      const value = slotBookings.length * 100; // Placeholder: count * average price
 
       timeline.push({
         time: `${String(slotStart.getHours()).padStart(2, '0')}h`,

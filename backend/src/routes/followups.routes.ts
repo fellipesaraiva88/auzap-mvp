@@ -109,10 +109,10 @@ router.post('/', async (req, res): Promise<void> => {
     const { data: followup, error } = await supabaseAdmin
       .from('scheduled_followups')
       .insert({
-        organization_id: organizationId,
         contact_id,
         scheduled_for,
-        message,
+        message_template: message, // Use message_template instead of message
+        type: 'reminder',
         status: 'pending'
       })
       .select()
