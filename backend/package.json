@@ -27,7 +27,8 @@
     "whatsapp:simulate": "ts-node scripts/simulate-message.ts",
     "whatsapp:dashboard": "ts-node scripts/whatsapp-dashboard.ts",
     "whatsapp:health": "ts-node scripts/health-check.ts",
-    "whatsapp:list": "ts-node scripts/list-instances.ts"
+    "whatsapp:list": "ts-node scripts/list-instances.ts",
+    "test:flow": "dotenv -e .env -- ts-node src/scripts/test-complete-flow.ts"
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",
