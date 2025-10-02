@@ -1,14 +1,10 @@
 import { Bot, Zap, Target, TrendingUp } from "lucide-react";
 import { CircularProgress } from "./CircularProgress";
-
 export function SystemOverview() {
-  return (
-    <div className="glass-card rounded-2xl p-8 mb-8">
+  return <div className="glass-card rounded-2xl p-8 mb-8">
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h2 className="text-2xl font-bold gradient-text mb-2">
-            🚀 Sistema AuZap Revolucionário
-          </h2>
+          <h2 className="text-2xl font-bold gradient-text mb-2">Fique por dentro de seu negócio!</h2>
           <p className="text-muted-foreground">
             Dashboard focado em impacto real, não apenas métricas operacionais
           </p>
@@ -77,48 +73,8 @@ export function SystemOverview() {
         </div>
       </div>
 
-      <div className="border-t border-border/50 pt-6">
-        <h3 className="text-sm font-semibold text-foreground mb-4">
-          🎯 Componentes Revolucionários Implementados:
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {[
-            "💎 Tempo Recuperado Hero",
-            "📊 Métricas de Impacto",
-            "🤖 Máquina de Resultados",
-            "📈 Gráficos de Significado",
-            "✨ Badges Inteligentes",
-            "🔔 Notificações Toast",
-            "🎯 Painel de Contexto IA",
-            "📋 Feed de Atividades",
-            "⚡ Quick Actions",
-            "🎪 Empty States",
-            "🐾 Paw Loader",
-            "📊 Stats em Tempo Real",
-            "⭕ Progress Circular",
-            "🎨 Glassmorphism Design",
-            "🌊 Animações Fluidas",
-            "🔐 Só Você Resolve",
-          ].map((item, index) => (
-            <div
-              key={index}
-              className="text-xs p-2 bg-muted/30 rounded-lg text-foreground hover:bg-muted/50 smooth-transition text-center"
-            >
-              {item}
-            </div>
-          ))}
-        </div>
-      </div>
+      
 
-      <div className="mt-6 p-5 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 rounded-xl border border-primary/20 text-center">
-        <div className="text-lg font-bold text-foreground mb-2">
-          ✅ Dashboard Revolucionário Completo
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Sistema focado em <span className="font-semibold text-primary">impacto real</span> na vida do usuário,
-          não apenas métricas operacionais
-        </p>
-      </div>
-    </div>
-  );
+      
+    </div>;
 }
