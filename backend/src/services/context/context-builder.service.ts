@@ -106,7 +106,7 @@ export class ContextBuilderService {
       .select('*')
       .eq('organization_id', organizationId)
       .eq('contact_id', contactId)
-      .is('deleted_at', null)
+      .eq('is_active', true)
       .order('created_at', { ascending: false });
 
     if (error) {

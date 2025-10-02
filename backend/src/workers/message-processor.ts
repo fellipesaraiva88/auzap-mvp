@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Worker, Job } from 'bullmq';
 import { redisConnection } from '../config/redis.js';
 import { logger } from '../config/logger.js';
