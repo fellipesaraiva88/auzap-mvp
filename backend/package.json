@@ -20,6 +20,7 @@
     "test:worker-logs": "ts-node src/scripts/test-worker-logs.ts",
     "test:routing": "ts-node src/scripts/test-routing.ts",
     "routing:status": "ts-node src/scripts/show-routing-status.ts",
+    "routing:demo": "ts-node src/scripts/demo-routing.ts",
     "upstash:info": "ts-node src/scripts/get-upstash-connection.ts",
     "whatsapp:send": "ts-node scripts/send-test-message.ts",
     "whatsapp:inspect": "ts-node scripts/inspect-instance.ts",
