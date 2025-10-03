@@ -138,10 +138,7 @@ services:
     # Environment variables for build
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: auzap-backend
-          property: url
+        value: https://auzap-backend-8xyx.onrender.com
 
       - key: VITE_SUPABASE_URL
         sync: false
