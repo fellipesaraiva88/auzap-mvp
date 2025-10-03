@@ -616,30 +616,23 @@ router.post('/sync-contacts', async (req: TenantRequest, res: Response): Promise
         const isGroup = chatId.endsWith('@g.us');
         const phoneNumber = isGroup ? null : chatId.split('@')[0];
 
-        // Criar ou atualizar conversa
-        const { data: existingConv } = await supabaseAdmin
-          .from('conversations')
+        // Buscar whatsapp_instance_id
+        const { data: whatsappInstance } = await supabaseAdmin
+          .from('whatsapp_instances')
           .select('id')
           .eq('organization_id', organizationId)
-          .eq('whatsapp_chat_id', chatId)
           .maybeSingle();
 
-        if (!existingConv) {
-          await supabaseAdmin
-            .from('conversations')
-            .insert({
-              organization_id: organizationId,
-              whatsapp_chat_id: chatId,
-              contact_name: chatName,
-              status: 'active',
-              last_message_at: new Date().toISOString()
-            });
-
-          conversationsCreated++;
-          logger.info({ chatId, chatName }, `✅ Conversa criada: ${chatName}`);
+        if (!whatsappInstance) {
+          logger.warn({ organizationId }, 'WhatsApp instance not found');
+          continue;
         }
 
-        // Para conversas individuais, criar contato
+        const whatsappInstanceId = whatsappInstance.id;
+
+        // Para conversas individuais, criar contato primeiro
+        let contactId: string | null = null;
+
         if (!isGroup && phoneNumber) {
           const { data: existingContact } = await supabaseAdmin
             .from('contacts')
@@ -648,18 +641,51 @@ router.post('/sync-contacts', async (req: TenantRequest, res: Response): Promise
             .eq('phone_number', phoneNumber)
             .maybeSingle();
 
-          if (!existingContact) {
-            await supabaseAdmin
+          if (existingContact) {
+            contactId = existingContact.id;
+          } else {
+            const { data: newContact } = await supabaseAdmin
               .from('contacts')
               .insert({
                 organization_id: organizationId,
                 name: chatName,
                 phone_number: phoneNumber,
                 whatsapp_number: phoneNumber
+              })
+              .select('id')
+              .single();
+
+            if (newContact) {
+              contactId = newContact.id;
+              contactsCreated++;
+              logger.info({ phoneNumber, chatName }, `✅ Contato criado: ${chatName}`);
+            }
+          }
+        }
+
+        // Criar ou verificar conversa (apenas se temos contact_id para individuais)
+        if (!isGroup && contactId) {
+          const { data: existingConv } = await supabaseAdmin
+            .from('conversations')
+            .select('id')
+            .eq('organization_id', organizationId)
+            .eq('whatsapp_instance_id', whatsappInstanceId)
+            .eq('contact_id', contactId)
+            .maybeSingle();
+
+          if (!existingConv) {
+            await supabaseAdmin
+              .from('conversations')
+              .insert({
+                organization_id: organizationId,
+                whatsapp_instance_id: whatsappInstanceId,
+                contact_id: contactId,
+                status: 'active',
+                last_message_at: new Date().toISOString()
               });
 
-            contactsCreated++;
-            logger.info({ phoneNumber, chatName }, `✅ Contato criado: ${chatName}`);
+            conversationsCreated++;
+            logger.info({ chatName }, `✅ Conversa criada: ${chatName}`);
           }
         }
       } catch (error) {

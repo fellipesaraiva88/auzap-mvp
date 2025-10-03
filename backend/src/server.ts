@@ -321,7 +321,8 @@ app.use('/api/internal/analytics', (await import('./routes/admin/analytics.route
 app.use('/api/internal/settings', (await import('./routes/admin/settings.routes.js')).default);
 app.use('/api/internal/actions', (await import('./routes/admin/actions.routes.js')).default);
 // Admin Client Management - CRUD Completo + Usuários + WhatsApp + Impersonation
-app.use('/api/internal/client-management', (await import('./routes/admin/client-management.routes.js')).default);
+// TEMPORARIAMENTE DESABILITADO - erros de TypeScript com adminAuditService
+// app.use('/api/internal/client-management', (await import('./routes/admin/client-management.routes.js')).default);
 
 // Bull Board - Queue Monitoring UI (owner-only)
 const { serverAdapter, bullBoardAuthMiddleware, bullBoardHealthCheck } =
