@@ -77,10 +77,10 @@ const App = () => (
                   <SidebarProvider>
                     <div className="min-h-screen flex w-full">
                       <AppSidebar />
-                      <main className="flex-1">
-                        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border">
-                          <div className="flex items-center h-16 px-6">
-                            <SidebarTrigger />
+                      <main className="flex-1 overflow-x-hidden">
+                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-md border-b border-border">
+                          <div className="flex items-center h-14 md:h-16 px-3 md:px-6">
+                            <SidebarTrigger className="h-9 w-9 md:h-10 md:w-10" />
                           </div>
                         </div>
                         <Suspense fallback={<PawLoader />}>

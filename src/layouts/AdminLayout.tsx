@@ -9,6 +9,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -21,6 +28,7 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  Menu,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
@@ -56,6 +64,7 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const [user, setUser] = useState<AdminUser | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Verificar autenticação
@@ -155,12 +164,87 @@ export default function AdminLayout() {
     return null; // Loading ou redirect
   }
 
+  // Componente de navegação reutilizável
+  const NavigationContent = ({ onItemClick }: { onItemClick?: () => void }) => (
+    <>
+      {visibleNavItems.map((item) => (
+        <NavLink
+          key={item.path}
+          to={item.path}
+          onClick={onItemClick}
+          className={({ isActive }) =>
+            cn(
+              'flex items-center gap-3 px-3 py-3 rounded-lg transition-colors min-h-[44px]',
+              'hover:bg-gray-100',
+              isActive && 'bg-ocean-blue/10 text-ocean-blue font-medium',
+              isCollapsed && 'justify-center lg:justify-start'
+            )
+          }
+        >
+          <item.icon className="h-5 w-5 flex-shrink-0" />
+          <span className={cn(isCollapsed && 'lg:inline hidden')}>{item.label}</span>
+        </NavLink>
+      ))}
+    </>
+  );
+
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-bold text-ocean-blue text-lg">AuZap</h1>
+            <p className="text-xs text-muted-foreground">Admin Panel</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Avatar className="h-7 w-7">
+                    <AvatarFallback className={ROLE_COLORS[user.role]}>
+                      {getInitials(user.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div>
+                    <p className="font-medium">{user.name}</p>
+                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-0">
+                <SheetHeader className="p-4 border-b">
+                  <SheetTitle className="text-left">Menu</SheetTitle>
+                </SheetHeader>
+                <nav className="flex-1 p-4 space-y-1">
+                  <NavigationContent onItemClick={() => setIsMobileMenuOpen(false)} />
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Sidebar */}
       <aside
         className={cn(
-          'bg-white border-r border-gray-200 flex flex-col transition-all duration-300',
+          'hidden lg:flex bg-white border-r border-gray-200 flex-col transition-all duration-300',
           isCollapsed ? 'w-16' : 'w-64'
         )}
       >
@@ -188,23 +272,7 @@ export default function AdminLayout() {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {visibleNavItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
-                  'hover:bg-gray-100',
-                  isActive && 'bg-ocean-blue/10 text-ocean-blue font-medium',
-                  isCollapsed && 'justify-center'
-                )
-              }
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && <span>{item.label}</span>}
-            </NavLink>
-          ))}
+          <NavigationContent />
         </nav>
 
         {/* User Menu */}
@@ -251,7 +319,7 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto pt-[60px] lg:pt-0">
         <Outlet />
       </main>
     </div>
