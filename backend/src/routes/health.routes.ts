@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../config/supabase.js';
-import { redisClient } from '../config/redis.js';
+import { redisConnection } from '../config/redis.js';
 
 const router = Router();
 
@@ -24,7 +24,7 @@ router.get('/health', async (req, res) => {
 // Redis health check
 router.get('/health/redis', async (req, res) => {
   try {
-    await redisClient.ping();
+    await redisConnection.ping();
     res.json({
       status: 'ok',
       redis: 'connected'

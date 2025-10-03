@@ -173,6 +173,9 @@ app.get('/health/whatsapp', async (_req: Request, res: Response): Promise<void> 
   }
 });
 
+// Health check routes (public)
+app.use('/', (await import('./routes/health.routes.js')).default);
+
 // Routes
 app.use('/api/auth', (await import('./routes/auth.routes.js')).default);
 app.use('/api/dashboard', (await import('./routes/dashboard.routes.js')).default);
