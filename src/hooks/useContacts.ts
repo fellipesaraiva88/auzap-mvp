@@ -66,6 +66,10 @@ export function useContacts(searchQuery?: string) {
     },
   });
 
+  const refetch = () => {
+    queryClient.invalidateQueries({ queryKey: ['contacts'] });
+  };
+
   return {
     contacts: data?.contacts || [],
     total: data?.total || 0,
@@ -77,6 +81,7 @@ export function useContacts(searchQuery?: string) {
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
+    refetch,
   };
 }
 
