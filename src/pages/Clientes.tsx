@@ -27,6 +27,8 @@ export default function Clientes() {
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [newContact, setNewContact] = useState({
     phone_number: "",
@@ -285,7 +287,15 @@ export default function Clientes() {
                   </div>
 
                   <div className="mt-4 pt-4 border-t border-border">
-                    <Button variant="outline" size="sm" className="w-full">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => {
+                        setSelectedClient(client);
+                        setIsDetailsOpen(true);
+                      }}
+                    >
                       Ver Detalhes
                     </Button>
                   </div>
@@ -295,6 +305,103 @@ export default function Clientes() {
           })}
         </div>
       )}
+
+      {/* Dialog Ver Detalhes */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Cliente</DialogTitle>
+            <DialogDescription>
+              Informações completas do cliente e seus pets
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedClient && (
+            <div className="space-y-6 mt-4">
+              {/* Informações do Cliente */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-lg">{selectedClient.full_name || selectedClient.name}</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Telefone</p>
+                    <p className="font-medium">{selectedClient.phone_number || selectedClient.phone}</p>
+                  </div>
+                  {selectedClient.email && (
+                    <div>
+                      <p className="text-muted-foreground">Email</p>
+                      <p className="font-medium">{selectedClient.email}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-muted-foreground">Cadastrado em</p>
+                    <p className="font-medium">
+                      {new Date(selectedClient.createdAt || selectedClient.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Status</p>
+                    <Badge variant={selectedClient.is_active ? "default" : "secondary"}>
+                      {selectedClient.is_active ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pets do Cliente */}
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-3">Pets ({selectedClient.pets?.length || 0})</h4>
+                {selectedClient.pets && selectedClient.pets.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {selectedClient.pets.map((pet: any) => (
+                      <div key={pet.id} className="p-3 rounded-lg border border-border">
+                        <div className="flex items-center gap-2 mb-2">
+                          {pet.species === "dog" ? (
+                            <Dog className="w-4 h-4 text-ocean-blue" />
+                          ) : (
+                            <Cat className="w-4 h-4 text-ocean-blue" />
+                          )}
+                          <span className="font-medium">{pet.name}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          <p>Raça: {pet.breed || "Não informado"}</p>
+                          <p>Idade: {pet.age || pet.age_years || 0} anos</p>
+                          {pet.weight_kg && <p>Peso: {pet.weight_kg} kg</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nenhum pet cadastrado</p>
+                )}
+              </div>
+
+              {/* Ações */}
+              <div className="border-t pt-4 flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // TODO: Implementar edição
+                    toast({
+                      title: "Em desenvolvimento",
+                      description: "Função de editar em breve!",
+                    });
+                  }}
+                  className="flex-1"
+                >
+                  Editar Cliente
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDetailsOpen(false)}
+                  className="flex-1"
+                >
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
