@@ -69,7 +69,7 @@ export class KnowledgeBaseService {
       throw error;
     }
 
-    return entry;
+    return entry as KnowledgeEntry;
   }
 
   /**
@@ -88,7 +88,7 @@ export class KnowledgeBaseService {
       return null;
     }
 
-    return data;
+    return data as KnowledgeEntry;
   }
 
   /**
@@ -119,7 +119,7 @@ export class KnowledgeBaseService {
       throw error;
     }
 
-    return data || [];
+    return (data || []) as KnowledgeEntry[];
   }
 
   /**
@@ -146,7 +146,7 @@ export class KnowledgeBaseService {
       throw error;
     }
 
-    return data;
+    return data as KnowledgeEntry;
   }
 
   /**

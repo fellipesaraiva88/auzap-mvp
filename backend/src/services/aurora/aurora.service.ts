@@ -173,7 +173,7 @@ NUNCA:
   }
 
   /**
-   * Gera resumo diário automático
+   * Gera resumo diário automático (incluindo novos verticals: Training, Daycare, Knowledge Base)
    */
   async generateDailySummary(organizationId: string): Promise<string> {
     try {
@@ -198,30 +198,60 @@ NUNCA:
         endDate: dayAfterTomorrow.toISOString()
       });
 
-      // Estatísticas
+      // Estatísticas de agendamentos
       const completed = todayBookings.filter(b => b.status === 'completed').length;
       const cancelled = todayBookings.filter(b => b.status === 'cancelled').length;
       const noShow = todayBookings.filter(b => b.status === 'no_show').length;
 
+      // NOVOS VERTICALS - Training Plans
+      const { count: activeTrainingPlans } = await supabaseAdmin
+        .from('training_plans')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('status', 'ativo');
+
+      // NOVOS VERTICALS - Daycare/Hotel
+      const { data: todayCheckIns } = await supabaseAdmin
+        .from('daycare_hotel_stays')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .gte('check_in_date', today.toISOString())
+        .lt('check_in_date', tomorrow.toISOString());
+
+      const { data: todayCheckOuts } = await supabaseAdmin
+        .from('daycare_hotel_stays')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .gte('check_out_date', today.toISOString())
+        .lt('check_out_date', tomorrow.toISOString());
+
       // Construir mensagem
       let summary = `📊 *Resumo do Dia* - ${today.toLocaleDateString('pt-BR')}\n\n`;
-      
-      summary += `*Hoje:*\n`;
-      summary += `✅ Atendimentos completados: ${completed}\n`;
+
+      summary += `*Agendamentos Hoje:*\n`;
+      summary += `✅ Completados: ${completed}\n`;
       summary += `❌ Cancelamentos: ${cancelled}\n`;
       summary += `⚠️ No-shows: ${noShow}\n`;
-      summary += `📋 Total de agendamentos: ${todayBookings.length}\n\n`;
+      summary += `📋 Total: ${todayBookings.length}\n\n`;
 
       summary += `*Amanhã:*\n`;
       summary += `📅 ${tomorrowBookings.length} agendamentos previstos\n\n`;
 
+      // Novos Verticals Summary
+      summary += `*🎓 Treinamento:*\n`;
+      summary += `${activeTrainingPlans || 0} planos ativos\n\n`;
+
+      summary += `*🏨 Hospedagem/Daycare:*\n`;
+      summary += `Check-ins hoje: ${todayCheckIns?.length || 0}\n`;
+      summary += `Check-outs hoje: ${todayCheckOuts?.length || 0}\n\n`;
+
       // Alertas
       if (noShow > 0) {
-        summary += `⚠️ *Atenção:* ${noShow} no-show(s) hoje. Considere enviar lembretes mais próximos do horário.\n\n`;
+        summary += `⚠️ *Atenção:* ${noShow} no-show(s) hoje. Considere lembretes mais próximos do horário.\n\n`;
       }
 
       if (tomorrowBookings.length < 5) {
-        summary += `💡 *Oportunidade:* Agenda de amanhã está com ${tomorrowBookings.length} agendamentos. Que tal uma campanha de última hora?\n`;
+        summary += `💡 *Oportunidade:* Agenda amanhã com ${tomorrowBookings.length} agendamentos. Campanha de última hora?\n`;
       }
 
       return summary;
@@ -232,7 +262,7 @@ NUNCA:
   }
 
   /**
-   * Identifica oportunidades de negócio
+   * Identifica oportunidades de negócio (incluindo novos verticals: Training, Daycare, Knowledge Base)
    */
   async identifyOpportunities(organizationId: string): Promise<string[]> {
     const opportunities: string[] = [];
@@ -257,6 +287,58 @@ NUNCA:
       if (futureBookings.length < 10) {
         opportunities.push(
           `📅 Apenas ${futureBookings.length} agendamentos nos próximos 3 dias. Hora de preencher a agenda!`
+        );
+      }
+
+      // Oportunidade: Planos de Adestramento (Training)
+      const { data: petsWithoutTraining } = await supabaseAdmin
+        .from('pets')
+        .select('id, name, contact_id')
+        .eq('organization_id', organizationId)
+        .is('deleted_at', null);
+
+      if (petsWithoutTraining && petsWithoutTraining.length > 0) {
+        const { count: trainingPlansCount } = await supabaseAdmin
+          .from('training_plans')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', organizationId)
+          .eq('status', 'ativo');
+
+        const petsWithoutActivePlan = petsWithoutTraining.length - (trainingPlansCount || 0);
+
+        if (petsWithoutActivePlan > 5) {
+          opportunities.push(
+            `🎓 ${petsWithoutActivePlan} pets sem plano de adestramento ativo. Campanha de treinamento comportamental?`
+          );
+        }
+      }
+
+      // Oportunidade: Hospedagem/Daycare (próximo feriado/verão)
+      const { data: daycareStays } = await supabaseAdmin
+        .from('daycare_hotel_stays')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .gte('check_in_date', new Date().toISOString())
+        .lte('check_in_date', threeDaysAhead.toISOString());
+
+      if (!daycareStays || daycareStays.length < 3) {
+        const nextMonth = new Date();
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+        opportunities.push(
+          `🏨 Apenas ${daycareStays?.length || 0} reservas de hospedagem nos próximos 3 dias. Feriados chegando - promover daycare/hotel?`
+        );
+      }
+
+      // Oportunidade: Base de Conhecimento subutilizada
+      const { count: kbEntriesCount } = await supabaseAdmin
+        .from('knowledge_base')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId);
+
+      if ((kbEntriesCount || 0) < 10) {
+        opportunities.push(
+          `📚 Base de conhecimento tem apenas ${kbEntriesCount || 0} entradas. Adicionar FAQs reduz tempo de resposta da IA!`
         );
       }
 
