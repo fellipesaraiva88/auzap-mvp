@@ -15,4 +15,46 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core libraries
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+
+          // UI component libraries (Radix UI)
+          'ui-vendor': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-avatar',
+            '@radix-ui/react-label',
+            '@radix-ui/react-slot',
+            '@radix-ui/react-separator',
+          ],
+
+          // Data fetching and state management
+          'query-vendor': ['@tanstack/react-query'],
+
+          // Supabase client
+          'supabase-vendor': ['@supabase/supabase-js'],
+
+          // Charts and visualization
+          'chart-vendor': ['recharts'],
+
+          // Icons
+          'icon-vendor': ['lucide-react'],
+
+          // Form handling
+          'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
+
+          // Socket.io
+          'socket-vendor': ['socket.io-client'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 500,
+  },
 }));
