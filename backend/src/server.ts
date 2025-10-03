@@ -32,6 +32,11 @@ baileysService.setSocketEmitter((event: string, data: any) => {
 import './queue/jobs/whatsapp-health-check.job.js';
 logger.info('WhatsApp health check job loaded');
 
+// Aurora Automation Jobs
+import './queue/jobs/aurora-daily-summary.job.js';
+import './queue/jobs/aurora-opportunities.job.js';
+logger.info('Aurora automation jobs loaded');
+
 // Middleware
 app.use(helmet({
   contentSecurityPolicy: {

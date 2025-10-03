@@ -167,4 +167,40 @@ router.post('/proactive/send', async (req: TenantRequest, res: Response): Promis
   }
 });
 
+// Trigger manual daily summary (send immediately via WhatsApp)
+router.post('/automation/trigger-daily-summary', async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const { organizationId } = req.auroraContext!;
+
+    const { triggerDailySummary } = await import('../queue/jobs/aurora-daily-summary.job.js');
+    await triggerDailySummary(organizationId);
+
+    res.json({
+      success: true,
+      message: 'Daily summary queued for delivery via WhatsApp'
+    });
+  } catch (error: any) {
+    logger.error('Trigger daily summary error', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Trigger manual opportunities report (send immediately via WhatsApp)
+router.post('/automation/trigger-opportunities', async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const { organizationId } = req.auroraContext!;
+
+    const { triggerOpportunities } = await import('../queue/jobs/aurora-opportunities.job.js');
+    await triggerOpportunities(organizationId);
+
+    res.json({
+      success: true,
+      message: 'Opportunities report queued for delivery via WhatsApp'
+    });
+  } catch (error: any) {
+    logger.error('Trigger opportunities error', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
