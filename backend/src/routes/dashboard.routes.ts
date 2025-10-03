@@ -1,22 +1,19 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { supabaseAdmin } from '../config/supabase.js';
 import { logger } from '../config/logger.js';
+import { TenantRequest, tenantMiddleware } from '../middleware/tenant.middleware.js';
 import { readLimiter } from '../middleware/rate-limiter.js';
 
 const router = Router();
 
-// Dashboard is read-heavy, allow higher limits
+// Apply tenant middleware and rate limiting to all routes
+router.use(tenantMiddleware);
 router.use(readLimiter);
 
 // Get dashboard stats
-router.get('/stats', async (req, res): Promise<void> => {
+router.get('/stats', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
-
-    if (!organizationId) {
-      res.status(400).json({ error: 'Organization ID required' });
-      return;
-    }
+    const organizationId = req.organizationId!;
 
     // Get today's date range
     const today = new Date();
@@ -99,14 +96,9 @@ router.get('/stats', async (req, res): Promise<void> => {
 });
 
 // Get impact metrics (last 7 days)
-router.get('/impact', async (req, res): Promise<void> => {
+router.get('/impact', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
-
-    if (!organizationId) {
-      res.status(400).json({ error: 'Organization ID required' });
-      return;
-    }
+    const organizationId = req.organizationId!;
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -149,14 +141,9 @@ router.get('/impact', async (req, res): Promise<void> => {
 });
 
 // Get overnight activity
-router.get('/overnight', async (req, res): Promise<void> => {
+router.get('/overnight', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
-
-    if (!organizationId) {
-      res.status(400).json({ error: 'Organization ID required' });
-      return;
-    }
+    const organizationId = req.organizationId!;
 
     // Last night: 22h yesterday to 8h today
     const lastNight = new Date();
@@ -208,14 +195,9 @@ router.get('/overnight', async (req, res): Promise<void> => {
 });
 
 // Get recent AI actions
-router.get('/actions', async (req, res): Promise<void> => {
+router.get('/actions', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
-
-    if (!organizationId) {
-      res.status(400).json({ error: 'Organization ID required' });
-      return;
-    }
+    const organizationId = req.organizationId!;
 
     // Get last 10 AI actions (from ai_interactions table)
     const { data: actions } = await supabaseAdmin
@@ -236,14 +218,9 @@ router.get('/actions', async (req, res): Promise<void> => {
 });
 
 // Get revenue by hour (last 24h)
-router.get('/revenue-timeline', async (req, res): Promise<void> => {
+router.get('/revenue-timeline', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
-
-    if (!organizationId) {
-      res.status(400).json({ error: 'Organization ID required' });
-      return;
-    }
+    const organizationId = req.organizationId!;
 
     const last24h = new Date();
     last24h.setHours(last24h.getHours() - 24);
