@@ -759,9 +759,7 @@ Informações que você pode coletar:
           name,
           species,
           breed,
-          age_years,
-          health_notes,
-          behavior_notes
+          age_years
         `)
         .eq('id', petId)
         .eq('organization_id', organizationId)
@@ -775,19 +773,19 @@ Informações que você pode coletar:
         };
       }
 
-      // Simular protocolo BIPE baseado nas notas do pet
+      // Simular protocolo BIPE baseado nas informações do pet
       const protocol = {
-        behavioral: pet.behavior_notes || 'Nenhuma observação comportamental',
+        behavioral: 'Nenhuma observação comportamental (campo não disponível)',
         individual: `${pet.species} - ${pet.breed || 'SRD'} - ${pet.age_years || 0} anos`,
         preventive: 'Verificar cartão de vacinas com o tutor',
-        emergent: pet.health_notes || 'Nenhum alerta de saúde'
+        emergent: 'Nenhum alerta de saúde (campo não disponível)'
       };
 
-      const hasAlerts = !!(pet.health_notes || pet.behavior_notes);
+      const hasAlerts = false; // Campos não disponíveis no schema atual
 
       return {
         success: true,
-        message: hasAlerts ? 'Pet possui observações no protocolo BIPE.' : 'Protocolo BIPE em dia.',
+        message: 'Protocolo BIPE básico consultado (aguardando implementação completa).',
         protocol,
         hasAlerts,
         petInfo: {

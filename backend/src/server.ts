@@ -67,12 +67,10 @@ if (ENABLE_EMBEDDED_WORKERS) {
       const { MessageWorker } = await import('./queue/workers/message.worker.js');
       const { CampaignWorker } = await import('./queue/workers/campaign.worker.js');
       const { AutomationWorker } = await import('./queue/workers/automation.worker.js');
-      const { VasculhadaWorker } = await import('./queue/workers/vasculhada.worker.js');
 
       const messageWorker = new MessageWorker();
       const campaignWorker = new CampaignWorker();
       const automationWorker = new AutomationWorker();
-      const vasculhadaWorker = new VasculhadaWorker();
 
       logger.info('✅ All embedded workers started successfully');
 
@@ -82,8 +80,7 @@ if (ENABLE_EMBEDDED_WORKERS) {
         await Promise.all([
           messageWorker.close(),
           campaignWorker.close(),
-          automationWorker.close(),
-          vasculhadaWorker.close()
+          automationWorker.close()
         ]);
       });
     } catch (error) {
@@ -243,14 +240,13 @@ app.get('/health/whatsapp', async (_req: Request, res: Response): Promise<void> 
 
 app.get('/health/workers', async (_req: Request, res: Response): Promise<void> => {
   try {
-    const { messageQueue, campaignQueue, automationQueue, vasculhadaQueue } = await import('./queue/queue-manager.js');
+    const { messageQueue, campaignQueue, automationQueue } = await import('./queue/queue-manager.js');
 
     // Buscar estatísticas de cada queue
-    const [messageStats, campaignStats, automationStats, vasculhadaStats] = await Promise.all([
+    const [messageStats, campaignStats, automationStats] = await Promise.all([
       messageQueue.getJobCounts(),
       campaignQueue.getJobCounts(),
-      automationQueue.getJobCounts(),
-      vasculhadaQueue.getJobCounts()
+      automationQueue.getJobCounts()
     ]);
 
     // Verificar se há workers processando (pelo menos 1 job ativo ou completo recentemente)
@@ -258,20 +254,17 @@ app.get('/health/workers', async (_req: Request, res: Response): Promise<void> =
       messageStats.active > 0 ||
       campaignStats.active > 0 ||
       automationStats.active > 0 ||
-      vasculhadaStats.active > 0 ||
       messageStats.completed > 0;
 
     const totalProcessing =
       messageStats.active +
       campaignStats.active +
-      automationStats.active +
-      vasculhadaStats.active;
+      automationStats.active;
 
     const totalWaiting =
       messageStats.waiting +
       campaignStats.waiting +
-      automationStats.waiting +
-      vasculhadaStats.waiting;
+      automationStats.waiting;
 
     res.json({
       status: hasActiveWorkers || totalWaiting === 0 ? 'ok' : 'warning',
@@ -281,8 +274,7 @@ app.get('/health/workers', async (_req: Request, res: Response): Promise<void> =
         waiting: totalWaiting,
         message: messageStats,
         campaign: campaignStats,
-        automation: automationStats,
-        vasculhada: vasculhadaStats
+        automation: automationStats
       }
     });
   } catch (error) {

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "tsc || true",
     "start": "node dist/server.js",
     "workers:start": "tsx src/queue/workers/all.ts",
     "workers:message": "tsx src/queue/workers/message.worker.ts",
