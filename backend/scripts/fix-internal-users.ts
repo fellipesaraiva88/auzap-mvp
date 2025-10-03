@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import { supabaseAdmin } from '../src/config/supabase.js';
-import { logger } from '../src/config/logger.js';
+import { supabaseAdmin } from '../src/config/supabase';
+import { logger } from '../src/config/logger';
 
-const CORRECT_PASSWORD_HASH = '$2b$10$/8w1nvmPRDDlYyrkbD3L9.Nl4S5dvSnAmUeNGUhtuhpqfyouVWE3u';
+const CORRECT_PASSWORD_HASH = '$2b$10$l4WIe0uNHDVaesrbls16l.ffUf0bdl9KQQC8t8TvHRzyOKOTbvWyy';
 
 async function fixInternalUsers() {
   try {
@@ -10,6 +10,7 @@ async function fixInternalUsers() {
 
     const emails = [
       'eu@saraiva.ai',
+      'admin@auzap.com',
       'julio@auzap.com',
       'arthur@auzap.com',
       'leo@auzap.com',
