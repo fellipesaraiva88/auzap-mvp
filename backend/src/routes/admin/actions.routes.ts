@@ -303,7 +303,7 @@ router.post(
         .eq('organization_id', clientId)
         .single();
 
-      const currentFlags = settings?.feature_flags || {};
+      const currentFlags = (settings?.feature_flags as Record<string, any>) || {};
       const newFlags = {
         ...currentFlags,
         [feature]: true,

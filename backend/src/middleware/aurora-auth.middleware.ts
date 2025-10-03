@@ -112,19 +112,3 @@ export async function auroraAuthMiddleware(
     });
   }
 }
-
-// Estender tipos do Express para incluir auroraContext
-declare global {
-  namespace Express {
-    interface Request {
-      auroraContext?: {
-        organizationId: string;
-        phoneNumber: string;
-        organizationName: string;
-        ownerName: string;
-        isOwner: boolean;
-        role: 'owner' | 'admin';
-      };
-    }
-  }
-}

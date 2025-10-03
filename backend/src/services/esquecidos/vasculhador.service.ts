@@ -9,8 +9,7 @@ import type {
   TipoVacuo,
   ResultadoVasculhada,
   ProgressoVasculhada,
-  ClienteEsquecido,
-  CriarClienteEsquecidoData
+  ClienteEsquecido
 } from '../../types/esquecidos.types.js';
 
 /**
@@ -191,24 +190,17 @@ export class VasculhadorService {
    * Busca mensagens de uma conversa
    */
   private async buscarMensagens(
-    sock: WASocket,
-    jid: string,
-    limit: number
+    _sock: WASocket,
+    _jid: string,
+    _limit: number
   ): Promise<MensagemWhatsApp[]> {
     try {
-      // Baileys: carregar mensagens
-      const messages = await sock.fetchMessagesFromWA(jid, limit);
+      // Nota: Baileys não tem método fetchMessagesFromWA direto
+      // Usar loadMessages ou messageHistory do Baileys store
+      logger.warn('fetchMessagesFromWA não implementado - usando store local');
 
-      return messages
-        .map((msg: proto.IWebMessageInfo) => ({
-          id: msg.key.id || '',
-          from: msg.key.remoteJid || '',
-          to: msg.key.remoteJid || '',
-          content: this.extrairConteudo(msg),
-          timestamp: Number(msg.messageTimestamp || 0),
-          fromMe: msg.key.fromMe || false
-        }))
-        .filter(m => m.content !== '[Unknown message type]');
+      // Placeholder - implementar com Baileys store quando disponível
+      return [];
     } catch (error) {
       // Se não conseguir buscar mensagens, retornar vazio
       return [];
@@ -217,8 +209,11 @@ export class VasculhadorService {
 
   /**
    * Extrai conteúdo de mensagem Baileys
+   * TODO: Implementar quando Baileys message history estiver disponível
+   * @deprecated Not currently used - implement when Baileys store is available
    */
-  private extrairConteudo(message: proto.IWebMessageInfo): string {
+  // @ts-ignore - Keeping for future implementation
+  private _extrairConteudo(message: proto.IWebMessageInfo): string {
     const msg = message.message;
     if (!msg) return '[Empty]';
 

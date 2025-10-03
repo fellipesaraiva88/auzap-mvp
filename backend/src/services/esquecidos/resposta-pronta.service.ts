@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../../config/logger.js';
 import { supabaseAdmin } from '../../config/supabase.js';
-import type { RespostaIA, TipoVacuo, ClienteEsquecido } from '../../types/esquecidos.types.js';
+import type { RespostaIA, TipoVacuo } from '../../types/esquecidos.types.js';
 
 /**
  * RespostaProntaService - "Já escrevi pra você!"
@@ -181,7 +181,7 @@ Agora gere a resposta:`;
   /**
    * Gera resposta fallback se IA falhar
    */
-  private gerarRespostaFallback(tipoVacuo: TipoVacuo, ultimaMensagem: string): RespostaIA {
+  private gerarRespostaFallback(tipoVacuo: TipoVacuo, _ultimaMensagem: string): RespostaIA {
     if (tipoVacuo === 'voce_vacuou') {
       return {
         mensagem: `Oi! Desculpa a demora. Vi sua mensagem aqui. Como posso te ajudar? 😊`,

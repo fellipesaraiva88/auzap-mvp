@@ -3,13 +3,10 @@ import { logger } from '../config/logger.js';
 import { supabaseAdmin } from '../config/supabase.js';
 
 /**
- * Request extendido com dados do tenant
+ * Type alias for Express Request with tenant context
+ * Actual extension is in src/types/express.d.ts
  */
-export interface TenantRequest extends Request {
-  organizationId?: string;
-  userId?: string;
-  userRole?: 'owner' | 'admin' | 'agent';
-}
+export type TenantRequest = Request;
 
 /**
  * Middleware para isolamento multi-tenant

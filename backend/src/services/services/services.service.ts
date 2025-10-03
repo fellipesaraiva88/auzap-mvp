@@ -168,7 +168,7 @@ export class ServicesService {
 
           existing.bookings += 1;
           existing.revenue += price;
-          existing.prices.push(price);
+          (existing.prices as number[]).push(price);
 
           revenueMap.set(serviceId, existing);
         }

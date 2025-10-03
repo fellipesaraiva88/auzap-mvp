@@ -94,7 +94,7 @@ router.get('/charts', requireAdminRole(['super_admin', 'tech', 'cs', 'sales', 'v
 
     // Agrupar por dia
     const messagesByDay = messagesData?.reduce((acc: any, msg) => {
-      const day = msg.created_at.split('T')[0];
+      const day = (msg.created_at || new Date().toISOString()).split('T')[0];
       acc[day] = (acc[day] || 0) + 1;
       return acc;
     }, {});
@@ -164,11 +164,14 @@ router.get('/recent-activity', requireAdminRole(['super_admin', 'tech', 'cs', 's
 router.get('/health', requireAdminRole(['super_admin', 'tech']), async (_req: AdminRequest, res: Response): Promise<void> => {
   try {
     // Testar conexão com Supabase
-    const supabaseHealthy = await supabaseAdmin
-      .from('organizations')
-      .select('id', { count: 'exact', head: true })
-      .then(() => true)
-      .catch(() => false);
+    let supabaseHealthy = true;
+    try {
+      await supabaseAdmin
+        .from('organizations')
+        .select('id', { count: 'exact', head: true });
+    } catch {
+      supabaseHealthy = false;
+    }
 
     res.json({
       supabase: supabaseHealthy ? 'healthy' : 'unhealthy',

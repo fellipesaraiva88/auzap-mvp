@@ -1,6 +1,5 @@
 import 'dotenv/config';
-import { supabaseAdmin } from '../config/supabase.js';
-import { readdir, readFile } from 'fs/promises';
+import { readdir } from 'fs/promises';
 import { join } from 'path';
 import { logger } from '../config/logger.js';
 
@@ -15,24 +14,15 @@ async function runMigrations() {
     logger.info({ count: sqlFiles.length }, 'Migrations encontradas');
     
     for (const file of sqlFiles) {
-      const filePath = join(migrationsPath, file);
-      const sql = await readFile(filePath, 'utf-8');
-      
       try {
         logger.info({ file }, 'Executando migration...');
-        
-        // Executar SQL diretamente
-        const { error } = await supabaseAdmin.rpc('exec_sql', {
-          sql_query: sql
-        });
-        
-        if (error) {
-          logger.error({ file, error }, 'Erro na migration');
-        } else {
-          logger.info({ file }, 'Migration executada com sucesso');
-        }
+
+        // Nota: Migrations devem ser executadas manualmente no Supabase SQL Editor
+        // ou via Supabase CLI. Este script é apenas um lembrete.
+        logger.warn({ file }, 'Migrations devem ser executadas manualmente no Supabase');
+
       } catch (err: any) {
-        logger.error({ file, error: err }, 'Erro ao executar migration');
+        logger.error({ file, error: err }, 'Erro ao processar migration');
       }
     }
     

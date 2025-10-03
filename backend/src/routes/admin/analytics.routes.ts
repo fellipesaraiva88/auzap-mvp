@@ -164,7 +164,7 @@ router.get('/revenue', requireAdminRole(['super_admin', 'sales']), async (req: A
     // Agrupar por dia/semana/mês
     const revenueByPeriod = bookings?.reduce((acc: any, booking) => {
       let period: string;
-      const date = new Date(booking.created_at);
+      const date = new Date(booking.created_at || new Date());
 
       if (group_by === 'day') {
         period = date.toISOString().split('T')[0];

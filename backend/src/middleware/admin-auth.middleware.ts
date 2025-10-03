@@ -1,13 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
-import { adminAuthService, type InternalRole, type AdminJWTPayload } from '../services/admin-auth.service.js';
+import { adminAuthService, type InternalRole } from '../services/admin-auth.service.js';
 import { logger } from '../config/logger.js';
 
-// Extend Express Request
-export interface AdminRequest extends Request {
-  admin?: AdminJWTPayload & {
-    id: string;
-  };
-}
+/**
+ * Type alias for Express Request with admin context
+ * Actual extension is in src/types/express.d.ts
+ */
+export type AdminRequest = Request;
 
 /**
  * Middleware de autenticação para admin panel
