@@ -19,8 +19,8 @@ export interface AuthResponse {
     refresh_token: string;
     expires_at: number;
   };
-  user?: any;
-  organization?: any;
+  user?: unknown;
+  organization?: unknown;
 }
 
 export interface UserProfile {
@@ -29,7 +29,7 @@ export interface UserProfile {
   full_name: string;
   role: string;
   organization_id?: string; // Optional for admin users
-  organizations?: any;
+  organizations?: unknown;
 }
 
 class AuthService {

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { StatCard } from "@/components/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -22,38 +22,80 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Home, Hotel, Calendar, Loader2, Plus, Sparkles } from "lucide-react";
+import { Plus, Loader2, Filter } from "lucide-react";
 import {
   useDaycareStays,
   useCreateDaycareStay,
   useUpdateDaycareStay,
-  useStayUpsells,
-  useAddExtraService,
 } from "@/hooks/useDaycare";
 import { usePets } from "@/hooks/usePets";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+// Import new components
+import { DaycareDashboard } from "@/components/daycare/DaycareDashboard";
+import { DaycareCalendar } from "@/components/daycare/DaycareCalendar";
+import { DaycareTimeline } from "@/components/daycare/DaycareTimeline";
+import { DaycareReports } from "@/components/daycare/DaycareReports";
+import { UpsellRecommendations } from "@/components/daycare/UpsellRecommendations";
+
+// Types
+interface DaycareStay {
+  id: string;
+  pet_id: string;
+  contact_id: string;
+  stay_type: "daycare" | "hotel";
+  status: string;
+  check_in_date: string;
+  check_out_date?: string;
+  created_at: string;
+  health_assessment?: {
+    vacinas?: boolean;
+    vermifugo?: boolean;
+  };
+  extra_services?: string[];
+  pet?: {
+    id: string;
+    name: string;
+  };
+  contact?: {
+    id: string;
+    full_name: string;
+  };
+}
+
+interface Pet {
+  id: string;
+  name: string;
+}
+
+interface StayFilters {
+  status?: string;
+  stayType?: string;
+}
+
+interface StatusBadgeVariant {
+  label: string;
+  className: string;
+}
+
 export default function DaycareStays() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
-  const filters: any = {};
+  const filters: StayFilters = {};
   if (statusFilter !== "all") filters.status = statusFilter;
   if (typeFilter !== "all") filters.stayType = typeFilter;
 
   const { data: staysData, isLoading } = useDaycareStays(filters);
   const createMutation = useCreateDaycareStay();
   const updateMutation = useUpdateDaycareStay();
-  const addServiceMutation = useAddExtraService();
   const { toast } = useToast();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedStayId, setSelectedStayId] = useState<string | null>(null);
   const [selectedContactId, setSelectedContactId] = useState("");
   const { data: petsData } = usePets(selectedContactId);
-  const { data: upsellsData } = useStayUpsells(selectedStayId);
 
   const [formData, setFormData] = useState({
     pet_id: "",
@@ -77,9 +119,110 @@ export default function DaycareStays() {
     extra_services: [] as string[],
   });
 
-  const stays = staysData?.stays || [];
-  const activeStays = stays.filter((s: any) => s.status === "em_estadia");
-  const pendingStays = stays.filter((s: any) => s.status === "aguardando_avaliacao");
+  const stays: DaycareStay[] = staysData?.stays || [];
+  const activeStays = stays.filter((s: DaycareStay) => s.status === "em_estadia");
+  const pendingStays = stays.filter((s: DaycareStay) => s.status === "aguardando_avaliacao");
+  const todayCheckIns = stays.filter((s: DaycareStay) => {
+    const checkIn = new Date(s.check_in_date);
+    const today = new Date();
+    return checkIn.toDateString() === today.toDateString();
+  }).length;
+  const todayCheckOuts = stays.filter((s: DaycareStay) => {
+    if (!s.check_out_date) return false;
+    const checkOut = new Date(s.check_out_date);
+    const today = new Date();
+    return checkOut.toDateString() === today.toDateString();
+  }).length;
+
+  // Dashboard stats
+  const daycareCapacity = 20; // TODO: Get from settings
+  const hotelCapacity = 10; // TODO: Get from settings
+  const daycareOccupied = stays.filter(
+    (s: DaycareStay) => s.stay_type === "daycare" && s.status === "em_estadia"
+  ).length;
+  const hotelOccupied = stays.filter(
+    (s: DaycareStay) => s.stay_type === "hotel" && s.status === "em_estadia"
+  ).length;
+  const occupancyRate =
+    ((daycareOccupied + hotelOccupied) / (daycareCapacity + hotelCapacity)) * 100;
+
+  const dashboardStats = {
+    totalStays: stays.length,
+    activeStays: activeStays.length,
+    pendingApproval: pendingStays.length,
+    todayCheckIns,
+    todayCheckOuts,
+    occupancyRate,
+    daycareCapacity,
+    hotelCapacity,
+    daycareOccupied,
+    hotelOccupied,
+  };
+
+  // Mock data for Timeline (TODO: Replace with real data)
+  const timelineEvents = [
+    {
+      id: "1",
+      time: "08:00",
+      type: "feeding" as const,
+      description: "Café da manhã - Ração Premium",
+      pet_name: "Rex",
+      completed: true,
+    },
+    {
+      id: "2",
+      time: "09:30",
+      type: "recreation" as const,
+      description: "Recreação em grupo - Parque externo",
+      pet_name: "Todos",
+      completed: true,
+    },
+    {
+      id: "3",
+      time: "12:00",
+      type: "feeding" as const,
+      description: "Almoço",
+      pet_name: "Todos",
+      completed: false,
+    },
+    {
+      id: "4",
+      time: "14:00",
+      type: "medication" as const,
+      description: "Medicação - Antibiótico",
+      pet_name: "Luna",
+      completed: false,
+    },
+  ];
+
+  // Mock data for Reports (TODO: Replace with real data)
+  const reports = [];
+
+  // Mock data for Upsells (TODO: Replace with real data)
+  const upsellSuggestions = [
+    {
+      id: "1",
+      stay_id: "stay_1",
+      pet_name: "Rex",
+      service: "Banho e Tosa",
+      description: "Banho completo com hidratação e tosa higiênica",
+      reason: "Pet está há mais de 3 dias no hotel, ideal para sair cheirosinho",
+      priority: "high" as const,
+      price: "R$ 80,00",
+      estimated_revenue: 80,
+    },
+    {
+      id: "2",
+      stay_id: "stay_2",
+      pet_name: "Luna",
+      service: "Sessão de Fotos",
+      description: "Ensaio fotográfico profissional (10 fotos editadas)",
+      reason: "Primeira estadia da Luna, ótima recordação para o tutor",
+      priority: "medium" as const,
+      price: "R$ 50,00",
+      estimated_revenue: 50,
+    },
+  ];
 
   const handleCreate = async () => {
     if (!formData.pet_id || !formData.check_in_date) {
@@ -103,20 +246,6 @@ export default function DaycareStays() {
       toast({
         variant: "destructive",
         title: "Erro ao criar estadia",
-      });
-    }
-  };
-
-  const handleAddService = async (stayId: string, service: string) => {
-    try {
-      await addServiceMutation.mutateAsync({ stayId, service });
-      toast({
-        title: "✅ Serviço adicionado!",
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao adicionar serviço",
       });
     }
   };
@@ -147,7 +276,7 @@ export default function DaycareStays() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
+    const variants: Record<string, StatusBadgeVariant> = {
       aguardando_avaliacao: { label: "Aguardando", className: "bg-yellow-100 text-yellow-800" },
       aprovado: { label: "Aprovado", className: "bg-green-100 text-green-800" },
       em_estadia: { label: "Em Estadia", className: "bg-blue-100 text-blue-800" },
@@ -163,10 +292,10 @@ export default function DaycareStays() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
       <PageHeader
-        title="Creche & Hotel"
-        subtitle="Gerenciamento de estadias com avaliações e upsells inteligentes"
+        title="Hotelzinho & Creche"
+        subtitle="Gestão completa de estadias com relatórios e upsells inteligentes"
         action={
           <Button onClick={() => setIsCreateOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
@@ -175,149 +304,174 @@ export default function DaycareStays() {
         }
       />
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard
-          title="Estadias Ativas"
-          value={activeStays.length}
-          icon={Home}
-          color="blue"
-        />
-        <StatCard
-          title="Aguardando Avaliação"
-          value={pendingStays.length}
-          icon={Calendar}
-          color="yellow"
-        />
-        <StatCard title="Total de Estadias" value={stays.length} icon={Hotel} color="purple" />
-      </div>
+      {/* Dashboard Stats */}
+      <DaycareDashboard stats={dashboardStats} />
 
-      {/* Filters */}
-      <div className="flex gap-2 flex-wrap">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="aguardando_avaliacao">Aguardando</SelectItem>
-            <SelectItem value="aprovado">Aprovado</SelectItem>
-            <SelectItem value="em_estadia">Em Estadia</SelectItem>
-            <SelectItem value="finalizado">Finalizado</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Main Content - Tabs */}
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+          <TabsTrigger value="calendar">Calendário</TabsTrigger>
+          <TabsTrigger value="timeline">Rotina</TabsTrigger>
+          <TabsTrigger value="reports">Relatórios</TabsTrigger>
+          <TabsTrigger value="upsells">Upsells</TabsTrigger>
+        </TabsList>
 
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os tipos</SelectItem>
-            <SelectItem value="daycare">Creche</SelectItem>
-            <SelectItem value="hotel">Hotel</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-4">
+          {/* Filters */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Filter className="w-4 h-4" />
+                Filtros
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex gap-2 flex-wrap">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="aguardando_avaliacao">Aguardando</SelectItem>
+                  <SelectItem value="aprovado">Aprovado</SelectItem>
+                  <SelectItem value="em_estadia">Em Estadia</SelectItem>
+                  <SelectItem value="finalizado">Finalizado</SelectItem>
+                </SelectContent>
+              </Select>
 
-      {/* Stays List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Estadias ({stays.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-ocean-blue" />
-            </div>
-          ) : stays.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              Nenhuma estadia encontrada 🏠
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {stays.map((stay: any) => (
-                <div
-                  key={stay.id}
-                  className="p-4 border rounded-lg hover:shadow-md transition-shadow"
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h4 className="font-semibold">{stay.pet?.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Tutor: {stay.contact?.full_name}
-                      </p>
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      {getStatusBadge(stay.status)}
-                      <Badge variant={stay.stay_type === "hotel" ? "default" : "secondary"}>
-                        {stay.stay_type === "hotel" ? "🏨 Hotel" : "🏠 Creche"}
-                      </Badge>
-                    </div>
-                  </div>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  <SelectItem value="daycare">Creche</SelectItem>
+                  <SelectItem value="hotel">Hotel</SelectItem>
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-3">
-                    <div>
-                      <p className="text-muted-foreground">Check-in:</p>
-                      <p className="font-medium">
-                        {new Date(stay.check_in_date).toLocaleDateString("pt-BR")}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Check-out:</p>
-                      <p className="font-medium">
-                        {stay.check_out_date
-                          ? new Date(stay.check_out_date).toLocaleDateString("pt-BR")
-                          : "Não definido"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Vacinas:</p>
-                      <p className="font-medium">
-                        {stay.health_assessment?.vacinas ? "✅ OK" : "❌ Pendente"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Criado:</p>
-                      <p className="font-medium">
-                        {formatDistanceToNow(new Date(stay.created_at), {
-                          addSuffix: true,
-                          locale: ptBR,
-                        })}
-                      </p>
-                    </div>
-                  </div>
-
-                  {stay.extra_services && stay.extra_services.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-xs text-muted-foreground mb-1">🎁 Serviços Extras:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {stay.extra_services.map((service: string, idx: number) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
-                            {service}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex gap-2">
-                    {stay.status === "aprovado" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setSelectedStayId(stay.id)}
-                      >
-                        <Sparkles className="w-4 h-4 mr-1" />
-                        Ver Sugestões
-                      </Button>
-                    )}
-                  </div>
+          {/* Stays List */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Estadias ({stays.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-ocean-blue" />
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              ) : stays.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Nenhuma estadia encontrada 🏠
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {stays.map((stay: DaycareStay) => (
+                    <div
+                      key={stay.id}
+                      className="p-4 border rounded-lg hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-semibold">{stay.pet?.name}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Tutor: {stay.contact?.full_name}
+                          </p>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          {getStatusBadge(stay.status)}
+                          <Badge variant={stay.stay_type === "hotel" ? "default" : "secondary"}>
+                            {stay.stay_type === "hotel" ? "🏨 Hotel" : "🏠 Creche"}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-3">
+                        <div>
+                          <p className="text-muted-foreground">Check-in:</p>
+                          <p className="font-medium">
+                            {new Date(stay.check_in_date).toLocaleDateString("pt-BR")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Check-out:</p>
+                          <p className="font-medium">
+                            {stay.check_out_date
+                              ? new Date(stay.check_out_date).toLocaleDateString("pt-BR")
+                              : "Não definido"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Vacinas:</p>
+                          <p className="font-medium">
+                            {stay.health_assessment?.vacinas ? "✅ OK" : "❌ Pendente"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Criado:</p>
+                          <p className="font-medium">
+                            {formatDistanceToNow(new Date(stay.created_at), {
+                              addSuffix: true,
+                              locale: ptBR,
+                            })}
+                          </p>
+                        </div>
+                      </div>
+
+                      {stay.extra_services && stay.extra_services.length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-xs text-muted-foreground mb-1">🎁 Serviços Extras:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {stay.extra_services.map((service: string, idx: number) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {service}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Calendar Tab */}
+        <TabsContent value="calendar">
+          <DaycareCalendar
+            stays={stays.map((s: DaycareStay) => ({
+              id: s.id,
+              pet_name: s.pet?.name || "Pet",
+              contact_name: s.contact?.full_name || "Tutor",
+              stay_type: s.stay_type,
+              check_in_date: s.check_in_date,
+              check_out_date: s.check_out_date,
+              status: s.status,
+            }))}
+          />
+        </TabsContent>
+
+        {/* Timeline Tab */}
+        <TabsContent value="timeline">
+          <DaycareTimeline events={timelineEvents} />
+        </TabsContent>
+
+        {/* Reports Tab */}
+        <TabsContent value="reports">
+          <DaycareReports reports={reports} />
+        </TabsContent>
+
+        {/* Upsells Tab */}
+        <TabsContent value="upsells">
+          <UpsellRecommendations suggestions={upsellSuggestions} />
+        </TabsContent>
+      </Tabs>
 
       {/* Create Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -351,7 +505,7 @@ export default function DaycareStays() {
                     <SelectValue placeholder="Selecione o pet" />
                   </SelectTrigger>
                   <SelectContent>
-                    {petsData?.map((pet: any) => (
+                    {petsData?.map((pet: Pet) => (
                       <SelectItem key={pet.id} value={pet.id}>
                         {pet.name}
                       </SelectItem>
@@ -366,7 +520,7 @@ export default function DaycareStays() {
                 <Label>Tipo *</Label>
                 <Select
                   value={formData.stay_type}
-                  onValueChange={(value: any) => setFormData({ ...formData, stay_type: value })}
+                  onValueChange={(value: "daycare" | "hotel") => setFormData({ ...formData, stay_type: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -465,57 +619,6 @@ export default function DaycareStays() {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Upsells Dialog */}
-      <Dialog open={!!selectedStayId} onOpenChange={() => setSelectedStayId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              <Sparkles className="w-5 h-5 inline mr-2 text-yellow-500" />
-              Sugestões de Serviços Extras
-            </DialogTitle>
-            <DialogDescription>Serviços complementares personalizados</DialogDescription>
-          </DialogHeader>
-
-          {upsellsData?.suggestions?.length > 0 ? (
-            <div className="space-y-3">
-              {upsellsData.suggestions.map((upsell: any, idx: number) => (
-                <div key={idx} className="p-3 border rounded-lg">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-semibold capitalize">{upsell.service}</h4>
-                    <Badge
-                      variant={
-                        upsell.priority === "high"
-                          ? "destructive"
-                          : upsell.priority === "medium"
-                          ? "default"
-                          : "secondary"
-                      }
-                    >
-                      {upsell.priority}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">{upsell.reason}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-semibold">{upsell.price}</span>
-                    <Button
-                      size="sm"
-                      onClick={() => handleAddService(selectedStayId!, upsell.service)}
-                      disabled={addServiceMutation.isPending}
-                    >
-                      Adicionar
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhuma sugestão disponível no momento
-            </p>
-          )}
         </DialogContent>
       </Dialog>
     </div>

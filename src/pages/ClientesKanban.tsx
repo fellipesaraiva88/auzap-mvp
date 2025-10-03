@@ -198,7 +198,7 @@ export default function ClientesKanban() {
       let columnId = "new"; // Default
 
       switch (currentView) {
-        case "status":
+        case "status": {
           // Lógica para categorizar por status
           const daysSinceCreation = Math.floor(
             (Date.now() - new Date(contact.created_at || contact.createdAt).getTime()) /
@@ -209,8 +209,9 @@ export default function ClientesKanban() {
           else columnId = "inactive";
           // VIP baseado em alguma lógica (ex: mais de 10 agendamentos)
           break;
+        }
 
-        case "interaction":
+        case "interaction": {
           // Lógica para última interação
           const lastMessage = contact.last_message_at;
           if (!lastMessage) {
@@ -225,6 +226,7 @@ export default function ClientesKanban() {
             else columnId = "old";
           }
           break;
+        }
 
         case "pets":
           // Será implementado quando tivermos contagem de pets

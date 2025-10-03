@@ -22,7 +22,12 @@ export function BipeNotifications() {
   const reactivateMutation = useReactivateAI();
   const { toast } = useToast();
 
-  const [selectedBipe, setSelectedBipe] = useState<any>(null);
+  const [selectedBipe, setSelectedBipe] = useState<{
+    id: string;
+    conversation?: { contact?: { full_name?: string; phone_number?: string } };
+    client_question: string;
+    conversation_id: string;
+  } | null>(null);
   const [responseText, setResponseText] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -73,15 +78,16 @@ export function BipeNotifications() {
     }
   };
 
-  const openResponseDialog = (bipe: any) => {
+  const openResponseDialog = (bipe: typeof selectedBipe) => {
     setSelectedBipe(bipe);
     setResponseText("");
     setIsDialogOpen(true);
   };
 
-  const pendingBipes = bipes?.filter((b: any) => b.status === 'pending') || [];
-  const aiUnknownBipes = pendingBipes.filter((b: any) => b.trigger_type === 'ai_unknown');
-  const handoffBipes = pendingBipes.filter((b: any) => b.trigger_type === 'limit_reached');
+  type BipeType = { id: string; status: string; trigger_type: string; conversation?: { contact?: { full_name?: string; phone_number?: string } }; client_question: string; conversation_id: string; handoff_reason?: string; created_at: string };
+  const pendingBipes = bipes?.filter((b: BipeType) => b.status === 'pending') || [];
+  const aiUnknownBipes = pendingBipes.filter((b: BipeType) => b.trigger_type === 'ai_unknown');
+  const handoffBipes = pendingBipes.filter((b: BipeType) => b.trigger_type === 'limit_reached');
 
   if (bipesLoading) {
     return (
@@ -121,7 +127,7 @@ export function BipeNotifications() {
                 <MessageSquare className="w-4 h-4" />
                 IA Precisa de Ajuda ({aiUnknownBipes.length})
               </div>
-              {aiUnknownBipes.map((bipe: any) => (
+              {aiUnknownBipes.map((bipe: BipeType) => (
                 <div
                   key={bipe.id}
                   className="p-4 border border-orange-200 rounded-lg bg-white dark:bg-gray-900 hover:shadow-md transition-shadow"
@@ -167,7 +173,7 @@ export function BipeNotifications() {
                 <Zap className="w-4 h-4" />
                 Atendimento Manual Ativo ({handoffBipes.length})
               </div>
-              {handoffBipes.map((bipe: any) => (
+              {handoffBipes.map((bipe: BipeType) => (
                 <div
                   key={bipe.id}
                   className="p-4 border border-yellow-200 rounded-lg bg-white dark:bg-gray-900 hover:shadow-md transition-shadow"

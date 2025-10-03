@@ -46,10 +46,11 @@ export function LiveStat({
         return `R$ ${val.toFixed(2)}`;
       case "percentage":
         return `${val}%`;
-      case "time":
+      case "time": {
         const hours = Math.floor(val / 60);
         const minutes = val % 60;
         return `${hours}h ${minutes}min`;
+      }
       default:
         return val.toString();
     }
