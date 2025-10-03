@@ -19,6 +19,10 @@ const IA = lazy(() => import("./pages/IA"));
 const Ajustes = lazy(() => import("./pages/Ajustes"));
 const WhatsAppSetup = lazy(() => import("./pages/WhatsAppSetup"));
 const AuroraMeetPage = lazy(() => import("./pages/AuroraMeetPage"));
+const BipePanel = lazy(() => import("./pages/BipePanel"));
+const TrainingPlans = lazy(() => import("./pages/TrainingPlans"));
+const DaycareStays = lazy(() => import("./pages/DaycareStays"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -46,6 +50,7 @@ const App = () => (
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/onboarding" element={<Onboarding />} />
 
             {/* Admin Panel Routes (separate auth) */}
             <Route path="/admin/login" element={<LoginAdmin />} />
@@ -88,6 +93,9 @@ const App = () => (
                             <Route path="/ajustes" element={<Ajustes />} />
                             <Route path="/whatsapp" element={<WhatsAppSetup />} />
                             <Route path="/aurora/meet" element={<AuroraMeetPage />} />
+                            <Route path="/bipe" element={<BipePanel />} />
+                            <Route path="/training" element={<TrainingPlans />} />
+                            <Route path="/daycare" element={<DaycareStays />} />
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </Suspense>

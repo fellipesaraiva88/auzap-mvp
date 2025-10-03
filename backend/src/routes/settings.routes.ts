@@ -108,4 +108,74 @@ router.patch('/:organizationId', async (req: TenantRequest, res: Response): Prom
   }
 });
 
+// Update onboarding settings (simplified endpoint for first-time setup)
+router.put('/onboarding', async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const organizationId = req.organizationId!;
+    const {
+      emergency_contact_name,
+      emergency_contact_phone,
+      emergency_contact_relationship,
+      payment_methods,
+      bipe_phone_number,
+      onboarding_completed
+    } = req.body;
+
+    // Validate required fields
+    if (!emergency_contact_name || !emergency_contact_phone || !payment_methods || !bipe_phone_number) {
+      res.status(400).json({ error: 'Missing required fields' });
+      return;
+    }
+
+    // Check if settings exist
+    const { data: existing } = await supabaseAdmin
+      .from('organization_settings')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .single();
+
+    const updates = {
+      emergency_contact_name,
+      emergency_contact_phone,
+      emergency_contact_relationship: emergency_contact_relationship || null,
+      payment_methods,
+      bipe_phone_number,
+      onboarding_completed: onboarding_completed || true
+    };
+
+    let result;
+    if (existing) {
+      // Update existing
+      const { data, error } = await supabaseAdmin
+        .from('organization_settings')
+        .update(updates)
+        .eq('organization_id', organizationId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      result = data;
+    } else {
+      // Insert new
+      const { data, error } = await supabaseAdmin
+        .from('organization_settings')
+        .insert({
+          organization_id: organizationId,
+          ...updates
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      result = data;
+    }
+
+    logger.info({ organizationId }, 'Onboarding completed');
+    res.json({ success: true, settings: result });
+  } catch (error: any) {
+    logger.error('Onboarding settings error', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
