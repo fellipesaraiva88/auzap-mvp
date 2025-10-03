@@ -22,40 +22,61 @@ export class SessionManager {
   constructor(sessionPath?: string) {
     // Render persistent disk: /app/data/sessions (subdir dentro do mount /app/data)
     // Isso permite que user node crie o subdir sem problemas de permissão
-    this.sessionPath = sessionPath || process.env.WHATSAPP_SESSION_PATH || '/app/data/sessions';
+    const preferredPath = sessionPath || process.env.WHATSAPP_SESSION_PATH || '/app/data/sessions';
 
-    // Verificar se path é gravável, senão usar /tmp como fallback
-    this.verifySessionPath();
+    // Verificar se path é gravável, senão usar fallback
+    this.sessionPath = this.verifyAndSelectSessionPath(preferredPath);
   }
 
   /**
-   * Verifica se sessionPath é gravável, senão usa /tmp (síncrono para uso no constructor)
+   * Verifica múltiplos paths e seleciona o primeiro gravável
+   * Ordem de prioridade:
+   * 1. /app/data/sessions (Render persistent disk)
+   * 2. ./sessions (desenvolvimento local)
+   * 3. /tmp/auzap-sessions (fallback sempre funciona)
    */
-  private verifySessionPath() {
-    try {
-      fsSync.accessSync(this.sessionPath, fsSync.constants.W_OK);
-      logger.info({ sessionPath: this.sessionPath }, 'Session path is writable');
-    } catch (error) {
-      const fallbackPath = '/tmp/sessions';
-      logger.warn({
-        originalPath: this.sessionPath,
-        fallbackPath,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }, 'Session path not writable, using fallback /tmp/sessions');
+  private verifyAndSelectSessionPath(preferredPath: string): string {
+    const candidatePaths = [
+      preferredPath,                    // Path preferido (env var ou parâmetro)
+      '/app/data/sessions',             // Render persistent disk
+      path.join(process.cwd(), 'sessions'), // Local development
+      '/tmp/auzap-sessions'             // Fallback seguro
+    ];
 
-      this.sessionPath = fallbackPath;
-
-      // Criar /tmp/sessions se não existir
+    for (const candidatePath of candidatePaths) {
       try {
-        fsSync.mkdirSync(fallbackPath, { recursive: true, mode: 0o777 });
-        logger.info({ fallbackPath }, 'Fallback session path created');
-      } catch (mkdirError) {
-        logger.error({
-          fallbackPath,
-          error: mkdirError instanceof Error ? mkdirError.message : 'Unknown error'
-        }, 'Failed to create fallback session path');
+        // Tentar criar diretório se não existir
+        if (!fsSync.existsSync(candidatePath)) {
+          fsSync.mkdirSync(candidatePath, { recursive: true, mode: 0o777 });
+          logger.info({ path: candidatePath }, 'Session path created');
+        }
+
+        // Verificar se é gravável
+        fsSync.accessSync(candidatePath, fsSync.constants.W_OK);
+
+        // Testar escrita real
+        const testFile = path.join(candidatePath, '.write-test');
+        fsSync.writeFileSync(testFile, 'test', { mode: 0o666 });
+        fsSync.unlinkSync(testFile);
+
+        logger.info({
+          sessionPath: candidatePath,
+          isPreferred: candidatePath === preferredPath
+        }, 'Session path verified and writable');
+
+        return candidatePath;
+      } catch (error) {
+        logger.debug({
+          path: candidatePath,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, 'Session path not available, trying next');
       }
     }
+
+    // Se chegou aqui, nenhum path funcionou - erro crítico
+    const errorMsg = 'No writable session path found. Tried: ' + candidatePaths.join(', ');
+    logger.error({ candidatePaths }, errorMsg);
+    throw new Error(errorMsg);
   }
 
   /**

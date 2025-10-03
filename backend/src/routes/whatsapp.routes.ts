@@ -371,6 +371,43 @@ router.delete('/instances/:instanceId', async (req: TenantRequest, res: Response
 });
 
 /**
+ * POST /api/whatsapp/instances/:instanceId/verify
+ * Verifica conexão real enviando mensagem de teste
+ */
+router.post('/instances/:instanceId/verify', async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const { instanceId } = req.params;
+    const organizationId = req.organizationId!;
+
+    logger.info({ instanceId, organizationId }, 'Verifying WhatsApp connection');
+
+    const result = await baileysService.verifyConnection(instanceId, organizationId);
+
+    if (result.verified) {
+      res.json({
+        success: true,
+        verified: true,
+        messageId: result.messageId,
+        message: 'Connection verified successfully. Check your WhatsApp for confirmation message.'
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        verified: false,
+        error: result.error
+      });
+    }
+  } catch (error: any) {
+    logger.error({ error }, 'Error verifying connection');
+    res.status(500).json({
+      success: false,
+      verified: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * POST /api/whatsapp/health-check
  * Trigger manual health check (valida todas as instâncias)
  */

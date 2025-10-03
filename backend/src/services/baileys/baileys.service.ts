@@ -717,6 +717,62 @@ export class BaileysService {
   async cleanupOldSessions(daysThreshold: number = 30): Promise<number> {
     return await sessionManager.cleanupOldSessions(daysThreshold);
   }
+
+  /**
+   * Verifica conexão enviando mensagem de teste
+   */
+  async verifyConnection(instanceId: string, organizationId?: string): Promise<{
+    verified: boolean;
+    messageId?: string;
+    error?: string;
+  }> {
+    try {
+      // 1. Verificar se instância está conectada
+      const instance = this.getInstance(instanceId, organizationId);
+
+      if (instance.status !== 'connected' || !instance.sock.user) {
+        return {
+          verified: false,
+          error: 'Instance not connected'
+        };
+      }
+
+      // 2. Enviar mensagem de teste para o próprio número
+      const phoneNumber = instance.sock.user.id.split(':')[0];
+      const testMessage = '✅ *AuZap Conectado!*\n\nSua IA está ativa e pronta para atender clientes 24/7.\n\nDigite *"teste"* para validar o funcionamento completo.';
+
+      const result = await this.sendTextMessage({
+        instanceId,
+        organizationId: instance.organizationId,
+        to: phoneNumber,
+        text: testMessage
+      });
+
+      if (result.success) {
+        logger.info({
+          instanceId,
+          organizationId: instance.organizationId,
+          messageId: result.messageId
+        }, 'Connection verified with test message');
+
+        return {
+          verified: true,
+          messageId: result.messageId
+        };
+      }
+
+      return {
+        verified: false,
+        error: result.error || 'Failed to send test message'
+      };
+    } catch (error: any) {
+      logger.error({ error, instanceId }, 'Failed to verify connection');
+      return {
+        verified: false,
+        error: error.message
+      };
+    }
+  }
 }
 
 export const baileysService = new BaileysService();

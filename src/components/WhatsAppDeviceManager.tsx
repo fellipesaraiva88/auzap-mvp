@@ -46,6 +46,11 @@ interface WhatsAppDeviceManagerProps {
 export function WhatsAppDeviceManager({ instance, onUpdate }: WhatsAppDeviceManagerProps) {
   const { toast } = useToast();
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
+  const [reconnectInfo, setReconnectInfo] = useState<{
+    attemptNumber: number;
+    maxAttempts: number;
+    nextRetryIn: number;
+  } | null>(null);
 
   // Real-time status
   const { data: statusData, isLoading: statusLoading } = useWhatsAppStatus(
@@ -64,6 +69,7 @@ export function WhatsAppDeviceManager({ instance, onUpdate }: WhatsAppDeviceMana
   const isConnected = currentStatus === 'connected';
   const isConnecting = currentStatus === 'connecting';
   const isDisconnected = currentStatus === 'disconnected';
+  const isReconnecting = !!reconnectInfo;
   const hasProblem = currentStatus === 'failed' || instance.reconnectAttempts > 3;
 
   // Auto-refresh on status change
@@ -73,7 +79,55 @@ export function WhatsAppDeviceManager({ instance, onUpdate }: WhatsAppDeviceMana
     }
   }, [statusData?.status, instance.status, onUpdate]);
 
+  // Socket.IO listener para eventos de reconexão
+  useEffect(() => {
+    // Importação dinâmica dentro de IIFE para evitar async useEffect
+    (async () => {
+      const { socketManager } = await import('@/lib/socket');
+      const organizationId = instance.organizationId;
+
+      const handleReconnecting = (data: any) => {
+        if (data.instanceId === instance.instanceId) {
+          setReconnectInfo({
+            attemptNumber: data.attemptNumber,
+            maxAttempts: data.maxAttempts,
+            nextRetryIn: data.nextRetryIn
+          });
+        }
+      };
+
+      const handleConnected = (data: any) => {
+        if (data.instanceId === instance.instanceId) {
+          setReconnectInfo(null);
+          toast({
+            title: '✅ Reconectado!',
+            description: 'WhatsApp está online novamente',
+          });
+        }
+      };
+
+      socketManager.on(`/org/${organizationId}:whatsapp:reconnecting`, handleReconnecting);
+      socketManager.on(`/org/${organizationId}:whatsapp:connected`, handleConnected);
+
+      // Cleanup não funcionará perfeitamente com IIFE, mas é aceitável
+      return () => {
+        socketManager.off(`/org/${organizationId}:whatsapp:reconnecting`, handleReconnecting);
+        socketManager.off(`/org/${organizationId}:whatsapp:connected`, handleConnected);
+      };
+    })();
+  }, [instance.instanceId, instance.organizationId, toast]);
+
   const getStatusConfig = () => {
+    if (isReconnecting) {
+      return {
+        color: 'bg-blue-500/20 text-blue-600 border-blue-500/30',
+        icon: <Loader2 className="w-4 h-4 animate-spin" />,
+        label: `Reconectando ${reconnectInfo!.attemptNumber}/${reconnectInfo!.maxAttempts}`,
+        description: `Próxima tentativa em ${Math.round(reconnectInfo!.nextRetryIn / 1000)}s`,
+        gradient: 'from-blue-400 to-blue-600'
+      };
+    }
+
     if (isConnected) {
       return {
         color: 'bg-green-500/20 text-green-600 border-green-500/30',

@@ -101,6 +101,13 @@ export interface SocketEvents {
   'whatsapp:qr': (data: { instanceId: string; qrCode: string }) => void;
   'whatsapp:connected': (data: { instanceId: string; phoneNumber: string }) => void;
   'whatsapp:disconnected': (data: { instanceId: string }) => void;
+  'whatsapp:reconnecting': (data: {
+    instanceId: string;
+    attemptNumber: number;
+    maxAttempts: number;
+    nextRetryIn: number;
+    timestamp: Date;
+  }) => void;
   'whatsapp:message': (data: { instanceId: string; from: string; message: string }) => void;
   'whatsapp-status-changed': (data: { instanceId: string; status: string; connected: boolean }) => void;
 

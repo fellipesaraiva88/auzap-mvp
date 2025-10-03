@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { WhatsAppDeviceManager } from '@/components/WhatsAppDeviceManager';
 import { PhoneInput } from '@/components/PhoneInput';
-import { useWhatsAppInstances, useInitializeWhatsApp } from '@/hooks/useWhatsApp';
+import { useWhatsAppInstances, useInitializeWhatsApp, useVerifyWhatsApp } from '@/hooks/useWhatsApp';
 import { useToast } from '@/hooks/use-toast';
 import {
   Smartphone,
@@ -32,12 +32,13 @@ import { ModalDinheiroEsquecido } from '@/components/esquecidos/ModalDinheiroEsq
 import { ProgressoDaIA } from '@/components/esquecidos/ProgressoDaIA';
 import { useClientesEsquecidos } from '@/hooks/useClientesEsquecidos';
 
-type WizardStep = 'phone' | 'code' | 'success';
+type WizardStep = 'phone' | 'code' | 'verifying' | 'success';
 
 export default function WhatsAppSetup() {
   const { toast } = useToast();
   const { data, isLoading, refetch } = useWhatsAppInstances();
   const initializeWhatsApp = useInitializeWhatsApp();
+  const verifyWhatsApp = useVerifyWhatsApp();
 
   // Dinheiro Esquecido
   const {
@@ -53,8 +54,11 @@ export default function WhatsAppSetup() {
   const [wizardStep, setWizardStep] = useState<WizardStep>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [pairingCode, setPairingCode] = useState('');
+  const [currentInstanceId, setCurrentInstanceId] = useState('');
   const [copied, setCopied] = useState(false);
   const [countdown, setCountdown] = useState(60);
+  const [pollingAttempts, setPollingAttempts] = useState(0);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const instances = data?.instances || [];
   const hasInstance = instances.length > 0;
@@ -79,14 +83,30 @@ export default function WhatsAppSetup() {
   // Reset wizard ao fechar
   const handleCloseDialog = () => {
     setDialogOpen(false);
+    // Limpar polling se existir
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
     setTimeout(() => {
       setWizardStep('phone');
       setPhoneNumber('');
       setPairingCode('');
+      setCurrentInstanceId('');
       setCopied(false);
       setCountdown(60);
+      setPollingAttempts(0);
     }, 300);
   };
+
+  // Cleanup ao desmontar
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
 
   const handleGenerateCode = async () => {
     // Validações
@@ -110,6 +130,8 @@ export default function WhatsAppSetup() {
 
     try {
       const instanceId = `instance_${Date.now()}`;
+      setCurrentInstanceId(instanceId); // Salvar para polling
+
       const result = await initializeWhatsApp.mutateAsync({
         instanceId,
         phoneNumber: phoneNumber.replace(/\D/g, ''),
@@ -120,6 +142,11 @@ export default function WhatsAppSetup() {
         setPairingCode(result.pairingCode);
         setWizardStep('code');
         setCountdown(60);
+
+        // Iniciar polling automático após 5s (dar tempo pro usuário ler)
+        setTimeout(() => {
+          startConnectionPolling();
+        }, 5000);
       } else {
         toast({
           variant: 'destructive',
@@ -146,12 +173,79 @@ export default function WhatsAppSetup() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Polling inteligente para detectar conexão
+  const startConnectionPolling = () => {
+    setPollingAttempts(0);
+    const maxAttempts = 20; // 20 x 3s = 60s
+
+    const pollInterval = setInterval(async () => {
+      setPollingAttempts(prev => {
+        const newCount = prev + 1;
+
+        if (newCount >= maxAttempts) {
+          clearInterval(pollInterval);
+          toast({
+            variant: 'destructive',
+            title: 'Tempo esgotado',
+            description: 'Não detectamos a conexão. Tente gerar novo código.',
+          });
+          setWizardStep('phone');
+          return 0;
+        }
+
+        return newCount;
+      });
+
+      // Verificar status atual
+      const result = await refetch();
+      const connectedInstance = result.data?.instances.find(
+        i => i.instanceId === currentInstanceId && i.status === 'connected'
+      );
+
+      if (connectedInstance) {
+        clearInterval(pollInterval);
+        setWizardStep('verifying');
+        await handleVerifyConnection();
+      }
+    }, 3000);
+
+    pollingIntervalRef.current = pollInterval;
+  };
+
+  const handleVerifyConnection = async () => {
+    try {
+      const result = await verifyWhatsApp.mutateAsync(currentInstanceId);
+
+      if (result.verified) {
+        toast({
+          title: '🎉 Conexão validada!',
+          description: 'Confira a mensagem de boas-vindas no seu WhatsApp',
+        });
+        setWizardStep('success');
+        setTimeout(() => {
+          handleCloseDialog();
+        }, 3000);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Erro na validação',
+          description: result.error || 'Não foi possível enviar mensagem de teste',
+        });
+        setWizardStep('code');
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao verificar',
+        description: 'Tente novamente',
+      });
+      setWizardStep('code');
+    }
+  };
+
   const handleCheckConnection = () => {
-    refetch();
-    setWizardStep('success');
-    setTimeout(() => {
-      handleCloseDialog();
-    }, 2000);
+    setWizardStep('verifying');
+    startConnectionPolling();
   };
 
   if (isLoading) {
@@ -242,6 +336,12 @@ export default function WhatsAppSetup() {
                   Código Gerado!
                 </>
               )}
+              {wizardStep === 'verifying' && (
+                <>
+                  <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+                  Verificando Conexão...
+                </>
+              )}
               {wizardStep === 'success' && (
                 <>
                   <Sparkles className="w-6 h-6 text-sunset-orange" />
@@ -252,6 +352,7 @@ export default function WhatsAppSetup() {
             <DialogDescription>
               {wizardStep === 'phone' && 'Digite o número do WhatsApp que será automatizado'}
               {wizardStep === 'code' && 'Copie o código e cole no WhatsApp'}
+              {wizardStep === 'verifying' && 'Aguardando confirmação no WhatsApp...'}
               {wizardStep === 'success' && 'Sua IA já está funcionando!'}
             </DialogDescription>
           </DialogHeader>
@@ -387,6 +488,32 @@ export default function WhatsAppSetup() {
               </div>
             )}
 
+            {/* PASSO 2.5: Verificando */}
+            {wizardStep === 'verifying' && (
+              <div className="space-y-6 text-center animate-in fade-in duration-500">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center mx-auto">
+                  <Loader2 className="w-12 h-12 text-white animate-spin" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-blue-600 mb-2">
+                    Aguardando Confirmação...
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    Detectamos a conexão! Enviando mensagem de teste...
+                  </p>
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <span>Tentativa {pollingAttempts} de 20</span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    💡 <strong>Aguarde:</strong> Estamos validando sua conexão e enviando uma mensagem de boas-vindas automaticamente.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* PASSO 3: Sucesso */}
             {wizardStep === 'success' && (
               <div className="space-y-6 text-center animate-in fade-in zoom-in duration-500">
@@ -399,6 +526,12 @@ export default function WhatsAppSetup() {
                   </h3>
                   <p className="text-muted-foreground">
                     Sua IA já está atendendo clientes automaticamente
+                  </p>
+                </div>
+
+                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  <p className="text-sm text-green-800">
+                    ✅ Confira a mensagem de boas-vindas no seu WhatsApp!
                   </p>
                 </div>
               </div>

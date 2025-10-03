@@ -302,3 +302,27 @@ export function useDisconnectWhatsApp() {
     },
   });
 }
+
+/**
+ * Verificar conexão com mensagem de teste
+ */
+export function useVerifyWhatsApp() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (instanceId: string) => {
+      const response = await apiClient.post<{
+        success: boolean;
+        verified: boolean;
+        messageId?: string;
+        message?: string;
+        error?: string;
+      }>(`/api/whatsapp/instances/${instanceId}/verify`);
+      return response.data;
+    },
+    onSuccess: (_, instanceId) => {
+      queryClient.invalidateQueries({ queryKey: ['whatsapp', 'status', instanceId] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp', 'health', instanceId] });
+    },
+  });
+}

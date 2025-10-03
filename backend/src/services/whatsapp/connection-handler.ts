@@ -176,6 +176,16 @@ export class ConnectionHandler {
       'Scheduling reconnect'
     );
 
+    // ✨ NOVO: Emitir evento de reconexão iniciada
+    this.emitReconnectingEvent({
+      instanceId,
+      organizationId,
+      attemptNumber: attempts,
+      maxAttempts: this.reconnectConfig.maxAttempts,
+      nextRetryIn: delay,
+      timestamp: new Date()
+    });
+
     // Limpar timer anterior se existir
     this.clearReconnectTimer(organizationId, instanceId);
 
@@ -360,6 +370,23 @@ export class ConnectionHandler {
     if (this.socketIOEmitter) {
       const namespace = `/org/${event.organizationId}`;
       this.socketIOEmitter(`${namespace}:whatsapp:disconnected`, event);
+    }
+  }
+
+  /**
+   * Emite evento de reconexão em andamento via Socket.IO
+   */
+  private emitReconnectingEvent(event: {
+    instanceId: string;
+    organizationId: string;
+    attemptNumber: number;
+    maxAttempts: number;
+    nextRetryIn: number;
+    timestamp: Date;
+  }): void {
+    if (this.socketIOEmitter) {
+      const namespace = `/org/${event.organizationId}`;
+      this.socketIOEmitter(`${namespace}:whatsapp:reconnecting`, event);
     }
   }
 
