@@ -1,34 +1,37 @@
 import { MessageSquare, Calendar, UserPlus, Bot } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export function QuickActions() {
+  const navigate = useNavigate();
+
   const actions = [
     {
       icon: MessageSquare,
       label: "Nova Conversa",
       color: "text-primary",
       bgColor: "bg-primary/10",
-      onClick: () => console.log("Nova conversa"),
+      onClick: () => navigate("/conversas"),
     },
     {
       icon: Calendar,
       label: "Agendar",
       color: "text-accent",
       bgColor: "bg-accent/10",
-      onClick: () => console.log("Agendar"),
+      onClick: () => navigate("/agenda"),
     },
     {
       icon: UserPlus,
       label: "Cadastrar Pet",
       color: "text-ai-success",
       bgColor: "bg-ai-success/10",
-      onClick: () => console.log("Cadastrar pet"),
+      onClick: () => navigate("/clientes"),
     },
     {
       icon: Bot,
       label: "Configurar IA",
       color: "text-ai-pending",
       bgColor: "bg-ai-pending/10",
-      onClick: () => console.log("Configurar IA"),
+      onClick: () => navigate("/ia"),
     },
   ];
 
