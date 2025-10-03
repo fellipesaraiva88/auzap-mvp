@@ -458,8 +458,7 @@ router.delete('/protocol/:petId/alert/:alertId', async (req: TenantRequest, res:
     }
 
     // Resolve alert
-    const resolvedBy = req.userId || 'system';
-    const result = await petHealthService.resolveAlert(alertId, petId, organizationId, resolvedBy);
+    const result = await petHealthService.resolveEmergentAlert(petId, alertId);
 
     logger.info({ organizationId, petId, alertId }, 'BIPE alert resolved');
     res.json({ message: 'Alert resolved successfully', alert: result });
@@ -478,11 +477,7 @@ router.get('/alerts', async (req: TenantRequest, res: Response): Promise<void> =
     const organizationId = req.organizationId!;
     const { severity, type, petId } = req.query;
 
-    const alerts = await petHealthService.getActiveAlerts(organizationId, {
-      severity: severity as any,
-      type: type as any,
-      petId: petId as string
-    });
+    const alerts = await petHealthService.getActiveAlerts(organizationId);
 
     res.json({ alerts, count: alerts.length });
   } catch (error: any) {
@@ -532,13 +527,7 @@ router.post('/protocol/:petId/assessment', async (req: TenantRequest, res: Respo
     }
 
     // Schedule assessment
-    const assessment = await petHealthService.scheduleAssessment(petId, organizationId, {
-      type: data.type,
-      scheduledAt: data.scheduledAt,
-      veterinarian: data.veterinarian,
-      notes: data.notes,
-      location: data.location
-    });
+    const assessment = await petHealthService.scheduleAssessment(petId, data.scheduledAt);
 
     logger.info({ organizationId, petId, assessmentId: assessment.id }, 'BIPE assessment scheduled');
     res.status(201).json({ assessment });
@@ -578,12 +567,7 @@ router.get('/protocol/:petId/history', async (req: TenantRequest, res: Response)
     }
 
     // Get history
-    const history = await petHealthService.getProtocolHistory(
-      petId,
-      organizationId,
-      parseInt(limit as string),
-      parseInt(offset as string)
-    );
+    const history = await petHealthService.getProtocolHistory(petId);
 
     res.json({ history, count: history.length });
   } catch (error: any) {
@@ -621,7 +605,7 @@ router.get('/protocol/:petId/report', async (req: TenantRequest, res: Response):
     }
 
     // Generate comprehensive report
-    const report = await petHealthService.generateHealthReport(petId, organizationId);
+    const report = await petHealthService.generateHealthReport(petId);
 
     logger.info({ organizationId, petId }, 'BIPE health report generated');
     res.json({

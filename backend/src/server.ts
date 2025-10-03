@@ -204,7 +204,7 @@ app.use('/api/esquecidos', (await import('./routes/esquecidos.routes.js')).defau
 // BIPE & Advanced Services Routes
 app.use('/api/training', (await import('./routes/training.routes.js')).default);
 app.use('/api/daycare', (await import('./routes/daycare.routes.js')).default);
-app.use('/api/bipe', (await import('./routes/bipe.routes.js')).default);
+// app.use('/api/bipe', (await import('./routes/bipe.routes.js')).default); // TODO: Aguardando migration da tabela pet_health_protocol
 app.use('/api/knowledge-base', (await import('./routes/knowledge-base.routes.js')).default);
 
 // Admin Panel Routes (internal users only)
@@ -249,14 +249,17 @@ io.use(async (socket, next) => {
 
     // Verify user belongs to the organization
     const orgId = Array.isArray(organizationId) ? organizationId[0] : organizationId;
-    const { data: membership } = await supabaseAdmin
-      .from('organizations')
-      .select('id')
-      .eq('id', orgId)
+
+    // Check if user exists in users table and belongs to this organization
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, organization_id')
+      .eq('auth_user_id', user.id)
+      .eq('organization_id', orgId)
       .single();
 
-    if (!membership) {
-      logger.error({ userId: user.id, organizationId: orgId }, 'User does not belong to organization');
+    if (userError || !userData) {
+      logger.error({ userId: user.id, organizationId: orgId, userError }, 'User does not belong to organization');
       return next(new Error('Access denied to organization'));
     }
 
