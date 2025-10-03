@@ -1,14 +1,20 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { ContactsService } from '../services/contacts/contacts.service.js';
 import { logger } from '../config/logger.js';
+import { TenantRequest, tenantMiddleware, validateResource } from '../middleware/tenant.middleware.js';
+import { standardLimiter } from '../middleware/rate-limiter.js';
 
 const router = Router();
 const contactsService = new ContactsService();
 
+// Apply tenant middleware and rate limiting to all routes
+router.use(tenantMiddleware);
+router.use(standardLimiter);
+
 // List all contacts for organization
-router.get('/', async (req, res): Promise<void> => {
+router.get('/', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
+    const organizationId = req.organizationId!;
     const { search, tags } = req.query;
 
     const contacts = await contactsService.listByOrganization(organizationId, {
@@ -23,8 +29,8 @@ router.get('/', async (req, res): Promise<void> => {
   }
 });
 
-// Get contact by ID
-router.get('/:id', async (req, res): Promise<void> => {
+// Get contact by ID (with organization validation)
+router.get('/:id', validateResource('id', 'contacts'), async (req: TenantRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const contact = await contactsService.findById(id);
@@ -42,9 +48,9 @@ router.get('/:id', async (req, res): Promise<void> => {
 });
 
 // Create contact
-router.post('/', async (req: Request, res: Response): Promise<void> => {
+router.post('/', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
+    const organizationId = req.organizationId!;
     const contactData = { ...req.body, organization_id: organizationId };
 
     const contact = await contactsService.findOrCreateByPhone(
@@ -62,8 +68,8 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Update contact
-router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
+// Update contact (with organization validation)
+router.patch('/:id', validateResource('id', 'contacts'), async (req: TenantRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const contact = await contactsService.update(id, req.body);
@@ -75,8 +81,8 @@ router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Add tags to contact
-router.post('/:id/tags', async (req: Request, res: Response): Promise<void> => {
+// Add tags to contact (with organization validation)
+router.post('/:id/tags', validateResource('id', 'contacts'), async (req: TenantRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { tags } = req.body;
