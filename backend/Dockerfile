@@ -12,7 +12,7 @@ RUN apk add --no-cache python3 make g++
 COPY package*.json ./
 
 # Install all dependencies (including devDependencies for build)
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -39,7 +39,7 @@ RUN mkdir -p /app/sessions && chown -R node:node /app/sessions
 COPY package*.json ./
 
 # Install production dependencies only
-RUN npm ci --only=production && npm cache clean --force
+RUN npm install --production && npm cache clean --force
 
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
