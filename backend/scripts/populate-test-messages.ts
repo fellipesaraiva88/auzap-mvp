@@ -286,7 +286,7 @@ async function populateMessages() {
         const messageTime = new Date(baseTime.getTime() + cumulativeDelay);
 
         const messageData = {
-          organization_id: conversation.contact_id.split('-')[0], // Assuming org_id is part of contact_id
+          organization_id: conversation.organization_id,
           conversation_id: conversation.id,
           direction: msg.direction,
           content: msg.content,
