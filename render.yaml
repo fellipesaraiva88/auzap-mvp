@@ -127,6 +127,12 @@ services:
     # Auto-deploy
     autoDeploy: true
 
+    # SPA routing - todas as rotas vão para index.html
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
     # Environment variables for build
     envVars:
       - key: VITE_API_URL
