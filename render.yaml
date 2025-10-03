@@ -105,27 +105,13 @@ services:
   - type: web
     name: auzap-frontend
     runtime: static
-    buildCommand: cd frontend && npm install && npm run build
-    staticPublishPath: ./frontend/dist
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
     region: oregon
     branch: main
 
     # Auto-deploy
     autoDeploy: true
-
-    # Custom headers for security
-    headers:
-      - path: /*
-        name: X-Frame-Options
-        value: DENY
-
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-
-      - path: /*
-        name: Referrer-Policy
-        value: strict-origin-when-cross-origin
 
     # Environment variables for build
     envVars:
@@ -139,4 +125,7 @@ services:
         sync: false
 
       - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
         sync: false
