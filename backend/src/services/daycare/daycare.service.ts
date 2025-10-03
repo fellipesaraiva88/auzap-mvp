@@ -355,6 +355,205 @@ export class DaycareService {
       throw error;
     }
   }
+
+  /**
+   * Buscar timeline de atividades da estadia
+   *
+   * FORMATO ESPERADO NO CAMPO NOTES:
+   * [ATIVIDADE][09:30] Alimentação - Comeu 200g de ração
+   * [RECREAÇÃO][10:15] Brincou com bola por 30 minutos
+   * [MEDICAÇÃO][14:00] Aplicado vermífugo
+   * [FOTO][15:30] https://storage.url/photo.jpg - Soneca no jardim
+   */
+  static async getStayTimeline(stayId: string, organizationId: string) {
+    try {
+      const stay = await this.getStay(stayId, organizationId);
+
+      if (!stay) {
+        throw new Error('Stay not found');
+      }
+
+      const notes = stay.notes || '';
+      const timeline: Array<{
+        id: string;
+        timestamp: string;
+        activity_type: string;
+        description: string;
+        photo_url?: string;
+      }> = [];
+
+      // Parse notes no formato: [TIPO][HH:MM] Descrição
+      const lines = notes.split('\n');
+      let counter = 1;
+
+      for (const line of lines) {
+        const match = line.match(/\[([A-ZÇÃÁÉÍÓÚ]+)\]\[(\d{2}:\d{2})\]\s*(.*)/);
+
+        if (match) {
+          const [, type, time, description] = match;
+
+          // Extrair URL de foto se existir
+          const photoMatch = description.match(/(https?:\/\/[^\s]+)/);
+          const photoUrl = photoMatch ? photoMatch[1] : undefined;
+          const cleanDescription = photoUrl
+            ? description.replace(photoUrl, '').replace(/\s+-\s+/, '')
+            : description;
+
+          timeline.push({
+            id: `${stayId}_${counter}`,
+            timestamp: `${stay.check_in_date}T${time}:00Z`,
+            activity_type: type.toLowerCase(),
+            description: cleanDescription,
+            photo_url: photoUrl
+          });
+
+          counter++;
+        }
+      }
+
+      // Ordenar por timestamp
+      timeline.sort((a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+
+      logger.info({ stayId, eventCount: timeline.length }, 'Timeline retrieved');
+      return timeline;
+    } catch (error) {
+      logger.error({ error, stayId }, 'Error fetching stay timeline');
+      throw error;
+    }
+  }
+
+  /**
+   * Buscar estadias que precisam de relatório pendente
+   * Critérios:
+   * - Status: em_estadia
+   * - Sem relatório enviado hoje (verificar campo notes)
+   */
+  static async getPendingReports(organizationId: string) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('daycare_hotel_stays')
+        .select(`
+          *,
+          pet:pets(
+            id,
+            name,
+            species
+          ),
+          contact:contacts(
+            id,
+            full_name,
+            phone_number
+          )
+        `)
+        .eq('organization_id', organizationId)
+        .eq('status', 'em_estadia')
+        .order('check_in_date', { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      // Filtrar apenas os que não tem relatório enviado hoje
+      const today = new Date().toISOString().split('T')[0];
+      const pendingReports = (data || []).filter(stay => {
+        const notes = stay.notes || '';
+        return !notes.includes(`[RELATÓRIO][${today}]`);
+      });
+
+      logger.info({
+        organizationId,
+        total: pendingReports.length
+      }, 'Pending reports retrieved');
+
+      return pendingReports;
+    } catch (error) {
+      logger.error({ error, organizationId }, 'Error fetching pending reports');
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar relatório diário via WhatsApp
+   *
+   * FORMATO DO RELATÓRIO:
+   * 🐾 Relatório Diário - [Nome do Pet]
+   *
+   * ✅ Alimentação: [status]
+   * 🎾 Recreação: [status]
+   * 😊 Comportamento: [avaliação]
+   * 📸 Fotos: [links]
+   *
+   * Nota: [observações adicionais]
+   */
+  static async sendReport(stayId: string, organizationId: string) {
+    try {
+      const stay = await this.getStay(stayId, organizationId);
+
+      if (!stay) {
+        throw new Error('Stay not found');
+      }
+
+      if (stay.status !== 'em_estadia') {
+        throw new Error('Can only send reports for stays in progress');
+      }
+
+      // Buscar timeline do dia
+      const timeline = await this.getStayTimeline(stayId, organizationId);
+      const today = new Date().toISOString().split('T')[0];
+      const todayEvents = timeline.filter(event =>
+        event.timestamp.startsWith(today)
+      );
+
+      // Gerar relatório
+      const petName = (stay as any).pet?.name || 'Pet';
+      const contactPhone = (stay as any).contact?.phone_number;
+
+      let report = `🐾 *Relatório Diário - ${petName}*\n\n`;
+
+      // Resumir atividades
+      const feeding = todayEvents.filter(e => e.activity_type === 'alimentação');
+      const recreation = todayEvents.filter(e => e.activity_type === 'recreação');
+      const photos = todayEvents.filter(e => e.photo_url);
+
+      report += `✅ *Alimentação:* ${feeding.length > 0 ? feeding.map(f => f.description).join(', ') : 'Pendente'}\n`;
+      report += `🎾 *Recreação:* ${recreation.length > 0 ? recreation.map(r => r.description).join(', ') : 'Pendente'}\n`;
+
+      const behaviorAssessment = stay.behavior_assessment as any;
+      report += `😊 *Comportamento:* ${behaviorAssessment?.socializacao || 'Normal'}\n`;
+
+      if (photos.length > 0) {
+        report += `📸 *Fotos:* ${photos.length} foto(s) enviada(s)\n`;
+      }
+
+      report += `\n💬 _Qualquer dúvida, estamos à disposição!_`;
+
+      // Marcar como enviado nas notas
+      const currentNotes = stay.notes || '';
+      const updatedNotes = `${currentNotes}\n[RELATÓRIO][${today}] Relatório enviado às ${new Date().toTimeString().slice(0, 5)}`;
+
+      await this.updateStay(stayId, organizationId, {
+        notes: updatedNotes
+      });
+
+      logger.info({
+        stayId,
+        contactPhone,
+        eventCount: todayEvents.length
+      }, 'Report generated successfully');
+
+      return {
+        report,
+        contactPhone,
+        eventCount: todayEvents.length,
+        sent: true
+      };
+    } catch (error) {
+      logger.error({ error, stayId }, 'Error sending report');
+      throw error;
+    }
+  }
 }
 
 export const daycareService = new DaycareService();

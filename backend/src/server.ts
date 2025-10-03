@@ -305,6 +305,9 @@ app.use('/api/daycare', (await import('./routes/daycare.routes.js')).default);
 // app.use('/api/bipe', (await import('./routes/bipe.routes.js')).default); // TODO: Aguardando migration da tabela pet_health_protocol
 app.use('/api/knowledge-base', (await import('./routes/knowledge-base.routes.js')).default);
 
+// AI Playground Route
+app.use('/api/v1/ai', (await import('./routes/ai.routes.js')).default);
+
 // Admin Panel Routes (internal users only)
 app.use('/api/internal/auth', (await import('./routes/admin/auth.routes.js')).default);
 app.use('/api/internal/debug', (await import('./routes/admin/debug-auth.routes.js')).default); // DEBUG - REMOVER EM PRODUÇÃO

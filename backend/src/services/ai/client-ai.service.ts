@@ -907,6 +907,43 @@ Informações que você pode coletar:
       };
     }
   }
+
+  /**
+   * Processa mensagem no modo playground (sem contexto real de organização)
+   */
+  async processPlaygroundMessage(
+    message: string,
+    conversationHistory: Array<{ role: string; content: string }> = []
+  ): Promise<string> {
+    try {
+      logger.info('🎮 Processing playground message');
+
+      // Criar mensagens para o GPT
+      const messages: any[] = [
+        { role: 'system', content: this.systemPrompt },
+        ...conversationHistory,
+        { role: 'user', content: message }
+      ];
+
+      // Chamar OpenAI sem function calling para simplificar playground
+      const response = await openai.chat.completions.create({
+        model: AI_MODELS.CLIENT,
+        messages,
+        temperature: 0.7,
+        max_tokens: 500
+      });
+
+      const choice = response.choices[0];
+      const reply = choice.message.content || 'Desculpe, não consegui processar sua mensagem.';
+
+      logger.info('✅ Playground message processed successfully');
+
+      return reply;
+    } catch (error) {
+      logger.error({ error }, 'Error processing playground message');
+      throw new Error('Failed to process playground message');
+    }
+  }
 }
 
 export const clientAIService = new ClientAIService();

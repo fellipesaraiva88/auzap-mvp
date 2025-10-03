@@ -27,6 +27,9 @@ import {
   useDaycareStays,
   useCreateDaycareStay,
   useUpdateDaycareStay,
+  useStayUpsells,
+  useStayTimeline,
+  usePendingReports,
 } from "@/hooks/useDaycare";
 import { usePets } from "@/hooks/usePets";
 import { useToast } from "@/hooks/use-toast";
@@ -159,70 +162,27 @@ export default function DaycareStays() {
     hotelOccupied,
   };
 
-  // Mock data for Timeline (TODO: Replace with real data)
-  const timelineEvents = [
-    {
-      id: "1",
-      time: "08:00",
-      type: "feeding" as const,
-      description: "Café da manhã - Ração Premium",
-      pet_name: "Rex",
-      completed: true,
-    },
-    {
-      id: "2",
-      time: "09:30",
-      type: "recreation" as const,
-      description: "Recreação em grupo - Parque externo",
-      pet_name: "Todos",
-      completed: true,
-    },
-    {
-      id: "3",
-      time: "12:00",
-      type: "feeding" as const,
-      description: "Almoço",
-      pet_name: "Todos",
-      completed: false,
-    },
-    {
-      id: "4",
-      time: "14:00",
-      type: "medication" as const,
-      description: "Medicação - Antibiótico",
-      pet_name: "Luna",
-      completed: false,
-    },
-  ];
+  // Real data from hooks
+  const { data: pendingReports } = usePendingReports();
 
-  // Mock data for Reports (TODO: Replace with real data)
-  const reports = [];
+  // Timeline and upsells for selected stay
+  const [selectedStayId, setSelectedStayId] = useState<string | null>(null);
+  const { data: timelineData } = useStayTimeline(selectedStayId);
+  const { data: upsellData } = useStayUpsells(selectedStayId);
 
-  // Mock data for Upsells (TODO: Replace with real data)
-  const upsellSuggestions = [
-    {
-      id: "1",
-      stay_id: "stay_1",
-      pet_name: "Rex",
-      service: "Banho e Tosa",
-      description: "Banho completo com hidratação e tosa higiênica",
-      reason: "Pet está há mais de 3 dias no hotel, ideal para sair cheirosinho",
-      priority: "high" as const,
-      price: "R$ 80,00",
-      estimated_revenue: 80,
-    },
-    {
-      id: "2",
-      stay_id: "stay_2",
-      pet_name: "Luna",
-      service: "Sessão de Fotos",
-      description: "Ensaio fotográfico profissional (10 fotos editadas)",
-      reason: "Primeira estadia da Luna, ótima recordação para o tutor",
-      priority: "medium" as const,
-      price: "R$ 50,00",
-      estimated_revenue: 50,
-    },
-  ];
+  const reports = pendingReports || [];
+  const upsellSuggestions = upsellData?.suggestions || [];
+
+  // Transform timeline data to component format
+  const timelineEvents = (timelineData || []).map((event: any) => ({
+    id: event.id,
+    time: new Date(event.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    type: event.activity_type,
+    description: event.description,
+    pet_name: event.pet_name || 'Pet',
+    completed: true,
+    photo_url: event.photo_url,
+  }));
 
   const handleCreate = async () => {
     if (!formData.pet_id || !formData.check_in_date) {
@@ -373,7 +333,10 @@ export default function DaycareStays() {
                   {stays.map((stay: DaycareStay) => (
                     <div
                       key={stay.id}
-                      className="p-4 border rounded-lg hover:shadow-md transition-shadow"
+                      className={`p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer ${
+                        selectedStayId === stay.id ? 'ring-2 ring-ocean-blue' : ''
+                      }`}
+                      onClick={() => setSelectedStayId(stay.id)}
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div>

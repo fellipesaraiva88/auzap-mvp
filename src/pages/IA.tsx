@@ -6,6 +6,7 @@ import { AIConfigTabs } from '@/components/ai/AIConfigTabs';
 import { AIHealthBadge } from '@/components/ai/AIHealthBadge';
 import { WhatsAppSyncCard } from '@/components/ai/WhatsAppSyncCard';
 import { BipeNotifications } from '@/components/ai/BipeNotifications';
+import { AIPlayground } from '@/components/ai/AIPlayground';
 import { useAIMetrics } from '@/hooks/useAIMetrics';
 import { useAIActivity } from '@/hooks/useAIActivity';
 import { useAIConfig } from '@/hooks/useAIConfig';
@@ -42,6 +43,9 @@ export default function IA() {
 
       {/* BIPE Notifications - Prioridade Máxima */}
       <BipeNotifications />
+
+      {/* AI Playground */}
+      <AIPlayground />
 
       {/* Hero Card - Impacto */}
       <AIHeroCard
