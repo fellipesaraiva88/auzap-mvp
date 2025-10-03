@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import {
   conversationsService,
   type Conversation,
   type ListConversationsParams,
 } from '@/services/conversations.service';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useConversations(params?: ListConversationsParams) {
   const { toast } = useToast();
@@ -16,6 +18,39 @@ export function useConversations(params?: ListConversationsParams) {
     staleTime: 10000, // Consider data fresh for 10s
     refetchInterval: 15000, // Atualizar a cada 15 segundos
   });
+
+  // 🔴 Supabase Realtime: Sincronização automática de conversas
+  useEffect(() => {
+    const organizationId = localStorage.getItem('organizationId');
+    if (!organizationId) return;
+
+    console.log('[Supabase Realtime] Setting up conversations subscription', { organizationId });
+
+    const channel = supabase
+      .channel('conversations-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'conversations',
+          filter: `organization_id=eq.${organizationId}`
+        },
+        (payload) => {
+          console.log('[Supabase Realtime] Conversation change detected', payload);
+          // Invalidar cache para forçar refetch
+          queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Supabase Realtime] Subscription status:', status);
+      });
+
+    return () => {
+      console.log('[Supabase Realtime] Cleaning up conversations subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const assumeMutation = useMutation({
     mutationFn: (conversationId: string) =>
@@ -131,6 +166,42 @@ export function useConversationMessages(conversationId?: string) {
     staleTime: 3000, // Consider data fresh for 3s
     refetchInterval: 5000, // Atualizar mensagens a cada 5 segundos
   });
+
+  // 🔴 Supabase Realtime: Sincronização automática de mensagens
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const organizationId = localStorage.getItem('organizationId');
+    if (!organizationId) return;
+
+    console.log('[Supabase Realtime] Setting up messages subscription', { conversationId });
+
+    const channel = supabase
+      .channel(`messages-${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        (payload) => {
+          console.log('[Supabase Realtime] Message change detected', payload);
+          // Invalidar cache para forçar refetch
+          queryClient.invalidateQueries({ queryKey: ['conversation-messages', conversationId] });
+          queryClient.invalidateQueries({ queryKey: ['conversations'] }); // Atualizar lista também
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Supabase Realtime] Messages subscription status:', status);
+      });
+
+    return () => {
+      console.log('[Supabase Realtime] Cleaning up messages subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId, queryClient]);
 
   const sendMessageMutation = useMutation({
     mutationFn: ({ conversationId, content }: { conversationId: string; content: string }) =>

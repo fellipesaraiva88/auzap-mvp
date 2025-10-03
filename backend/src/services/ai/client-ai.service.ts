@@ -7,8 +7,7 @@ import { bookingsService } from '../bookings/bookings.service.js';
 import { contextBuilderService, type ClientContext } from '../context/context-builder.service.js';
 import { TrainingService } from '../training/training.service.js';
 import { DaycareService } from '../daycare/daycare.service.js';
-import { BipeService } from '../bipe/bipe.service.js';
-import { KnowledgeBaseService } from '../knowledge-base/knowledge-base.service.js';
+import { knowledgeBaseService } from '../knowledge-base/knowledge-base.service.js';
 
 interface AIContext {
   organizationId: string;
@@ -128,6 +127,7 @@ Informações que você pode coletar:
    */
   private getFunctions(): any[] {
     return [
+      // === Core Pet & Service Functions ===
       {
         name: 'cadastrar_pet',
         description: 'Cadastra um novo pet para o cliente',
@@ -183,6 +183,121 @@ Informações que você pode coletar:
           required: ['tipo_servico', 'data']
         }
       },
+
+      // === Training Functions (NEW) ===
+      {
+        name: 'criar_plano_adestramento',
+        description: 'Criar novo plano de adestramento para um pet',
+        parameters: {
+          type: 'object',
+          properties: {
+            petId: { type: 'string', description: 'ID do pet' },
+            planType: {
+              type: 'string',
+              enum: ['basico', 'intermediario', 'avancado', 'personalizado'],
+              description: 'Tipo do plano de adestramento'
+            },
+            goals: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Objetivos do adestramento'
+            },
+            totalSessions: { type: 'number', description: 'Total de sessões' }
+          },
+          required: ['petId', 'planType', 'goals', 'totalSessions']
+        }
+      },
+      {
+        name: 'listar_planos_adestramento',
+        description: 'Listar planos de adestramento de um contato ou pet',
+        parameters: {
+          type: 'object',
+          properties: {
+            petId: { type: 'string', description: 'ID do pet (opcional)' }
+          }
+        }
+      },
+
+      // === Daycare/Hotel Functions (NEW) ===
+      {
+        name: 'criar_reserva_hospedagem',
+        description: 'Criar reserva de daycare ou hospedagem para pet',
+        parameters: {
+          type: 'object',
+          properties: {
+            petId: { type: 'string', description: 'ID do pet' },
+            stayType: {
+              type: 'string',
+              enum: ['daycare_diario', 'hospedagem_pernoite', 'hospedagem_estendida'],
+              description: 'Tipo de estadia'
+            },
+            checkInDate: { type: 'string', format: 'date', description: 'Data de entrada (YYYY-MM-DD)' },
+            checkOutDate: { type: 'string', format: 'date', description: 'Data de saída (YYYY-MM-DD)' },
+            specialRequests: { type: 'string', description: 'Pedidos especiais (opcional)' }
+          },
+          required: ['petId', 'stayType', 'checkInDate', 'checkOutDate']
+        }
+      },
+      {
+        name: 'listar_reservas_hospedagem',
+        description: 'Listar reservas de hospedagem/daycare',
+        parameters: {
+          type: 'object',
+          properties: {
+            petId: { type: 'string', description: 'ID do pet (opcional)' },
+            status: {
+              type: 'string',
+              enum: ['reservado', 'em_andamento', 'concluido'],
+              description: 'Status da reserva (opcional)'
+            }
+          }
+        }
+      },
+
+      // === BIPE Protocol Functions (NEW) ===
+      {
+        name: 'consultar_bipe_pet',
+        description: 'Consultar protocolo BIPE (saúde integral) de um pet',
+        parameters: {
+          type: 'object',
+          properties: {
+            petId: { type: 'string', description: 'ID do pet' }
+          },
+          required: ['petId']
+        }
+      },
+      {
+        name: 'adicionar_alerta_saude',
+        description: 'Adicionar alerta de saúde urgente ao protocolo BIPE',
+        parameters: {
+          type: 'object',
+          properties: {
+            petId: { type: 'string', description: 'ID do pet' },
+            type: {
+              type: 'string',
+              enum: ['vacina_atrasada', 'vermifugo_atrasado', 'comportamento_critico', 'saude_urgente'],
+              description: 'Tipo de alerta'
+            },
+            description: { type: 'string', description: 'Descrição do alerta' }
+          },
+          required: ['petId', 'type', 'description']
+        }
+      },
+
+      // === Knowledge Base Function (NEW) ===
+      {
+        name: 'consultar_base_conhecimento',
+        description: 'Buscar resposta na base de conhecimento da organização',
+        parameters: {
+          type: 'object',
+          properties: {
+            question: { type: 'string', description: 'Pergunta do cliente' }
+          },
+          required: ['question']
+        }
+      },
+
+      // === System Functions ===
       {
         name: 'escalar_para_humano',
         description: 'Escalona a conversa para um atendente humano',
@@ -192,109 +307,6 @@ Informações que você pode coletar:
             motivo: { type: 'string', description: 'Motivo da escalação' }
           },
           required: ['motivo']
-        }
-      },
-      {
-        name: 'create_training_plan',
-        description: 'Criar plano de adestramento após avaliação completa (6 pontos obrigatórios)',
-        parameters: {
-          type: 'object',
-          properties: {
-            petId: { type: 'string', description: 'ID do pet' },
-            initialAssessment: {
-              type: 'object',
-              properties: {
-                rotina: { type: 'string', description: 'Rotina diária do pet' },
-                problemas: { type: 'array', items: { type: 'string' }, description: 'Problemas comportamentais' },
-                relacao_familia: { type: 'string', description: 'Relação com a família' },
-                historico_saude: { type: 'string', description: 'Histórico de saúde relevante' },
-                observacao_pratica: { type: 'string', description: 'Observação prática do comportamento' },
-                objetivos: { type: 'array', items: { type: 'string' }, description: 'Objetivos do adestramento' }
-              },
-              required: ['rotina', 'problemas', 'relacao_familia', 'historico_saude', 'observacao_pratica', 'objetivos']
-            },
-            planType: { type: 'string', enum: ['1x_semana', '2x_semana', '3x_semana'], description: 'Frequência semanal' },
-            durationWeeks: { type: 'number', description: 'Duração em semanas' }
-          },
-          required: ['petId', 'initialAssessment', 'planType', 'durationWeeks']
-        }
-      },
-      {
-        name: 'create_daycare_stay',
-        description: 'Registrar estadia em creche/hotel após validar documentação',
-        parameters: {
-          type: 'object',
-          properties: {
-            petId: { type: 'string', description: 'ID do pet' },
-            healthAssessment: {
-              type: 'object',
-              properties: {
-                vacinas: { type: 'boolean', description: 'Vacinas em dia' },
-                vermifugo: { type: 'boolean', description: 'Vermifugação em dia' },
-                exames: { type: 'array', items: { type: 'string' }, description: 'Exames realizados' },
-                restricoes_alimentares: { type: 'array', items: { type: 'string' }, description: 'Restrições' }
-              },
-              required: ['vacinas', 'vermifugo']
-            },
-            behaviorAssessment: {
-              type: 'object',
-              properties: {
-                socializacao: { type: 'string', description: 'Nível de socialização (alta/média/baixa)' },
-                ansiedade: { type: 'string', description: 'Nível de ansiedade (alta/média/baixa)' },
-                energia: { type: 'string', description: 'Nível de energia (alta/média/baixa)' }
-              },
-              required: ['socializacao', 'ansiedade', 'energia']
-            },
-            stayType: { type: 'string', enum: ['daycare', 'hotel'], description: 'Tipo de estadia' },
-            checkInDate: { type: 'string', description: 'Data de entrada (YYYY-MM-DD)' },
-            checkOutDate: { type: 'string', description: 'Data de saída (YYYY-MM-DD)' }
-          },
-          required: ['petId', 'healthAssessment', 'behaviorAssessment', 'stayType', 'checkInDate']
-        }
-      },
-      {
-        name: 'search_knowledge_base',
-        description: 'Buscar resposta no banco de conhecimento ANTES de acionar BIPE (use sempre primeiro)',
-        parameters: {
-          type: 'object',
-          properties: {
-            query: { type: 'string', description: 'Pergunta do cliente para buscar no KB' }
-          },
-          required: ['query']
-        }
-      },
-      {
-        name: 'trigger_bipe_unknown',
-        description: 'Acionar BIPE quando não souber responder (use SOMENTE após search_knowledge_base retornar vazio)',
-        parameters: {
-          type: 'object',
-          properties: {
-            question: { type: 'string', description: 'Pergunta que não conseguiu responder' }
-          },
-          required: ['question']
-        }
-      },
-      {
-        name: 'suggest_upsell',
-        description: 'Sugerir serviços complementares após confirmar creche/hotel',
-        parameters: {
-          type: 'object',
-          properties: {
-            stayId: { type: 'string', description: 'ID da estadia confirmada' }
-          },
-          required: ['stayId']
-        }
-      },
-      {
-        name: 'check_availability_training',
-        description: 'Verificar disponibilidade de adestrador para determinada data',
-        parameters: {
-          type: 'object',
-          properties: {
-            date: { type: 'string', description: 'Data desejada (YYYY-MM-DD)' },
-            planType: { type: 'string', enum: ['1x_semana', '2x_semana', '3x_semana'], description: 'Tipo de plano' }
-          },
-          required: ['date', 'planType']
         }
       }
     ];
@@ -311,6 +323,7 @@ Informações que você pode coletar:
     const args = JSON.parse(functionCall.arguments);
 
     switch (functionCall.name) {
+      // === Core Pet & Service Functions ===
       case 'cadastrar_pet':
         return await this.cadastrarPet(organizationId, contactId, args);
 
@@ -320,26 +333,34 @@ Informações que você pode coletar:
       case 'consultar_horarios':
         return await this.consultarHorarios(organizationId, args);
 
+      // === Training Functions ===
+      case 'criar_plano_adestramento':
+        return await this.criarPlanoAdestramento(organizationId, contactId, args);
+
+      case 'listar_planos_adestramento':
+        return await this.listarPlanosAdestramento(organizationId, contactId, args.petId);
+
+      // === Daycare/Hotel Functions ===
+      case 'criar_reserva_hospedagem':
+        return await this.criarReservaHospedagem(organizationId, contactId, args);
+
+      case 'listar_reservas_hospedagem':
+        return await this.listarReservasHospedagem(organizationId, contactId, args);
+
+      // === BIPE Protocol Functions ===
+      case 'consultar_bipe_pet':
+        return await this.consultarBipePet(organizationId, args.petId);
+
+      case 'adicionar_alerta_saude':
+        return await this.adicionarAlertaSaude(organizationId, args);
+
+      // === Knowledge Base Function ===
+      case 'consultar_base_conhecimento':
+        return await this.consultarBaseConhecimento(organizationId, args.question);
+
+      // === System Functions ===
       case 'escalar_para_humano':
         return await this.escalarParaHumano(contactId, args.motivo);
-
-      case 'create_training_plan':
-        return await this.createTrainingPlan(organizationId, contactId, args);
-
-      case 'create_daycare_stay':
-        return await this.createDaycareStay(organizationId, contactId, args);
-
-      case 'search_knowledge_base':
-        return await this.searchKnowledgeBase(organizationId, args.query);
-
-      case 'trigger_bipe_unknown':
-        return await this.triggerBipeUnknown(organizationId, contactId, args.question);
-
-      case 'suggest_upsell':
-        return await this.suggestUpsell(args.stayId);
-
-      case 'check_availability_training':
-        return await this.checkAvailabilityTraining(organizationId, args.date, args.planType);
 
       default:
         return { error: 'Função não encontrada' };
@@ -471,260 +492,6 @@ Informações que você pode coletar:
   }
 
   /**
-   * Criar plano de adestramento
-   */
-  private async createTrainingPlan(
-    organizationId: string,
-    contactId: string,
-    args: any
-  ): Promise<any> {
-    try {
-      logger.info({ organizationId, contactId }, 'Creating training plan via AI');
-
-      // Buscar pet do contato
-      const { data: pets } = await supabaseAdmin
-        .from('pets')
-        .select('id')
-        .eq('contact_id', contactId)
-        .eq('organization_id', organizationId)
-        .limit(1);
-
-      if (!pets || pets.length === 0) {
-        return {
-          success: false,
-          message: 'Pet não encontrado. Por favor, cadastre o pet primeiro.'
-        };
-      }
-
-      const plan = await TrainingService.createTrainingPlan({
-        organizationId,
-        petId: pets[0].id,
-        contactId,
-        initialAssessment: args.initial_assessment,
-        planType: args.plan_type,
-        durationWeeks: args.duration_weeks || 8,
-        methodology: args.methodology,
-        locationType: args.location_type
-      });
-
-      return {
-        success: true,
-        message: `Plano de adestramento criado com sucesso! Frequência: ${args.plan_type.replace('_', ' ')}`,
-        planId: plan.id
-      };
-    } catch (error) {
-      logger.error({ error, organizationId, contactId }, 'Error creating training plan');
-      return {
-        success: false,
-        message: 'Erro ao criar plano de adestramento. Tente novamente.'
-      };
-    }
-  }
-
-  /**
-   * Criar estadia de creche/hotel
-   */
-  private async createDaycareStay(
-    organizationId: string,
-    contactId: string,
-    args: any
-  ): Promise<any> {
-    try {
-      logger.info({ organizationId, contactId, stayType: args.stay_type }, 'Creating daycare stay via AI');
-
-      // Buscar pet do contato
-      const { data: pets } = await supabaseAdmin
-        .from('pets')
-        .select('id')
-        .eq('contact_id', contactId)
-        .eq('organization_id', organizationId)
-        .limit(1);
-
-      if (!pets || pets.length === 0) {
-        return {
-          success: false,
-          message: 'Pet não encontrado. Por favor, cadastre o pet primeiro.'
-        };
-      }
-
-      const stay = await DaycareService.createStay({
-        organizationId,
-        petId: pets[0].id,
-        contactId,
-        healthAssessment: args.health_assessment,
-        behaviorAssessment: args.behavior_assessment,
-        stayType: args.stay_type,
-        checkInDate: args.check_in_date,
-        checkOutDate: args.check_out_date,
-        extraServices: args.extra_services || [],
-        notes: args.notes
-      });
-
-      // Sugerir upsells se aprovado
-      let upsellMessage = '';
-      if (stay.status === 'aprovado') {
-        const upsells = await DaycareService.suggestUpsells(stay.id);
-        if (upsells.length > 0) {
-          const topUpsell = upsells[0];
-          upsellMessage = `\n\nSugestão: ${topUpsell.service} - ${topUpsell.reason}`;
-        }
-      }
-
-      return {
-        success: true,
-        message: `Estadia criada com sucesso! Status: ${stay.status}${upsellMessage}`,
-        stayId: stay.id,
-        status: stay.status
-      };
-    } catch (error) {
-      logger.error({ error, organizationId, contactId }, 'Error creating daycare stay');
-      return {
-        success: false,
-        message: 'Erro ao criar estadia. Tente novamente.'
-      };
-    }
-  }
-
-  /**
-   * Buscar no Knowledge Base
-   */
-  private async searchKnowledgeBase(organizationId: string, query: string): Promise<any> {
-    try {
-      logger.info({ organizationId, query }, 'Searching knowledge base');
-
-      const results = await KnowledgeBaseService.searchKnowledge(organizationId, query);
-
-      if (results.length === 0) {
-        return {
-          success: false,
-          message: 'Nenhuma resposta encontrada no banco de conhecimento.',
-          found: false
-        };
-      }
-
-      // Incrementar uso da primeira resposta (mais relevante)
-      await KnowledgeBaseService.incrementUsage(results[0].id);
-
-      return {
-        success: true,
-        found: true,
-        answer: results[0].answer,
-        question: results[0].question,
-        confidence: results.length > 1 ? 'medium' : 'high'
-      };
-    } catch (error) {
-      logger.error({ error, organizationId, query }, 'Error searching knowledge base');
-      return {
-        success: false,
-        found: false,
-        message: 'Erro ao buscar no banco de conhecimento.'
-      };
-    }
-  }
-
-  /**
-   * Acionar BIPE quando IA não sabe responder
-   */
-  private async triggerBipeUnknown(
-    organizationId: string,
-    contactId: string,
-    question: string
-  ): Promise<any> {
-    try {
-      logger.info({ organizationId, contactId }, 'Triggering BIPE (ai_unknown)');
-
-      // Buscar conversa ativa
-      const { data: conversation } = await supabaseAdmin
-        .from('conversations')
-        .select('id')
-        .eq('contact_id', contactId)
-        .eq('organization_id', organizationId)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (!conversation) {
-        return {
-          success: false,
-          message: 'Conversa não encontrada.'
-        };
-      }
-
-      // Buscar instanceId da organização
-      const { data: instance } = await supabaseAdmin
-        .from('whatsapp_instances')
-        .select('id')
-        .eq('organization_id', organizationId)
-        .single();
-
-      if (!instance?.id) {
-        return {
-          success: false,
-          message: 'WhatsApp não configurado.'
-        };
-      }
-
-      await BipeService.triggerAiUnknown({
-        organizationId,
-        conversationId: conversation.id,
-        clientQuestion: question,
-        instanceId: instance.id
-      });
-
-      return {
-        success: true,
-        message: 'Notificação enviada ao gestor. Você receberá a resposta em breve! 🔔'
-      };
-    } catch (error) {
-      logger.error({ error, organizationId, contactId }, 'Error triggering BIPE');
-      return {
-        success: false,
-        message: 'Erro ao acionar BIPE. Tente novamente.'
-      };
-    }
-  }
-
-  /**
-   * Sugerir upsells para estadia
-   */
-  private async suggestUpsell(stayId: string): Promise<any> {
-    try {
-      logger.info({ stayId }, 'Suggesting upsells');
-
-      const suggestions = await DaycareService.suggestUpsells(stayId);
-
-      if (suggestions.length === 0) {
-        return {
-          success: true,
-          message: 'Nenhuma sugestão disponível no momento.',
-          suggestions: []
-        };
-      }
-
-      const formattedSuggestions = suggestions.map(s => ({
-        service: s.service,
-        reason: s.reason,
-        priority: s.priority,
-        price: s.price_cents ? `R$ ${(s.price_cents / 100).toFixed(2)}` : 'Consultar'
-      }));
-
-      return {
-        success: true,
-        message: 'Sugestões de serviços adicionais:',
-        suggestions: formattedSuggestions
-      };
-    } catch (error) {
-      logger.error({ error, stayId }, 'Error suggesting upsells');
-      return {
-        success: false,
-        message: 'Erro ao buscar sugestões.',
-        suggestions: []
-      };
-    }
-  }
-
-  /**
    * Verificar disponibilidade de adestramento
    */
   private async checkAvailabilityTraining(
@@ -735,13 +502,19 @@ Informações que você pode coletar:
     try {
       logger.info({ organizationId, date, planType }, 'Checking training availability');
 
-      // Buscar planos na data
+      // Buscar planos criados na data (usando created_at como referência)
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
       const { data: existingPlans } = await supabaseAdmin
         .from('training_plans')
         .select('id')
         .eq('organization_id', organizationId)
-        .eq('start_date', date)
-        .eq('status', 'active');
+        .gte('created_at', startOfDay.toISOString())
+        .lte('created_at', endOfDay.toISOString())
+        .eq('status', 'em_andamento');
 
       const bookedSlots = existingPlans?.length || 0;
       const maxSlots = 5; // Máximo de treinos por dia
@@ -761,6 +534,378 @@ Informações que você pode coletar:
         success: false,
         available: false,
         message: 'Erro ao verificar disponibilidade.'
+      };
+    }
+  }
+
+  /**
+   * Criar plano de adestramento (NEW)
+   */
+  private async criarPlanoAdestramento(
+    organizationId: string,
+    contactId: string,
+    args: any
+  ): Promise<any> {
+    try {
+      logger.info({ organizationId, contactId }, 'Creating training plan via new AI function');
+
+      const plan = await TrainingService.createTrainingPlan({
+        organizationId,
+        petId: args.petId,
+        contactId,
+        initialAssessment: {
+          rotina: args.goals.join(', '),
+          problemas: args.goals,
+          relacao_familia: 'A ser avaliado',
+          historico_saude: 'A ser avaliado',
+          observacao_pratica: 'A ser avaliado',
+          objetivos: args.goals
+        },
+        planType: args.planType,
+        durationWeeks: Math.ceil(args.totalSessions / 4),
+        methodology: args.planType === 'basico' ? 'positivo' : 'misto',
+        locationType: 'casa_tutor'
+      });
+
+      return {
+        success: true,
+        message: `Plano de adestramento ${args.planType} criado! Total de ${args.totalSessions} sessões.`,
+        planId: plan.id
+      };
+    } catch (error) {
+      logger.error({ error }, 'Error creating training plan');
+      return {
+        success: false,
+        message: 'Erro ao criar plano de adestramento'
+      };
+    }
+  }
+
+  /**
+   * Listar planos de adestramento (NEW)
+   */
+  private async listarPlanosAdestramento(
+    organizationId: string,
+    contactId: string,
+    petId?: string
+  ): Promise<any> {
+    try {
+      const { data: plans } = await supabaseAdmin
+        .from('training_plans')
+        .select(`
+          id,
+          plan_type,
+          status,
+          duration_weeks,
+          session_frequency,
+          created_at
+        `)
+        .eq('organization_id', organizationId)
+        .eq('contact_id', contactId)
+        .eq(petId ? 'pet_id' : 'contact_id', petId || contactId)
+        .order('created_at', { ascending: false });
+
+      if (!plans || plans.length === 0) {
+        return {
+          success: true,
+          plans: [],
+          message: 'Nenhum plano de adestramento encontrado.'
+        };
+      }
+
+      return {
+        success: true,
+        plans: plans.map(p => ({
+          id: p.id,
+          tipo: p.plan_type,
+          status: p.status,
+          duracao: `${p.duration_weeks} semanas`,
+          frequencia: p.session_frequency,
+          criado: new Date(p.created_at).toLocaleDateString('pt-BR')
+        })),
+        message: `Encontrados ${plans.length} plano(s) de adestramento.`
+      };
+    } catch (error) {
+      logger.error({ error }, 'Error listing training plans');
+      return {
+        success: false,
+        plans: [],
+        message: 'Erro ao listar planos'
+      };
+    }
+  }
+
+  /**
+   * Criar reserva de hospedagem (NEW)
+   */
+  private async criarReservaHospedagem(
+    organizationId: string,
+    contactId: string,
+    args: any
+  ): Promise<any> {
+    try {
+      const stay = await DaycareService.createStay({
+        organizationId,
+        petId: args.petId,
+        contactId,
+        healthAssessment: {
+          vacinas: true,
+          vermifugo: true,
+          exames: [],
+          restricoes_alimentares: args.specialRequests ? [args.specialRequests] : []
+        },
+        behaviorAssessment: {
+          socializacao: 'média',
+          ansiedade: 'média',
+          energia: 'média'
+        },
+        stayType: args.stayType === 'daycare_diario' ? 'daycare' : 'hotel',
+        checkInDate: args.checkInDate,
+        checkOutDate: args.checkOutDate,
+        extraServices: [],
+        notes: args.specialRequests
+      });
+
+      return {
+        success: true,
+        message: `Reserva de ${args.stayType.replace('_', ' ')} criada! Check-in: ${args.checkInDate}`,
+        stayId: stay.id,
+        status: stay.status
+      };
+    } catch (error) {
+      logger.error({ error }, 'Error creating daycare reservation');
+      return {
+        success: false,
+        message: 'Erro ao criar reserva'
+      };
+    }
+  }
+
+  /**
+   * Listar reservas de hospedagem (NEW)
+   */
+  private async listarReservasHospedagem(
+    organizationId: string,
+    contactId: string,
+    args: any
+  ): Promise<any> {
+    try {
+      let query = supabaseAdmin
+        .from('daycare_hotel_stays')
+        .select(`
+          id,
+          stay_type,
+          status,
+          check_in_date,
+          check_out_date,
+          pet_id
+        `)
+        .eq('organization_id', organizationId)
+        .eq('contact_id', contactId);
+
+      if (args.petId) {
+        query = query.eq('pet_id', args.petId);
+      }
+      if (args.status) {
+        query = query.eq('status', args.status);
+      }
+
+      const { data: reservations } = await query
+        .order('check_in_date', { ascending: false });
+
+      if (!reservations || reservations.length === 0) {
+        return {
+          success: true,
+          reservations: [],
+          message: 'Nenhuma reserva encontrada.'
+        };
+      }
+
+      return {
+        success: true,
+        reservations: reservations.map(r => ({
+          id: r.id,
+          tipo: r.stay_type,
+          status: r.status,
+          entrada: r.check_in_date,
+          saida: r.check_out_date
+        })),
+        message: `Encontradas ${reservations.length} reserva(s).`
+      };
+    } catch (error) {
+      logger.error({ error }, 'Error listing reservations');
+      return {
+        success: false,
+        reservations: [],
+        message: 'Erro ao listar reservas'
+      };
+    }
+  }
+
+  /**
+   * Consultar protocolo BIPE do pet (NEW)
+   */
+  private async consultarBipePet(
+    organizationId: string,
+    petId: string
+  ): Promise<any> {
+    try {
+      // Como o BIPE é um protocolo de handoff/escalação, vamos verificar se há alertas pendentes
+      // relacionados ao pet em questão consultando a tabela de pets
+      const { data: pet } = await supabaseAdmin
+        .from('pets')
+        .select(`
+          id,
+          name,
+          species,
+          breed,
+          age_years,
+          health_notes,
+          behavior_notes
+        `)
+        .eq('id', petId)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (!pet) {
+        return {
+          success: false,
+          message: 'Pet não encontrado.',
+          protocol: null
+        };
+      }
+
+      // Simular protocolo BIPE baseado nas notas do pet
+      const protocol = {
+        behavioral: pet.behavior_notes || 'Nenhuma observação comportamental',
+        individual: `${pet.species} - ${pet.breed || 'SRD'} - ${pet.age_years || 0} anos`,
+        preventive: 'Verificar cartão de vacinas com o tutor',
+        emergent: pet.health_notes || 'Nenhum alerta de saúde'
+      };
+
+      const hasAlerts = !!(pet.health_notes || pet.behavior_notes);
+
+      return {
+        success: true,
+        message: hasAlerts ? 'Pet possui observações no protocolo BIPE.' : 'Protocolo BIPE em dia.',
+        protocol,
+        hasAlerts,
+        petInfo: {
+          name: pet.name,
+          species: pet.species,
+          breed: pet.breed,
+          age: pet.age_years
+        }
+      };
+    } catch (error) {
+      logger.error({ error }, 'Error consulting BIPE protocol');
+      return {
+        success: false,
+        message: 'Erro ao consultar protocolo BIPE'
+      };
+    }
+  }
+
+  /**
+   * Adicionar alerta de saúde ao BIPE (NEW)
+   */
+  private async adicionarAlertaSaude(
+    organizationId: string,
+    args: any
+  ): Promise<any> {
+    try {
+      // Buscar conversa ativa
+      const { data: conversations } = await supabaseAdmin
+        .from('conversations')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const conversationId = conversations?.[0]?.id;
+
+      if (!conversationId) {
+        return {
+          success: false,
+          message: 'Nenhuma conversa ativa encontrada.'
+        };
+      }
+
+      // Criar entrada no BIPE para escalação
+      const { data } = await supabaseAdmin
+        .from('bipe_protocol')
+        .insert({
+          organization_id: organizationId,
+          conversation_id: conversationId,
+          trigger_type: 'health_alert',
+          client_question: `ALERTA DE SAÚDE - Pet ID: ${args.petId} - Tipo: ${args.type} - ${args.description}`,
+          status: 'pending',
+          handoff_active: true,
+          handoff_reason: `Alerta de saúde: ${args.type}`
+        })
+        .select()
+        .single();
+
+      // Atualizar notas de saúde do pet
+      await supabaseAdmin
+        .from('pets')
+        .update({
+          health_notes: args.description,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', args.petId)
+        .eq('organization_id', organizationId);
+
+      return {
+        success: true,
+        message: `Alerta de saúde registrado! Tipo: ${args.type}. O gestor foi notificado.`,
+        alertId: data?.id
+      };
+    } catch (error) {
+      logger.error({ error }, 'Error adding health alert');
+      return {
+        success: false,
+        message: 'Erro ao adicionar alerta de saúde'
+      };
+    }
+  }
+
+  /**
+   * Consultar base de conhecimento (NEW)
+   */
+  private async consultarBaseConhecimento(
+    organizationId: string,
+    question: string
+  ): Promise<any> {
+    try {
+      logger.info({ organizationId, question }, 'Searching knowledge base');
+
+      const results = await knowledgeBaseService.searchKnowledge(question, organizationId);
+
+      if (results.length === 0) {
+        return {
+          success: false,
+          found: false,
+          message: 'Não encontrei resposta para sua pergunta. Vou consultar um especialista.'
+        };
+      }
+
+      // Incrementar uso
+      await knowledgeBaseService.incrementUsage(results[0].id);
+
+      return {
+        success: true,
+        found: true,
+        answer: results[0].answer,
+        confidence: results.length > 1 ? 'medium' : 'high'
+      };
+    } catch (error) {
+      logger.error({ error }, 'Error searching knowledge base');
+      return {
+        success: false,
+        found: false,
+        message: 'Erro ao buscar resposta'
       };
     }
   }

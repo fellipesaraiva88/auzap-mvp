@@ -29,11 +29,7 @@ router.get('/', async (req: TenantRequest, res: Response): Promise<void> => {
         contacts (
           id,
           name,
-          phone,
-          pets (
-            id,
-            name
-          )
+          phone
         )
       `)
       .eq('organization_id', organizationId)
@@ -71,11 +67,7 @@ router.get('/:id', validateResource('id', 'scheduled_followups'), async (req: Te
         contacts (
           id,
           name,
-          phone,
-          pets (
-            id,
-            name
-          )
+          phone
         )
       `)
       .eq('id', id)

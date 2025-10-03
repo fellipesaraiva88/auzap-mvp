@@ -1,334 +1,349 @@
 import { supabaseAdmin } from '../../config/supabase.js';
+import { openai, AI_MODELS } from '../../config/openai.js';
 import { logger } from '../../config/logger.js';
-import type { TablesInsert, Tables } from '../../types/database.types.js';
+
+/**
+ * Knowledge Base Service
+ *
+ * Simplified version aligned with actual database schema:
+ * - id, organization_id, question, answer, source, learned_from_bipe_id
+ * - usage_count, last_used_at, created_at, updated_at
+ */
 
 export interface KnowledgeEntry {
-  organizationId: string;
+  id?: string;
+  organization_id: string;
+  question: string;
+  answer: string;
+  source?: 'bipe' | 'manual' | 'import' | null;
+  learned_from_bipe_id?: string | null;
+  usage_count?: number | null;
+  last_used_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateKnowledgeEntryData {
+  organization_id: string;
   question: string;
   answer: string;
   source?: 'bipe' | 'manual' | 'import';
-  learnedFromBipeId?: string;
+  learned_from_bipe_id?: string;
 }
 
-/**
- * KnowledgeBaseService - Base de Conhecimento Organizacional
- *
- * OBJETIVO: Loop de aprendizado contínuo
- * 1. BIPE → resposta do gestor → salvo no KB
- * 2. IA busca no KB antes de acionar BIPE
- * 3. KB cresce organicamente → menos BIPEs futuros
- *
- * FEATURES:
- * - Full-text search em português
- * - Tracking de uso (qual resposta mais usada)
- * - Múltiplas fontes (BIPE, manual, import)
- */
+export interface UpdateKnowledgeEntryData {
+  question?: string;
+  answer?: string;
+  source?: 'bipe' | 'manual' | 'import';
+}
+
+export interface SearchKnowledgeResult {
+  id: string;
+  question: string;
+  answer: string;
+  source: string | null;
+  usage_count: number | null;
+  relevance_score: number;
+}
+
 export class KnowledgeBaseService {
   /**
-   * Adicionar entrada ao KB
+   * Create new knowledge base entry
    */
-  static async addEntry(input: KnowledgeEntry): Promise<Tables<'knowledge_base'>> {
-    try {
-      logger.info({
-        organizationId: input.organizationId,
-        source: input.source
-      }, 'Adding knowledge base entry');
+  async createEntry(data: CreateKnowledgeEntryData): Promise<KnowledgeEntry> {
+    const { data: entry, error } = await supabaseAdmin
+      .from('knowledge_base')
+      .insert({
+        organization_id: data.organization_id,
+        question: data.question,
+        answer: data.answer,
+        source: data.source || 'manual',
+        learned_from_bipe_id: data.learned_from_bipe_id,
+        usage_count: 0
+      })
+      .select()
+      .single();
 
-      const entryData: TablesInsert<'knowledge_base'> = {
-        organization_id: input.organizationId,
-        question: input.question.trim(),
-        answer: input.answer.trim(),
-        source: input.source || 'manual',
-        learned_from_bipe_id: input.learnedFromBipeId
-      };
-
-      const { data, error } = await supabaseAdmin
-        .from('knowledge_base')
-        .insert(entryData)
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      logger.info({ entryId: data.id }, 'Knowledge base entry added');
-      return data as Tables<'knowledge_base'>;
-    } catch (error) {
-      logger.error({ error }, 'Failed to add knowledge base entry');
+    if (error) {
+      logger.error({ error }, 'Failed to create knowledge base entry');
       throw error;
     }
+
+    return entry as KnowledgeEntry;
   }
 
   /**
-   * Buscar no KB usando full-text search (PostgreSQL)
-   *
-   * IMPORTANTE: Usa to_tsvector para busca semântica em português
-   * Exemplo: busca por "vacina" encontra "vacinação", "vacinas", etc.
+   * Get entry by ID
    */
-  static async searchKnowledge(
-    organizationId: string,
-    query: string
-  ): Promise<Tables<'knowledge_base'>[]> {
-    try {
-      logger.info({ organizationId, query }, 'Searching knowledge base');
+  async getEntryById(id: string, organizationId: string): Promise<KnowledgeEntry | null> {
+    const { data, error } = await supabaseAdmin
+      .from('knowledge_base')
+      .select('*')
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .single();
 
-      // Busca full-text usando PostgreSQL
-      const { data, error } = await supabaseAdmin
-        .from('knowledge_base')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .textSearch('question', query, {
-          type: 'websearch',
-          config: 'portuguese'
-        })
-        .order('usage_count', { ascending: false }) // Mais usadas primeiro
-        .limit(5); // Top 5 resultados
-
-      if (error) {
-        throw error;
-      }
-
-      logger.info({
-        query,
-        resultsFound: data?.length || 0
-      }, 'Knowledge search completed');
-
-      return (data || []) as Tables<'knowledge_base'>[];
-    } catch (error) {
-      logger.error({ error, query }, 'Error searching knowledge base');
-      throw error;
-    }
-  }
-
-  /**
-   * Buscar entrada exata por pergunta
-   */
-  static async findExactMatch(
-    organizationId: string,
-    question: string
-  ): Promise<Tables<'knowledge_base'> | null> {
-    try {
-      const normalizedQuestion = question.trim().toLowerCase();
-
-      const { data, error } = await supabaseAdmin
-        .from('knowledge_base')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .ilike('question', normalizedQuestion)
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST116') { // Not found
-          return null;
-        }
-        throw error;
-      }
-
-      return data as Tables<'knowledge_base'>;
-    } catch (error) {
-      logger.error({ error, question }, 'Error finding exact match');
+    if (error) {
+      logger.error({ error, id }, 'Failed to get knowledge base entry');
       return null;
     }
+
+    return data as KnowledgeEntry;
   }
 
   /**
-   * Incrementar contador de uso
-   *
-   * IMPORTANTE: Usa função SQL para atomicidade
+   * List all entries for organization
    */
-  static async incrementUsage(knowledgeId: string): Promise<void> {
-    try {
-      const { error } = await supabaseAdmin.rpc('increment_knowledge_usage', {
-        knowledge_id: knowledgeId
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      logger.debug({ knowledgeId }, 'Knowledge usage incremented');
-    } catch (error) {
-      logger.error({ error, knowledgeId }, 'Failed to increment usage');
-      // Não falhar a operação principal se tracking falhar
-    }
-  }
-
-  /**
-   * Listar todas as entradas do KB
-   */
-  static async listEntries(
+  async listEntries(
     organizationId: string,
-    options?: {
-      source?: 'bipe' | 'manual' | 'import';
-      limit?: number;
-      offset?: number;
-      sortBy?: 'recent' | 'usage' | 'alphabetical';
+    filters: { source?: string; limit?: number } = {}
+  ): Promise<KnowledgeEntry[]> {
+    let query = supabaseAdmin
+      .from('knowledge_base')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false });
+
+    if (filters.source) {
+      query = query.eq('source', filters.source);
     }
-  ) {
-    try {
-      let query = supabaseAdmin
-        .from('knowledge_base')
-        .select('*', { count: 'exact' })
-        .eq('organization_id', organizationId);
 
-      // Filtro por fonte
-      if (options?.source) {
-        query = query.eq('source', options.source);
-      }
+    if (filters.limit) {
+      query = query.limit(filters.limit);
+    }
 
-      // Ordenação
-      const sortBy = options?.sortBy || 'recent';
-      if (sortBy === 'recent') {
-        query = query.order('created_at', { ascending: false });
-      } else if (sortBy === 'usage') {
-        query = query.order('usage_count', { ascending: false });
-      } else if (sortBy === 'alphabetical') {
-        query = query.order('question', { ascending: true });
-      }
+    const { data, error } = await query;
 
-      // Paginação
-      const limit = options?.limit || 50;
-      const offset = options?.offset || 0;
-      query = query.range(offset, offset + limit - 1);
+    if (error) {
+      logger.error({ error }, 'Failed to list knowledge base entries');
+      throw error;
+    }
 
-      const { data, error, count } = await query;
+    return (data || []) as KnowledgeEntry[];
+  }
 
-      if (error) {
-        throw error;
-      }
+  /**
+   * Update entry
+   */
+  async updateEntry(
+    id: string,
+    organizationId: string,
+    updates: UpdateKnowledgeEntryData
+  ): Promise<KnowledgeEntry> {
+    const { data, error } = await supabaseAdmin
+      .from('knowledge_base')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error({ error, id }, 'Failed to update knowledge base entry');
+      throw error;
+    }
+
+    return data as KnowledgeEntry;
+  }
+
+  /**
+   * Delete entry
+   */
+  async deleteEntry(id: string, organizationId: string): Promise<void> {
+    const { error } = await supabaseAdmin
+      .from('knowledge_base')
+      .delete()
+      .eq('id', id)
+      .eq('organization_id', organizationId);
+
+    if (error) {
+      logger.error({ error, id }, 'Failed to delete knowledge base entry');
+      throw error;
+    }
+  }
+
+  /**
+   * Search knowledge base (simple text matching)
+   */
+  async searchKnowledge(
+    query: string,
+    organizationId: string,
+    limit: number = 5
+  ): Promise<SearchKnowledgeResult[]> {
+    const { data, error } = await supabaseAdmin
+      .from('knowledge_base')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .or(`question.ilike.%${query}%,answer.ilike.%${query}%`)
+      .limit(limit);
+
+    if (error) {
+      logger.error({ error, query }, 'Failed to search knowledge base');
+      return [];
+    }
+
+    // Calculate simple relevance score based on position of match
+    return (data || []).map(entry => {
+      const questionMatch = entry.question.toLowerCase().includes(query.toLowerCase());
+      const answerMatch = entry.answer.toLowerCase().includes(query.toLowerCase());
+
+      let relevance_score = 0;
+      if (questionMatch) relevance_score += 70;
+      if (answerMatch) relevance_score += 30;
 
       return {
-        entries: (data || []) as Tables<'knowledge_base'>[],
-        total: count || 0,
-        limit,
-        offset
+        id: entry.id,
+        question: entry.question,
+        answer: entry.answer,
+        source: entry.source,
+        usage_count: entry.usage_count,
+        relevance_score
       };
-    } catch (error) {
-      logger.error({ error, organizationId }, 'Error listing knowledge entries');
-      throw error;
-    }
+    }).sort((a, b) => b.relevance_score - a.relevance_score);
   }
 
   /**
-   * Atualizar entrada do KB
+   * Suggest answer using AI + knowledge base
    */
-  static async updateEntry(
-    entryId: string,
-    organizationId: string,
-    updates: {
-      question?: string;
-      answer?: string;
-    }
-  ): Promise<Tables<'knowledge_base'>> {
-    try {
-      const { data, error } = await supabaseAdmin
-        .from('knowledge_base')
-        .update(updates)
-        .eq('id', entryId)
-        .eq('organization_id', organizationId)
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      logger.info({ entryId }, 'Knowledge base entry updated');
-      return data as Tables<'knowledge_base'>;
-    } catch (error) {
-      logger.error({ error, entryId }, 'Error updating knowledge entry');
-      throw error;
-    }
-  }
-
-  /**
-   * Deletar entrada do KB
-   */
-  static async deleteEntry(
-    entryId: string,
-    organizationId: string
-  ): Promise<void> {
-    try {
-      const { error } = await supabaseAdmin
-        .from('knowledge_base')
-        .delete()
-        .eq('id', entryId)
-        .eq('organization_id', organizationId);
-
-      if (error) {
-        throw error;
-      }
-
-      logger.info({ entryId }, 'Knowledge base entry deleted');
-    } catch (error) {
-      logger.error({ error, entryId }, 'Error deleting knowledge entry');
-      throw error;
-    }
-  }
-
-  /**
-   * Obter estatísticas do KB
-   */
-  static async getStats(organizationId: string): Promise<{
-    totalEntries: number;
-    entriesBySource: Record<string, number>;
-    mostUsedEntries: Array<{
-      question: string;
-      usageCount: number;
-    }>;
-    recentlyAdded: number; // últimas 24h
+  async suggestAnswer(question: string, organizationId: string): Promise<{
+    answer: string;
+    source: 'kb_match' | 'ai_generated';
+    confidence: number;
   }> {
+    // 1. Search knowledge base first
+    const kbResults = await this.searchKnowledge(question, organizationId, 3);
+
+    // 2. High confidence match (>70) - return directly
+    if (kbResults.length > 0 && kbResults[0].relevance_score >= 70) {
+      await this.incrementUsage(kbResults[0].id);
+      return {
+        answer: kbResults[0].answer,
+        source: 'kb_match',
+        confidence: kbResults[0].relevance_score / 100
+      };
+    }
+
+    // 3. Use AI to generate answer with KB context
+    const context = kbResults.map(r =>
+      `Q: ${r.question}\nA: ${r.answer}`
+    ).join('\n\n');
+
     try {
-      // Total de entradas
-      const { count: totalEntries } = await supabaseAdmin
-        .from('knowledge_base')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', organizationId);
+      const completion = await openai.chat.completions.create({
+        model: AI_MODELS.CLIENT,
+        messages: [
+          {
+            role: 'system',
+            content: `Você é um assistente que responde perguntas usando a base de conhecimento da empresa.
+Base de conhecimento disponível:
+${context}
 
-      // Por fonte
-      const { data: bySource } = await supabaseAdmin
-        .from('knowledge_base')
-        .select('source')
-        .eq('organization_id', organizationId);
-
-      const entriesBySource: Record<string, number> = {};
-      bySource?.forEach(entry => {
-        const source = entry.source || 'unknown';
-        entriesBySource[source] = (entriesBySource[source] || 0) + 1;
+Se a pergunta puder ser respondida com base nessas informações, use-as. Caso contrário, informe que não tem essa informação.`
+          },
+          {
+            role: 'user',
+            content: question
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 500
       });
 
-      // Mais usadas
-      const { data: mostUsed } = await supabaseAdmin
-        .from('knowledge_base')
-        .select('question, usage_count')
-        .eq('organization_id', organizationId)
-        .order('usage_count', { ascending: false })
-        .limit(5);
-
-      // Recentes (24h)
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-
-      const { count: recentCount } = await supabaseAdmin
-        .from('knowledge_base')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', organizationId)
-        .gte('created_at', yesterday.toISOString());
+      const answer = completion.choices[0].message.content || 'Desculpe, não consegui gerar uma resposta.';
 
       return {
-        totalEntries: totalEntries || 0,
-        entriesBySource,
-        mostUsedEntries: (mostUsed || []).map(e => ({
-          question: e.question,
-          usageCount: e.usage_count || 0
-        })),
-        recentlyAdded: recentCount || 0
+        answer,
+        source: 'ai_generated',
+        confidence: kbResults.length > 0 ? 0.6 : 0.3
       };
     } catch (error) {
-      logger.error({ error, organizationId }, 'Error getting KB stats');
-      throw error;
+      logger.error({ error, question }, 'Failed to generate AI answer');
+      return {
+        answer: 'Desculpe, não consegui processar sua pergunta no momento.',
+        source: 'ai_generated',
+        confidence: 0
+      };
     }
+  }
+
+  /**
+   * Increment usage count for an entry
+   */
+  async incrementUsage(entryId: string): Promise<void> {
+    // Get current count first
+    const { data: entry } = await supabaseAdmin
+      .from('knowledge_base')
+      .select('usage_count')
+      .eq('id', entryId)
+      .single();
+
+    const currentCount = entry?.usage_count || 0;
+
+    const { error } = await supabaseAdmin
+      .from('knowledge_base')
+      .update({
+        usage_count: currentCount + 1,
+        last_used_at: new Date().toISOString()
+      })
+      .eq('id', entryId);
+
+    if (error) {
+      logger.error({ error, entryId }, 'Failed to increment usage count');
+    }
+  }
+
+  /**
+   * Get stats for knowledge base
+   */
+  async getStats(organizationId: string): Promise<{
+    total: number;
+    by_source: Record<string, number>;
+    most_used: Array<{ question: string; usage_count: number }>;
+  }> {
+    const { data: entries } = await supabaseAdmin
+      .from('knowledge_base')
+      .select('*')
+      .eq('organization_id', organizationId);
+
+    const total = entries?.length || 0;
+
+    const by_source = (entries || []).reduce((acc, entry) => {
+      const source = entry.source || 'unknown';
+      acc[source] = (acc[source] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const most_used = (entries || [])
+      .filter(e => e.usage_count && e.usage_count > 0)
+      .sort((a, b) => (b.usage_count || 0) - (a.usage_count || 0))
+      .slice(0, 5)
+      .map(e => ({
+        question: e.question,
+        usage_count: e.usage_count || 0
+      }));
+
+    return { total, by_source, most_used };
+  }
+
+  /**
+   * LEGACY METHOD - for BIPE compatibility
+   */
+  async addFromBipe(entry: {
+    organizationId: string;
+    question: string;
+    answer: string;
+    bipeId: string;
+  }): Promise<void> {
+    await this.createEntry({
+      organization_id: entry.organizationId,
+      question: entry.question,
+      answer: entry.answer,
+      source: 'bipe',
+      learned_from_bipe_id: entry.bipeId
+    });
   }
 }
 

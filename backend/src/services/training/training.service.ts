@@ -255,6 +255,154 @@ export class TrainingService {
       throw error;
     }
   }
+
+  /**
+   * 6-9. Métodos de Sessões
+   * NOTA: Requerem tabela training_sessions (não existe no schema atual)
+   * Estes métodos estão preparados para quando a tabela for criada
+   */
+
+  /**
+   * 6. Criar sessão
+   * NOTA: Requer tabela training_sessions (não existe no schema)
+   */
+  static async createSession(planId: string, sessionData: any): Promise<any> {
+    logger.warn({ planId }, 'createSession: training_sessions table not implemented');
+    throw new Error(
+      'Training sessions table not yet implemented. ' +
+      'Migration required to create training_sessions table with columns: ' +
+      'id, organization_id, training_plan_id, session_number, scheduled_at, ' +
+      'duration_minutes, status, trainer_notes, skills_worked, pet_behavior_rating'
+    );
+  }
+
+  /**
+   * 7. Atualizar sessão
+   */
+  static async updateSession(sessionId: string, updates: any): Promise<any> {
+    logger.warn({ sessionId }, 'updateSession: training_sessions table not implemented');
+    throw new Error('Training sessions table not yet implemented. Migration required.');
+  }
+
+  /**
+   * 8. Completar sessão
+   */
+  static async completeSession(sessionId: string): Promise<void> {
+    logger.warn({ sessionId }, 'completeSession: training_sessions table not implemented');
+    throw new Error('Training sessions table not yet implemented. Migration required.');
+  }
+
+  /**
+   * 9. Obter próximas sessões
+   */
+  static async getUpcomingSessions(organizationId: string, limit: number = 10): Promise<any[]> {
+    logger.warn({ organizationId }, 'getUpcomingSessions: training_sessions table not implemented');
+    throw new Error('Training sessions table not yet implemented. Migration required.');
+  }
+
+  /**
+   * 10. Obter estatísticas/analytics de um plano
+   */
+  static async getPlanAnalytics(planId: string, organizationId?: string) {
+    const startTime = Date.now();
+    try {
+      logger.info({ planId, organizationId }, 'Fetching training plan analytics');
+
+      const plan = await this.getTrainingPlan(planId, organizationId || '');
+      if (!plan) {
+        return null;
+      }
+
+      // Calcular semanas decorridas desde criação
+      const createdAt = new Date(plan.created_at);
+      const now = new Date();
+      const weeksElapsed = Math.floor(
+        (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24 * 7)
+      );
+
+      // Calcular porcentagem de progresso
+      const progressPercentage = Math.min(
+        100,
+        Math.round((weeksElapsed / plan.duration_weeks) * 100)
+      );
+
+      // Data estimada de conclusão
+      const estimatedCompletionDate = new Date(createdAt);
+      estimatedCompletionDate.setDate(
+        estimatedCompletionDate.getDate() + (plan.duration_weeks * 7)
+      );
+
+      // Determinar se já começou
+      const startedAt = plan.status === 'em_andamento'
+        ? plan.created_at
+        : null;
+
+      const analytics = {
+        planId: plan.id,
+        totalWeeks: plan.duration_weeks,
+        weeksElapsed: Math.max(0, weeksElapsed),
+        progressPercentage,
+        shortTermGoalsCount: plan.short_term_goals?.length || 0,
+        longTermGoalsCount: plan.long_term_goals?.length || 0,
+        status: plan.status,
+        startedAt,
+        estimatedCompletionDate: estimatedCompletionDate.toISOString()
+      };
+
+      const duration = Date.now() - startTime;
+      logger.info({ planId, analytics, duration }, 'Training plan analytics calculated');
+
+      return analytics;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      logger.error({ error, planId, duration }, 'Error calculating training plan analytics');
+      return null;
+    }
+  }
+
+  /**
+   * MÉTODOS AUXILIARES
+   */
+
+  /**
+   * Listar planos ativos de uma organização
+   */
+  static async listActivePlans(organizationId: string) {
+    const result = await this.listTrainingPlans(organizationId, {
+      status: 'em_andamento'
+    });
+    return result.plans;
+  }
+
+  /**
+   * Listar planos de um pet específico
+   */
+  static async listPlansByPet(organizationId: string, petId: string) {
+    return await this.listTrainingPlans(organizationId, { petId });
+  }
+
+  /**
+   * Deletar plano (hard delete)
+   */
+  static async deletePlan(planId: string, organizationId: string): Promise<void> {
+    const startTime = Date.now();
+    try {
+      logger.info({ planId, organizationId }, 'Deleting training plan');
+
+      await supabaseAdmin
+        .from('training_plans')
+        .delete()
+        .eq('id', planId)
+        .eq('organization_id', organizationId);
+
+      const duration = Date.now() - startTime;
+      logger.info({ planId, duration }, 'Training plan deleted');
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      logger.error({ error, planId, duration }, 'Error deleting training plan');
+      throw error;
+    }
+  }
 }
 
 export const trainingService = new TrainingService();

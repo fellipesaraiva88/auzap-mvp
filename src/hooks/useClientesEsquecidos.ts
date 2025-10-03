@@ -85,7 +85,7 @@ export function useClientesEsquecidos() {
   } = useQuery<ClienteEsquecido[]>({
     queryKey: ['clientes-esquecidos'],
     queryFn: async () => {
-      const response = await apiClient.get('/esquecidos');
+      const response = await apiClient.get('/api/esquecidos');
       return response.data.clientes;
     }
   });
@@ -98,7 +98,7 @@ export function useClientesEsquecidos() {
   } = useQuery<EstatisticasEsquecidos>({
     queryKey: ['clientes-esquecidos-stats'],
     queryFn: async () => {
-      const response = await apiClient.get('/esquecidos/resumo');
+      const response = await apiClient.get('/api/esquecidos/resumo');
       return response.data;
     }
   });
@@ -106,7 +106,7 @@ export function useClientesEsquecidos() {
   // Mutation: Trigger vasculhada
   const triggerVasculhada = useMutation({
     mutationFn: async (instanceId: string) => {
-      const response = await apiClient.post('/esquecidos/vasculhar', {
+      const response = await apiClient.post('/api/esquecidos/vasculhar', {
         instance_id: instanceId
       });
       return response.data;
@@ -123,7 +123,7 @@ export function useClientesEsquecidos() {
   // Mutation: Responder cliente
   const responderCliente = useMutation({
     mutationFn: async (clienteId: string) => {
-      const response = await apiClient.post(`/esquecidos/${clienteId}/responder`);
+      const response = await apiClient.post(`/api/esquecidos/${clienteId}/responder`);
       return response.data;
     },
     onSuccess: () => {
@@ -139,7 +139,7 @@ export function useClientesEsquecidos() {
   // Mutation: Reescrever resposta
   const reescreverResposta = useMutation({
     mutationFn: async (clienteId: string) => {
-      const response = await apiClient.post(`/esquecidos/${clienteId}/reescrever`);
+      const response = await apiClient.post(`/api/esquecidos/${clienteId}/reescrever`);
       return response.data;
     },
     onSuccess: () => {
@@ -154,7 +154,7 @@ export function useClientesEsquecidos() {
   // Mutation: Deixar quieto
   const deixarQuieto = useMutation({
     mutationFn: async (clienteId: string) => {
-      const response = await apiClient.post(`/esquecidos/${clienteId}/deixar-quieto`);
+      const response = await apiClient.post(`/api/esquecidos/${clienteId}/deixar-quieto`);
       return response.data;
     },
     onSuccess: () => {
@@ -176,7 +176,7 @@ export function useClientesEsquecidos() {
       clienteId: string;
       valorCentavos: number;
     }) => {
-      const response = await apiClient.post(`/esquecidos/${clienteId}/marcar-convertido`, {
+      const response = await apiClient.post(`/api/esquecidos/${clienteId}/marcar-convertido`, {
         valor_real_centavos: valorCentavos
       });
       return response.data;

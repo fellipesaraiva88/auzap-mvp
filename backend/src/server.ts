@@ -16,7 +16,11 @@ app.set('trust proxy', 1);
 // Socket.io setup
 export const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: [
+      process.env.FRONTEND_URL || 'http://localhost:5173',
+      'https://ia.auzap.com.br',
+      'https://auzap-frontend-d84c.onrender.com'
+    ],
     credentials: true
   }
 });
@@ -47,6 +51,49 @@ import './queue/jobs/aurora-daily-summary.job.js';
 import './queue/jobs/aurora-opportunities.job.js';
 logger.info('Aurora automation jobs loaded');
 
+// ==========================================
+// WORKERS AUTO-START (Production Only)
+// ==========================================
+// Em produção, se não houver worker service separado rodando,
+// inicializa workers junto com o servidor API
+const ENABLE_EMBEDDED_WORKERS = process.env.ENABLE_EMBEDDED_WORKERS === 'true' ||
+  (process.env.NODE_ENV === 'production' && !process.env.SEPARATE_WORKER_SERVICE);
+
+if (ENABLE_EMBEDDED_WORKERS) {
+  logger.info('🔄 Initializing embedded workers (no separate worker service detected)...');
+
+  (async () => {
+    try {
+      const { MessageWorker } = await import('./queue/workers/message.worker.js');
+      const { CampaignWorker } = await import('./queue/workers/campaign.worker.js');
+      const { AutomationWorker } = await import('./queue/workers/automation.worker.js');
+      const { VasculhadaWorker } = await import('./queue/workers/vasculhada.worker.js');
+
+      const messageWorker = new MessageWorker();
+      const campaignWorker = new CampaignWorker();
+      const automationWorker = new AutomationWorker();
+      const vasculhadaWorker = new VasculhadaWorker();
+
+      logger.info('✅ All embedded workers started successfully');
+
+      // Graceful shutdown dos workers
+      process.on('SIGTERM', async () => {
+        logger.info('Shutting down embedded workers...');
+        await Promise.all([
+          messageWorker.close(),
+          campaignWorker.close(),
+          automationWorker.close(),
+          vasculhadaWorker.close()
+        ]);
+      });
+    } catch (error) {
+      logger.error({ error }, '❌ Failed to initialize embedded workers');
+    }
+  })();
+} else {
+  logger.info('ℹ️ Embedded workers disabled (using separate worker service)');
+}
+
 // Middleware
 app.use(helmet({
   contentSecurityPolicy: {
@@ -55,7 +102,12 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:5173']
+      connectSrc: [
+        "'self'",
+        process.env.FRONTEND_URL || 'http://localhost:5173',
+        'https://ia.auzap.com.br',
+        'https://auzap-frontend-d84c.onrender.com'
+      ]
     }
   },
   hsts: {
@@ -72,6 +124,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use((req: Request, res: Response, next: NextFunction): void => {
   const allowedOrigins = [
     process.env.FRONTEND_URL,
+    'https://ia.auzap.com.br',
+    'https://auzap-frontend-d84c.onrender.com',
     'http://localhost:8080',
     'http://localhost:8081',
     'http://localhost:8082',
@@ -173,6 +227,55 @@ app.get('/health/whatsapp', async (_req: Request, res: Response): Promise<void> 
   }
 });
 
+app.get('/health/workers', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const { messageQueue, campaignQueue, automationQueue, vasculhadaQueue } = await import('./queue/queue-manager.js');
+
+    // Buscar estatísticas de cada queue
+    const [messageStats, campaignStats, automationStats, vasculhadaStats] = await Promise.all([
+      messageQueue.getJobCounts(),
+      campaignQueue.getJobCounts(),
+      automationQueue.getJobCounts(),
+      vasculhadaQueue.getJobCounts()
+    ]);
+
+    // Verificar se há workers processando (pelo menos 1 job ativo ou completo recentemente)
+    const hasActiveWorkers =
+      messageStats.active > 0 ||
+      campaignStats.active > 0 ||
+      automationStats.active > 0 ||
+      vasculhadaStats.active > 0 ||
+      messageStats.completed > 0;
+
+    const totalProcessing =
+      messageStats.active +
+      campaignStats.active +
+      automationStats.active +
+      vasculhadaStats.active;
+
+    const totalWaiting =
+      messageStats.waiting +
+      campaignStats.waiting +
+      automationStats.waiting +
+      vasculhadaStats.waiting;
+
+    res.json({
+      status: hasActiveWorkers || totalWaiting === 0 ? 'ok' : 'warning',
+      workers: {
+        enabled: ENABLE_EMBEDDED_WORKERS,
+        processing: totalProcessing,
+        waiting: totalWaiting,
+        message: messageStats,
+        campaign: campaignStats,
+        automation: automationStats,
+        vasculhada: vasculhadaStats
+      }
+    });
+  } catch (error) {
+    res.status(503).json({ status: 'error', workers: { connected: false, error } });
+  }
+});
+
 // Health check routes (public)
 app.use('/', (await import('./routes/health.routes.js')).default);
 
@@ -193,18 +296,20 @@ app.use('/api/esquecidos', (await import('./routes/esquecidos.routes.js')).defau
 // BIPE & Advanced Services Routes
 app.use('/api/training', (await import('./routes/training.routes.js')).default);
 app.use('/api/daycare', (await import('./routes/daycare.routes.js')).default);
-app.use('/api/bipe', (await import('./routes/bipe.routes.js')).default);
+// app.use('/api/bipe', (await import('./routes/bipe.routes.js')).default); // TODO: Aguardando migration da tabela pet_health_protocol
+app.use('/api/knowledge-base', (await import('./routes/knowledge-base.routes.js')).default);
 
 // Admin Panel Routes (internal users only)
 app.use('/api/internal/auth', (await import('./routes/admin/auth.routes.js')).default);
 app.use('/api/internal/debug', (await import('./routes/admin/debug-auth.routes.js')).default); // DEBUG - REMOVER EM PRODUÇÃO
-app.use('/api/internal/clients', (await import('./routes/admin/clients.routes.js')).default);
+app.use('/api/version', (await import('./routes/admin/version-check.routes.js')).default); // Version check
 app.use('/api/internal/dashboard', (await import('./routes/admin/dashboard.routes.js')).default);
+app.use('/api/internal/clients', (await import('./routes/admin/clients.routes.js')).default);
 app.use('/api/internal/monitoring', (await import('./routes/admin/monitoring.routes.js')).default);
 app.use('/api/internal/logs', (await import('./routes/admin/logs.routes.js')).default);
 app.use('/api/internal/analytics', (await import('./routes/admin/analytics.routes.js')).default);
 app.use('/api/internal/settings', (await import('./routes/admin/settings.routes.js')).default);
-app.use('/api/internal', (await import('./routes/admin/actions.routes.js')).default);
+app.use('/api/internal/actions', (await import('./routes/admin/actions.routes.js')).default);
 
 // Bull Board - Queue Monitoring UI (owner-only)
 const { serverAdapter, bullBoardAuthMiddleware, bullBoardHealthCheck } =
@@ -237,14 +342,17 @@ io.use(async (socket, next) => {
 
     // Verify user belongs to the organization
     const orgId = Array.isArray(organizationId) ? organizationId[0] : organizationId;
-    const { data: membership } = await supabaseAdmin
-      .from('organizations')
-      .select('id')
-      .eq('id', orgId)
+
+    // Check if user exists in users table and belongs to this organization
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, organization_id')
+      .eq('auth_user_id', user.id)
+      .eq('organization_id', orgId)
       .single();
 
-    if (!membership) {
-      logger.error({ userId: user.id, organizationId: orgId }, 'User does not belong to organization');
+    if (userError || !userData) {
+      logger.error({ userId: user.id, organizationId: orgId, userError }, 'User does not belong to organization');
       return next(new Error('Access denied to organization'));
     }
 
