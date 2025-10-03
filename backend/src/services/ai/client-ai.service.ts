@@ -882,7 +882,7 @@ Informações que você pode coletar:
     try {
       logger.info({ organizationId, question }, 'Searching knowledge base');
 
-      const results = await KnowledgeBaseService.searchKnowledge(organizationId, question);
+      const results = await knowledgeBaseService.searchKnowledge(question, organizationId);
 
       if (results.length === 0) {
         return {
@@ -893,7 +893,7 @@ Informações que você pode coletar:
       }
 
       // Incrementar uso
-      await KnowledgeBaseService.incrementUsage(results[0].id);
+      await knowledgeBaseService.incrementUsage(results[0].id);
 
       return {
         success: true,
