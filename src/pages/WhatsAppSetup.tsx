@@ -204,8 +204,16 @@ export default function WhatsAppSetup() {
 
       if (connectedInstance) {
         clearInterval(pollInterval);
-        setWizardStep('verifying');
-        await handleVerifyConnection();
+        setWizardStep('success');
+        toast({
+          title: '🎉 WhatsApp Conectado!',
+          description: 'Sua IA já está atendendo automaticamente',
+        });
+        // Fechar modal automaticamente após detectar conexão
+        setTimeout(() => {
+          handleCloseDialog();
+          refetch(); // Atualizar lista de instâncias
+        }, 2000);
       }
     }, 3000);
 
@@ -222,9 +230,10 @@ export default function WhatsAppSetup() {
           description: 'Confira a mensagem de boas-vindas no seu WhatsApp',
         });
         setWizardStep('success');
+        // Fechar modal imediatamente após sucesso
         setTimeout(() => {
           handleCloseDialog();
-        }, 3000);
+        }, 1500);
       } else {
         toast({
           variant: 'destructive',
@@ -408,35 +417,35 @@ export default function WhatsAppSetup() {
             {/* PASSO 2: Código */}
             {wizardStep === 'code' && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                {/* Código Gigante */}
+                {/* Código Gigante - Estilo WhatsApp */}
                 <div className="relative">
                   <div
                     onClick={handleCopyCode}
-                    className="p-8 bg-gradient-to-br from-ocean-blue to-sunset-orange rounded-2xl text-center cursor-pointer hover:scale-[1.02] transition-transform duration-200 group"
+                    className="p-8 bg-[#25D366] rounded-2xl text-center cursor-pointer hover:scale-[1.02] transition-transform duration-200 shadow-lg group"
                   >
-                    <p className="text-white/90 text-sm font-medium mb-3">
+                    <p className="text-white text-sm font-medium mb-3">
                       👆 Clique no código para copiar:
                     </p>
                     <div className="text-6xl font-bold text-white tracking-[0.2em] font-mono mb-2 select-all">
                       {pairingCode}
                     </div>
                     {copied && (
-                      <div className="text-white/90 text-sm font-medium mb-3 animate-pulse">
+                      <div className="text-white text-sm font-medium mb-3 animate-pulse">
                         ✅ Copiado!
                       </div>
                     )}
                   </div>
 
-                  {/* Botão de Copiar GIGANTE */}
+                  {/* Botão de Copiar GIGANTE - Estilo WhatsApp */}
                   <Button
                     onClick={handleCopyCode}
                     size="lg"
-                    className="w-full mt-4 bg-white hover:bg-gray-50 text-ocean-blue font-bold text-xl h-16 shadow-lg border-2 border-ocean-blue/20"
+                    className="w-full mt-4 bg-white hover:bg-gray-50 text-[#25D366] font-bold text-xl h-16 shadow-lg border-2 border-[#25D366]/30 hover:border-[#25D366]/50"
                   >
                     {copied ? (
                       <>
-                        <Check className="w-6 h-6 mr-3 text-green-600" />
-                        <span className="text-green-600">Código Copiado! ✅</span>
+                        <Check className="w-6 h-6 mr-3" />
+                        <span>Código Copiado! ✅</span>
                       </>
                     ) : (
                       <>
@@ -472,7 +481,7 @@ export default function WhatsAppSetup() {
 
                 <Button
                   onClick={handleCheckConnection}
-                  className="w-full btn-gradient text-white text-lg h-12"
+                  className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white text-lg h-12"
                 >
                   <CheckCircle2 className="w-5 h-5 mr-2" />
                   Já conectei!

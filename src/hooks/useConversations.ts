@@ -21,8 +21,26 @@ export function useConversations(params?: ListConversationsParams) {
 
   // 🔴 Supabase Realtime: Sincronização automática de conversas
   useEffect(() => {
-    const organizationId = localStorage.getItem('organizationId');
-    if (!organizationId) return;
+    // Tentar obter organization_id de múltiplas fontes
+    let organizationId = localStorage.getItem('organizationId');
+
+    // Fallback: tentar obter do user via localStorage (auth_token decodificado)
+    if (!organizationId) {
+      try {
+        const authToken = localStorage.getItem('auth_token');
+        if (authToken) {
+          const payload = JSON.parse(atob(authToken.split('.')[1]));
+          organizationId = payload.organization_id;
+        }
+      } catch (e) {
+        console.warn('[Supabase Realtime] Could not extract organization_id from token');
+      }
+    }
+
+    if (!organizationId) {
+      console.warn('[Supabase Realtime] No organization_id found, skipping subscription');
+      return;
+    }
 
     console.log('[Supabase Realtime] Setting up conversations subscription', { organizationId });
 
@@ -171,10 +189,27 @@ export function useConversationMessages(conversationId?: string) {
   useEffect(() => {
     if (!conversationId) return;
 
-    const organizationId = localStorage.getItem('organizationId');
-    if (!organizationId) return;
+    // Tentar obter organization_id de múltiplas fontes
+    let organizationId = localStorage.getItem('organizationId');
 
-    console.log('[Supabase Realtime] Setting up messages subscription', { conversationId });
+    if (!organizationId) {
+      try {
+        const authToken = localStorage.getItem('auth_token');
+        if (authToken) {
+          const payload = JSON.parse(atob(authToken.split('.')[1]));
+          organizationId = payload.organization_id;
+        }
+      } catch (e) {
+        console.warn('[Supabase Realtime] Could not extract organization_id from token');
+      }
+    }
+
+    if (!organizationId) {
+      console.warn('[Supabase Realtime] No organization_id found, skipping messages subscription');
+      return;
+    }
+
+    console.log('[Supabase Realtime] Setting up messages subscription', { conversationId, organizationId });
 
     const channel = supabase
       .channel(`messages-${conversationId}`)

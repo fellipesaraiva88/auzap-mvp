@@ -55,11 +55,19 @@ class AuthService {
 
   async getProfile(): Promise<UserProfile> {
     const response = await apiClient.get<{ user: UserProfile }>('/api/auth/me');
-    return response.data.user;
+    const user = response.data.user;
+
+    // Salvar organization_id no localStorage para uso em subscriptions Realtime
+    if (user.organization_id) {
+      localStorage.setItem('organizationId', user.organization_id);
+    }
+
+    return user;
   }
 
   logout(): void {
     apiClient.clearToken();
+    localStorage.removeItem('organizationId'); // Limpar organization_id ao fazer logout
   }
 
   isAuthenticated(): boolean {
