@@ -502,9 +502,9 @@ Informações que você pode coletar:
         contactId,
         initialAssessment: args.initial_assessment,
         planType: args.plan_type,
-        startDate: args.start_date,
-        goals: args.goals,
-        notes: args.notes
+        durationWeeks: args.duration_weeks || 8,
+        methodology: args.methodology,
+        locationType: args.location_type
       });
 
       return {

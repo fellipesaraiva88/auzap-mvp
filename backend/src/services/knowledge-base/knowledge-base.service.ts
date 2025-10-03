@@ -294,7 +294,8 @@ export class KnowledgeBaseService {
 
       const entriesBySource: Record<string, number> = {};
       bySource?.forEach(entry => {
-        entriesBySource[entry.source] = (entriesBySource[entry.source] || 0) + 1;
+        const source = entry.source || 'unknown';
+        entriesBySource[source] = (entriesBySource[source] || 0) + 1;
       });
 
       // Mais usadas

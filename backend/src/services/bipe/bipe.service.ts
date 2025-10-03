@@ -160,16 +160,18 @@ export class BipeService {
         throw updateError;
       }
 
-      // 3. Salvar no Knowledge Base
-      await supabaseAdmin
-        .from('knowledge_base')
-        .insert({
-          organization_id: bipe.organization_id,
-          question: bipe.client_question,
-          answer: managerResponse,
-          source: 'bipe',
-          learned_from_bipe_id: bipeId
-        });
+      // 3. Salvar no Knowledge Base (apenas se houver pergunta do cliente)
+      if (bipe.client_question) {
+        await supabaseAdmin
+          .from('knowledge_base')
+          .insert({
+            organization_id: bipe.organization_id,
+            question: bipe.client_question,
+            answer: managerResponse,
+            source: 'bipe',
+            learned_from_bipe_id: bipeId
+          });
+      }
 
       // 4. Marcar como aprendido
       await supabaseAdmin

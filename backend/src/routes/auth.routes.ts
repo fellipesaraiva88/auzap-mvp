@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { supabaseAdmin } from '../config/supabase.js';
 import { logger } from '../config/logger.js';
 import { authLimiter } from '../middleware/rate-limiter.js';
-import type { TablesInsert, Organization, Tables } from '../types/database.types.js';
+import type { TablesInsert, Tables } from '../types/database.types.js';
+import type { Organization } from '../types/supabase-extended.js';
 
 const router = Router();
 
@@ -37,7 +38,7 @@ router.post('/register', async (req, res): Promise<void> => {
       .from('organizations')
       .insert(orgData)
       .select()
-      .single() as { data: Organization | null; error: any };
+      .single() as { data: Tables<'organizations'> | null; error: any };
 
     if (orgError || !org) {
       logger.error('Organization creation failed', orgError);

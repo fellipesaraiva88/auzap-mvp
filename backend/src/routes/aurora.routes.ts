@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { tenantMiddleware } from '../middleware/tenant.middleware.js';
+import { tenantMiddleware, TenantRequest } from '../middleware/tenant.middleware.js';
 import { auroraAuthMiddleware } from '../middleware/aurora-auth.middleware.js';
 import { auroraService } from '../services/aurora/aurora.service.js';
 import { auroraProactiveService } from '../services/aurora/aurora-proactive.service.js';
@@ -19,7 +19,7 @@ router.use(tenantMiddleware);
  * 
  * Body: { phoneNumber, ownerName }
  */
-router.post('/register-owner', async (req, res) => {
+router.post('/register-owner', async (req: TenantRequest, res) => {
   try {
     const organizationId = req.organizationId!;
     const { phoneNumber, ownerName } = req.body;
@@ -133,7 +133,7 @@ router.post('/register-owner', async (req, res) => {
  * Verifica se número já está cadastrado como owner
  * Query: ?phoneNumber=5511999999999
  */
-router.get('/check-owner', async (req, res) => {
+router.get('/check-owner', async (req: TenantRequest, res): Promise<void> => {
   try {
     const organizationId = req.organizationId!;
     const { phoneNumber } = req.query;
