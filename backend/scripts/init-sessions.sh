@@ -4,7 +4,7 @@
 
 set -e
 
-SESSION_DIR="${WHATSAPP_SESSION_PATH:-/app/sessions}"
+SESSION_DIR="${WHATSAPP_SESSION_PATH:-/app/data/sessions}"
 
 echo "🔧 Initializing WhatsApp sessions directory: $SESSION_DIR"
 

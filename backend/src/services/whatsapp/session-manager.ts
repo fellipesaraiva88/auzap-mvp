@@ -8,7 +8,9 @@ import type { SessionData } from '../../types/whatsapp.types.js';
 
 /**
  * Gerencia sessões WhatsApp com persistência multi-tenant
- * - Persiste em /app/sessions/{organizationId}_{instanceId}
+ * - Persiste em /app/data/sessions/{organizationId}_{instanceId}
+ * - /app/data = Render Persistent Disk mount point
+ * - /app/data/sessions = subdir criado pelo app (evita permission issues)
  * - Cache em Redis para performance
  * - Cleanup automático de sessões antigas
  */
@@ -18,11 +20,11 @@ export class SessionManager {
   private readonly SESSION_METADATA_KEY = 'session:metadata:';
 
   constructor(sessionPath?: string) {
-    // Render persistent disk ou local
-    // Fallback para /tmp se /app/sessions não for gravável
-    this.sessionPath = sessionPath || process.env.WHATSAPP_SESSION_PATH || '/app/sessions';
+    // Render persistent disk: /app/data/sessions (subdir dentro do mount /app/data)
+    // Isso permite que user node crie o subdir sem problemas de permissão
+    this.sessionPath = sessionPath || process.env.WHATSAPP_SESSION_PATH || '/app/data/sessions';
 
-    // Verificar se path é gravável, senão usar /tmp
+    // Verificar se path é gravável, senão usar /tmp como fallback
     this.verifySessionPath();
   }
 

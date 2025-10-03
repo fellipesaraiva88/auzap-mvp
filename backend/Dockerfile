@@ -54,11 +54,12 @@ COPY --from=builder /app/scripts ./scripts
 # Make init script executable
 RUN chmod +x ./scripts/init-sessions.sh
 
-# CRITICAL: Create and set permissions BEFORE switching to node user
-# This ensures Render Persistent Disk mount point has correct permissions
-RUN mkdir -p /app/sessions && \
-    chmod 777 /app/sessions && \
-    chown -R node:node /app/sessions
+# CRITICAL: Create mount point for Render Persistent Disk
+# Render will mount disk at /app/data, then code creates /app/data/sessions as subdir
+# This avoids permission issues with direct mount on /app/sessions
+RUN mkdir -p /app/data && \
+    chmod 777 /app/data && \
+    chown -R node:node /app/data
 
 # Create simple startup script (permissions already set above)
 RUN echo '#!/bin/sh\nexec node dist/server.js' > /app/start.sh && \
