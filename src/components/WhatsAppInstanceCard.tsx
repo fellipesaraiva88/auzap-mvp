@@ -4,7 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { whatsappService, type WhatsAppInstance } from '@/services/whatsapp.service';
+import {
+  useInitializeWhatsApp,
+  useDisconnectWhatsApp,
+  type WhatsAppInstance
+} from '@/hooks/useWhatsApp';
 import { useToast } from '@/hooks/use-toast';
 import {
   Smartphone,
@@ -23,9 +27,12 @@ interface WhatsAppInstanceCardProps {
 
 export function WhatsAppInstanceCard({ instance, onUpdate }: WhatsAppInstanceCardProps) {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const initializeWhatsApp = useInitializeWhatsApp();
+  const disconnectWhatsApp = useDisconnectWhatsApp();
+
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showPhoneInput, setShowPhoneInput] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -71,18 +78,25 @@ export function WhatsAppInstanceCard({ instance, onUpdate }: WhatsAppInstanceCar
   };
 
   const handleConnect = async () => {
-    setLoading(true);
     try {
-      const result = await whatsappService.connectInstance(
-        instance.id,
-        showPhoneInput ? phoneNumber : undefined
-      );
+      const result = await initializeWhatsApp.mutateAsync({
+        instanceId: instance.instanceId,
+        phoneNumber: showPhoneInput ? phoneNumber.replace(/\D/g, '') : undefined,
+        preferredAuthMethod: showPhoneInput ? 'pairing_code' : 'qr_code',
+      });
 
       if (result.pairingCode) {
         toast({
-          title: 'Código de Pareamento',
-          description: `Código: ${result.pairingCode}. Digite no seu WhatsApp.`,
-          duration: 10000,
+          title: '✅ Código de Pareamento Gerado!',
+          description: `Digite este código no WhatsApp: ${result.pairingCode}`,
+          duration: 15000,
+        });
+      } else if (result.qrCode) {
+        setQrCode(result.qrCode);
+        toast({
+          title: '📱 QR Code Gerado!',
+          description: 'Escaneie o código exibido abaixo',
+          duration: 5000,
         });
       }
 
@@ -93,19 +107,17 @@ export function WhatsAppInstanceCard({ instance, onUpdate }: WhatsAppInstanceCar
         title: 'Erro ao conectar',
         description: error.response?.data?.error || 'Tente novamente',
       });
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleDisconnect = async () => {
-    setLoading(true);
     try {
-      await whatsappService.disconnectInstance(instance.id);
+      await disconnectWhatsApp.mutateAsync(instance.instanceId);
       toast({
-        title: 'Desconectado',
-        description: 'Instância WhatsApp desconectada',
+        title: '✅ Desconectado',
+        description: 'Instância WhatsApp desconectada com sucesso',
       });
+      setQrCode(null);
       onUpdate();
     } catch (error: any) {
       toast({
@@ -113,8 +125,6 @@ export function WhatsAppInstanceCard({ instance, onUpdate }: WhatsAppInstanceCar
         title: 'Erro ao desconectar',
         description: error.response?.data?.error || 'Tente novamente',
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -142,15 +152,21 @@ export function WhatsAppInstanceCard({ instance, onUpdate }: WhatsAppInstanceCar
         )}
 
         {/* QR Code */}
-        {instance.status === 'qr_pending' && instance.qr_code && (
+        {qrCode && (
           <div className="p-4 bg-white rounded-lg border-2 border-ocean-blue/20">
-            <p className="text-sm text-center mb-2 font-medium">
-              Escaneie este QR Code no WhatsApp
+            <p className="text-sm text-center mb-2 font-medium text-gray-700">
+              📱 Escaneie este QR Code no WhatsApp
             </p>
-            <img src={instance.qr_code} alt="QR Code" className="w-full" />
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              WhatsApp → Aparelhos Conectados → Conectar Aparelho
-            </p>
+            <img src={qrCode} alt="QR Code" className="w-full max-w-xs mx-auto" />
+            <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+              <p className="text-xs text-blue-800 font-medium mb-1">Como conectar:</p>
+              <ol className="text-xs text-blue-700 space-y-1 list-decimal list-inside">
+                <li>Abra WhatsApp no celular</li>
+                <li>Toque em Mais opções (⋮) → Aparelhos conectados</li>
+                <li>Toque em Conectar um aparelho</li>
+                <li>Aponte para esta tela</li>
+              </ol>
+            </div>
           </div>
         )}
 
@@ -186,11 +202,11 @@ export function WhatsAppInstanceCard({ instance, onUpdate }: WhatsAppInstanceCar
               </Button>
               <Button
                 onClick={handleConnect}
-                disabled={loading || (showPhoneInput && !phoneNumber)}
+                disabled={initializeWhatsApp.isPending || (showPhoneInput && !phoneNumber)}
                 size="sm"
                 className="flex-1 btn-gradient text-white"
               >
-                {loading ? (
+                {initializeWhatsApp.isPending ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
                   <Power className="w-4 h-4 mr-2" />
@@ -203,12 +219,12 @@ export function WhatsAppInstanceCard({ instance, onUpdate }: WhatsAppInstanceCar
           {instance.status === 'connected' && (
             <Button
               onClick={handleDisconnect}
-              disabled={loading}
+              disabled={disconnectWhatsApp.isPending}
               variant="outline"
               size="sm"
               className="flex-1"
             >
-              {loading ? (
+              {disconnectWhatsApp.isPending ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
                 <Power className="w-4 h-4 mr-2" />
