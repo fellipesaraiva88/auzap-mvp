@@ -709,4 +709,91 @@ router.get(
   }
 );
 
+/**
+ * GET /api/daycare/reservations/:id/timeline
+ * Get timeline/activities for a reservation
+ */
+router.get(
+  '/reservations/:id/timeline',
+  readLimiter,
+  validateResource('id', 'daycare_hotel_stays'),
+  async (req: TenantRequest, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const organizationId = req.organizationId!;
+
+      const timeline = await DaycareService.getStayTimeline(id, organizationId);
+
+      res.json({
+        success: true,
+        timeline
+      });
+    } catch (error: any) {
+      logger.error({ error, reservationId: req.params.id }, 'Error fetching timeline');
+      res.status(500).json({
+        error: 'Failed to fetch timeline',
+        message: error.message
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/daycare/reports/pending
+ * Get pending reports to send
+ */
+router.get(
+  '/reports/pending',
+  readLimiter,
+  async (req: TenantRequest, res: Response): Promise<void> => {
+    try {
+      const organizationId = req.organizationId!;
+
+      const reports = await DaycareService.getPendingReports(organizationId);
+
+      res.json({
+        success: true,
+        reports
+      });
+    } catch (error: any) {
+      logger.error({ error }, 'Error fetching pending reports');
+      res.status(500).json({
+        error: 'Failed to fetch pending reports',
+        message: error.message
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/daycare/reports/:stayId/send
+ * Send report to pet owner via WhatsApp
+ */
+router.post(
+  '/reports/:stayId/send',
+  criticalLimiter,
+  async (req: TenantRequest, res: Response): Promise<void> => {
+    try {
+      const { stayId } = req.params;
+      const organizationId = req.organizationId!;
+
+      const result = await DaycareService.sendReport(stayId, organizationId);
+
+      logger.info({ stayId, organizationId }, 'Report sent successfully');
+
+      res.json({
+        success: true,
+        message: 'Report sent successfully',
+        result
+      });
+    } catch (error: any) {
+      logger.error({ error, stayId: req.params.stayId }, 'Error sending report');
+      res.status(500).json({
+        error: 'Failed to send report',
+        message: error.message
+      });
+    }
+  }
+);
+
 export default router;

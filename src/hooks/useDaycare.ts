@@ -63,3 +63,29 @@ export function useAddExtraService() {
     }
   });
 }
+
+export function useStayTimeline(stayId: string | null) {
+  return useQuery({
+    queryKey: ['daycare-timeline', stayId],
+    queryFn: () => daycareService.getTimeline(stayId!),
+    enabled: !!stayId
+  });
+}
+
+export function usePendingReports() {
+  return useQuery({
+    queryKey: ['daycare-reports', 'pending'],
+    queryFn: () => daycareService.getPendingReports()
+  });
+}
+
+export function useSendReport() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (stayId: string) => daycareService.sendReport(stayId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['daycare-reports'] });
+    }
+  });
+}

@@ -9,12 +9,12 @@ export const daycareService = {
     limit?: number;
     offset?: number;
   }) {
-    const response = await api.get('/daycare/stays', { params: filters });
+    const response = await apiClient.get('/api/daycare/reservations', { params: filters });
     return response.data;
   },
 
   async getById(stayId: string) {
-    const response = await api.get(`/daycare/stays/${stayId}`);
+    const response = await apiClient.get(`/api/daycare/reservations/${stayId}`);
     return response.data;
   },
 
@@ -39,7 +39,20 @@ export const daycareService = {
     extra_services?: string[];
     notes?: string;
   }) {
-    const response = await api.post('/daycare/stays', data);
+    // Transform frontend format to backend format
+    const payload = {
+      contactId: data.contact_id,
+      petId: data.pet_id,
+      stayType: data.stay_type === 'daycare' ? 'daycare_diario' : 'hospedagem_pernoite',
+      checkInDate: data.check_in_date,
+      checkOutDate: data.check_out_date || '',
+      healthAssessment: data.health_assessment,
+      behaviorAssessment: data.behavior_assessment,
+      specialRequests: data.notes || '',
+      medicalNotes: ''
+    };
+
+    const response = await apiClient.post('/api/daycare/reservations', payload);
     return response.data;
   },
 
@@ -49,17 +62,53 @@ export const daycareService = {
     check_out_date?: string;
     notes?: string;
   }) {
-    const response = await api.put(`/daycare/stays/${stayId}`, updates);
+    // Transform to backend format
+    const payload = {
+      status: updates.status,
+      extraServices: updates.extra_services,
+      checkOutDate: updates.check_out_date,
+      notes: updates.notes
+    };
+
+    const response = await apiClient.put(`/api/daycare/reservations/${stayId}`, payload);
     return response.data;
   },
 
   async getUpsells(stayId: string) {
-    const response = await api.get(`/daycare/stays/${stayId}/upsells`);
+    const response = await apiClient.get(`/api/daycare/reservations/${stayId}/upsells`);
     return response.data;
   },
 
   async addExtraService(stayId: string, service: string) {
-    const response = await api.post(`/daycare/stays/${stayId}/services`, { service });
+    // Use the update endpoint to add service to extra_services array
+    const response = await apiClient.put(`/api/daycare/reservations/${stayId}`, {
+      extraServices: [service] // Backend will merge with existing
+    });
+    return response.data;
+  },
+
+  async getTimeline(stayId: string) {
+    const response = await apiClient.get(`/api/daycare/reservations/${stayId}/timeline`);
+    return response.data;
+  },
+
+  async addTimelineEvent(stayId: string, event: {
+    activityType: string;
+    description: string;
+    timestamp?: string;
+    notes?: string;
+  }) {
+    const response = await apiClient.post(`/api/daycare/reservations/${stayId}/activity`, event);
+    return response.data;
+  },
+
+  async getPendingReports() {
+    const response = await apiClient.get('/api/daycare/reports/pending');
+    return response.data;
+  },
+
+  async sendReport(stayId: string) {
+    const response = await apiClient.post(`/api/daycare/reports/${stayId}/send`);
     return response.data;
   }
 };
