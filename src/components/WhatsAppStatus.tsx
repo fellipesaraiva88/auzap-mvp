@@ -1,43 +1,44 @@
 import { Wifi, WifiOff, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { apiClient } from "@/lib/api";
 import { DashboardCardSkeleton, ErrorState } from "./LoadingStates";
 
 interface WhatsAppStatusProps {
   instanceId?: string;
 }
 
+interface WhatsAppInstance {
+  instanceId: string;
+  organizationId: string;
+  phoneNumber?: string;
+  status: 'disconnected' | 'connecting' | 'connected' | 'qr_pending' | 'pairing_pending' | 'failed';
+  authMethod: 'pairing_code' | 'qr_code';
+  lastActivity: string;
+  reconnectAttempts: number;
+}
+
 export function WhatsAppStatusCard({ instanceId }: WhatsAppStatusProps) {
   const { user } = useAuth();
 
-  // Buscar primeira instância WhatsApp da organização
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['whatsapp-instance', user?.organization_id],
+  // Buscar primeira instância WhatsApp da organização via API
+  const { data: instancesData, isLoading, error, refetch } = useQuery({
+    queryKey: ['whatsapp-instances', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) {
         throw new Error('Organization ID not found');
       }
 
-      const { data, error } = await supabase
-        .from('whatsapp_instances')
-        .select('*')
-        .eq('organization_id', user.organization_id)
-        .eq('status', 'connected')
-        .order('last_connected_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        throw error;
-      }
-
-      return data;
+      const response = await apiClient.get<{ instances: WhatsAppInstance[]; count: number }>('/api/whatsapp/instances');
+      return response.data;
     },
     enabled: !!user?.organization_id,
     refetchInterval: 30000, // Atualizar a cada 30 segundos
     staleTime: 10000,
   });
+
+  // Pegar primeira instância conectada
+  const data = instancesData?.instances?.find(i => i.status === 'connected') || null;
 
   if (isLoading) {
     return <DashboardCardSkeleton />;
@@ -91,9 +92,9 @@ export function WhatsAppStatusCard({ instanceId }: WhatsAppStatusProps) {
         {isConnecting ? 'Conectando...' : isConnected ? 'IA Online' : 'WhatsApp Offline'}
       </span>
 
-      {data?.phone_number && (
+      {data?.phoneNumber && (
         <span className="text-xs text-muted-foreground ml-auto">
-          {data.phone_number}
+          {data.phoneNumber}
         </span>
       )}
     </div>
