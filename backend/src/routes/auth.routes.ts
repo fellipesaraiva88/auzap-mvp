@@ -134,13 +134,20 @@ router.get('/me', async (req, res): Promise<void> => {
       return;
     }
 
-    const { data: profile } = await supabaseAdmin
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('users')
       .select('*, organizations(*)')
       .eq('auth_user_id', user.id)
       .single();
 
-    logger.info({ profile }, 'Profile fetched');
+    logger.info({ profile, profileError, auth_user_id: user.id }, 'Profile fetched');
+
+    if (profileError) {
+      logger.error({ profileError }, 'Error fetching profile from database');
+      res.status(500).json({ error: 'Failed to fetch user profile', details: profileError.message });
+      return;
+    }
+
     res.json({ user: profile });
   } catch (error: any) {
     logger.error({ error: error.message, stack: error.stack }, 'Get user error');
