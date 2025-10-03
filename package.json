@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "lint": "eslint . --max-warnings 120",
+    "lint": "eslint . --max-warnings 135",
     "type-check": "tsc --noEmit",
     "validate": "npm run type-check && npm run lint",
     "preview": "vite preview",

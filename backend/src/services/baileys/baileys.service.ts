@@ -328,6 +328,29 @@ export class BaileysService {
   }
 
   /**
+   * Envia mensagem de texto simples (público para admin e outros serviços)
+   */
+  public async sendMessage(
+    instanceId: string,
+    phoneNumber: string,
+    message: string
+  ): Promise<SendMessageResult> {
+    // Buscar instância
+    const instance = Array.from(this.instances.values()).find(i => i.instanceId === instanceId);
+    if (!instance) {
+      throw new Error('Instância não encontrada');
+    }
+
+    // Usar o método sendTextMessage existente
+    return this.sendTextMessage({
+      organizationId: instance.organizationId,
+      instanceId,
+      to: phoneNumber,
+      message
+    });
+  }
+
+  /**
    * Força reconexão de uma instância (público para admin)
    */
   public async forceReconnectInstance(instanceId: string): Promise<void> {
