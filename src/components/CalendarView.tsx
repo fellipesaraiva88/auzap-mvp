@@ -1,8 +1,10 @@
 import { useMemo, useCallback } from "react";
 import { Calendar, dateFnsLocalizer, View } from "react-big-calendar";
+import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 
 const locales = {
   "pt-BR": ptBR,
@@ -15,6 +17,8 @@ const localizer = dateFnsLocalizer({
   getDay,
   locales,
 });
+
+const DnDCalendar = withDragAndDrop(Calendar);
 
 interface CalendarEvent {
   id: string;
@@ -128,7 +132,7 @@ export function CalendarView({
 
   return (
     <div className="calendar-container" style={{ height: "600px" }}>
-      <Calendar
+      <DnDCalendar
         localizer={localizer}
         events={events}
         startAccessor="start"
