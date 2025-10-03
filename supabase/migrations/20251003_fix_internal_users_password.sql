@@ -1,34 +1,25 @@
--- =============================================
--- Fix Internal Users - Corrigir hash de senha
--- =============================================
--- Senha: AuZap2025! (hash bcrypt correto)
+-- Migration: Fix Internal Users Password
+-- Date: 2025-10-03
+-- Description: Update password hash for admin@auzap.com to use correct AuZap2025! password
 
-UPDATE internal_users
-SET password_hash = '$2b$10$/8w1nvmPRDDlYyrkbD3L9.Nl4S5dvSnAmUeNGUhtuhpqfyouVWE3u'
-WHERE email IN (
-  'eu@saraiva.ai',
-  'julio@auzap.com',
-  'arthur@auzap.com',
-  'leo@auzap.com',
-  'joaquim@auzap.com',
-  'leticia@auzap.com'
-);
+-- Update admin user password hash
+-- Hash generated with bcrypt (10 salt rounds) for password: AuZap2025!
+UPDATE public.internal_users
+SET 
+  password_hash = '$2b$10$/CFfBye8noIRBVkK5EHoVe.PUUlT2HJrKXOsYS2890yzEZDHK20/.',
+  updated_at = NOW()
+WHERE email = 'admin@auzap.com';
 
--- Verificar se os usuários foram atualizados
+-- Verify update
 DO $$
 DECLARE
-  updated_count INT;
+  updated_user RECORD;
 BEGIN
-  SELECT COUNT(*) INTO updated_count
-  FROM internal_users
-  WHERE email IN (
-    'eu@saraiva.ai',
-    'julio@auzap.com',
-    'arthur@auzap.com',
-    'leo@auzap.com',
-    'joaquim@auzap.com',
-    'leticia@auzap.com'
-  );
-
-  RAISE NOTICE 'Updated % internal users with correct password hash', updated_count;
+  SELECT * INTO updated_user FROM public.internal_users WHERE email = 'admin@auzap.com';
+  
+  IF updated_user.password_hash = '$2b$10$/CFfBye8noIRBVkK5EHoVe.PUUlT2HJrKXOsYS2890yzEZDHK20/.' THEN
+    RAISE NOTICE 'Admin password updated successfully for: %', updated_user.email;
+  ELSE
+    RAISE EXCEPTION 'Failed to update admin password';
+  END IF;
 END $$;
