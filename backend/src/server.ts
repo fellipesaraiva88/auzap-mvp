@@ -28,6 +28,16 @@ baileysService.setSocketEmitter((event: string, data: any) => {
   logger.debug({ event, organizationId: data.organizationId }, 'Socket.IO event emitted');
 });
 
+// VasculhadorService Socket.IO integration (Dinheiro Esquecido real-time)
+import { vasculhadorService } from './services/esquecidos/vasculhador.service.js';
+vasculhadorService.setSocketEmitter((event: string, data: any) => {
+  const orgId = data.organization_id || data.organizationId;
+  if (orgId) {
+    io.to(`org:${orgId}`).emit(event, data);
+    logger.debug({ event, organizationId: orgId }, 'Dinheiro Esquecido event emitted');
+  }
+});
+
 // WhatsApp Health Check Job (reconexão automática a cada 5 min)
 import './queue/jobs/whatsapp-health-check.job.js';
 logger.info('WhatsApp health check job loaded');
@@ -173,6 +183,7 @@ app.use('/api/followups', (await import('./routes/followups.routes.js')).default
 app.use('/api/settings', (await import('./routes/settings.routes.js')).default);
 app.use('/api/automations', (await import('./routes/automations.routes.js')).default);
 app.use('/api/conversations', (await import('./routes/conversations.routes.js')).default);
+app.use('/api/esquecidos', (await import('./routes/esquecidos.routes.js')).default);
 
 // Admin Panel Routes (internal users only)
 app.use('/api/internal/auth', (await import('./routes/admin/auth.routes.js')).default);
