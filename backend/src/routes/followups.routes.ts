@@ -1,19 +1,20 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { supabaseAdmin } from '../config/supabase.js';
 import { logger } from '../config/logger.js';
+import { TenantRequest, tenantMiddleware, validateResource } from '../middleware/tenant.middleware.js';
+import { standardLimiter } from '../middleware/rate-limiter.js';
 
 const router = Router();
 
-// Get follow-ups by status
-router.get('/', async (req, res): Promise<void> => {
-  try {
-    const organizationId = req.headers['x-organization-id'] as string;
-    const status = req.query.status as string;
+// Apply tenant middleware and rate limiting to all routes
+router.use(tenantMiddleware);
+router.use(standardLimiter);
 
-    if (!organizationId) {
-      res.status(400).json({ error: 'Organization ID required' });
-      return;
-    }
+// Get follow-ups by status
+router.get('/', async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const organizationId = req.organizationId!;
+    const status = req.query.status as string;
 
     let query = supabaseAdmin
       .from('scheduled_followups')
@@ -57,16 +58,11 @@ router.get('/', async (req, res): Promise<void> => {
   }
 });
 
-// Get follow-up details
-router.get('/:id', async (req, res): Promise<void> => {
+// Get follow-up details (with organization validation)
+router.get('/:id', validateResource('id', 'scheduled_followups'), async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
+    const organizationId = req.organizationId!;
     const { id } = req.params;
-
-    if (!organizationId) {
-      res.status(400).json({ error: 'Organization ID required' });
-      return;
-    }
 
     const { data: followup, error } = await supabaseAdmin
       .from('scheduled_followups')
@@ -96,15 +92,10 @@ router.get('/:id', async (req, res): Promise<void> => {
 });
 
 // Create follow-up
-router.post('/', async (req, res): Promise<void> => {
+router.post('/', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
+    const organizationId = req.organizationId!;
     const { contact_id, scheduled_for, message } = req.body;
-
-    if (!organizationId) {
-      res.status(400).json({ error: 'Organization ID required' });
-      return;
-    }
 
     const { data: followup, error } = await supabaseAdmin
       .from('scheduled_followups')
@@ -127,16 +118,11 @@ router.post('/', async (req, res): Promise<void> => {
   }
 });
 
-// Cancel follow-up
-router.delete('/:id', async (req, res): Promise<void> => {
+// Cancel follow-up (with organization validation)
+router.delete('/:id', validateResource('id', 'scheduled_followups'), async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
+    const organizationId = req.organizationId!;
     const { id } = req.params;
-
-    if (!organizationId) {
-      res.status(400).json({ error: 'Organization ID required' });
-      return;
-    }
 
     const { error } = await supabaseAdmin
       .from('scheduled_followups')

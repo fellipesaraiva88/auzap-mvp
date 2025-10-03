@@ -1,12 +1,18 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { PetsService } from '../services/pets/pets.service.js';
 import { logger } from '../config/logger.js';
+import { TenantRequest, tenantMiddleware, validateResource } from '../middleware/tenant.middleware.js';
+import { standardLimiter } from '../middleware/rate-limiter.js';
 
 const router = Router();
 const petsService = new PetsService();
 
-// List pets by contact
-router.get('/contact/:contactId', async (req: Request, res: Response): Promise<void> => {
+// Apply tenant middleware and rate limiting to all routes
+router.use(tenantMiddleware);
+router.use(standardLimiter);
+
+// List pets by contact (with organization validation)
+router.get('/contact/:contactId', validateResource('contactId', 'contacts'), async (req: TenantRequest, res: Response): Promise<void> => {
   try {
     const { contactId } = req.params;
     const pets = await petsService.listByContact(contactId);
@@ -19,9 +25,9 @@ router.get('/contact/:contactId', async (req: Request, res: Response): Promise<v
 });
 
 // List pets by organization
-router.get('/organization', async (req: Request, res: Response): Promise<void> => {
+router.get('/organization', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
+    const organizationId = req.organizationId!;
     const { search, species } = req.query;
 
     const pets = await petsService.listByOrganization(organizationId, {
@@ -36,8 +42,8 @@ router.get('/organization', async (req: Request, res: Response): Promise<void> =
   }
 });
 
-// Get pet by ID
-router.get('/:id', async (req, res): Promise<void> => {
+// Get pet by ID (with organization validation)
+router.get('/:id', validateResource('id', 'pets'), async (req: TenantRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const pet = await petsService.findById(id);
@@ -55,9 +61,9 @@ router.get('/:id', async (req, res): Promise<void> => {
 });
 
 // Create pet
-router.post('/', async (req: Request, res: Response): Promise<void> => {
+router.post('/', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
+    const organizationId = req.organizationId!;
     const petData = { ...req.body, organization_id: organizationId };
 
     const pet = await petsService.create(petData);
@@ -68,8 +74,8 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Update pet
-router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
+// Update pet (with organization validation)
+router.patch('/:id', validateResource('id', 'pets'), async (req: TenantRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const pet = await petsService.update(id, req.body);
