@@ -14,9 +14,9 @@ export function useAuth() {
           const profile = await authService.getProfile()
           setUser(profile)
 
-          // Connect socket and join organization
+          // Connect socket and join organization (only for regular users with organization_id)
           const token = localStorage.getItem('auth_token')
-          if (token) {
+          if (token && profile.organization_id) {
             socketManager.connect(token)
             socketManager.joinOrganization(profile.organization_id)
           }

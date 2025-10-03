@@ -28,8 +28,8 @@ export interface UserProfile {
   email: string;
   full_name: string;
   role: string;
-  organization_id: string;
-  organizations: any;
+  organization_id?: string; // Optional for admin users
+  organizations?: any;
 }
 
 class AuthService {
