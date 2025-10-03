@@ -7,6 +7,7 @@ import { logger } from './config/logger.js';
 import { supabaseAdmin } from './config/supabase.js';
 import { globalLimiter } from './middleware/rate-limiter.js';
 
+// AuZap Backend v2 - Internal Auth with bcryptjs
 const app = express();
 const httpServer = createServer(app);
 
