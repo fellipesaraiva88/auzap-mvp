@@ -47,7 +47,8 @@ async function cleanDatabase() {
   ];
 
   for (const table of tables) {
-    const { error } = await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    // Deletar TUDO da tabela (usando filtro sempre verdadeiro)
+    const { error } = await supabase.from(table).delete().gte('created_at', '1900-01-01');
     if (error && error.code !== 'PGRST116') {
       log.warning(`Erro ao limpar ${table}: ${error.message}`);
     }
@@ -71,7 +72,7 @@ async function cleanDatabase() {
 async function seedOrganization() {
   log.info('🏢 Criando organização...');
 
-  const { data, error } = await supabase.from('organizations').insert({
+  const { data, error } = await supabase.from('organizations').upsert({
     id: ORG_ID,
     name: 'Pet Paradise',
     email: 'contato@petparadise.com',
@@ -79,7 +80,7 @@ async function seedOrganization() {
     address: 'Rua das Flores, 123 - São Paulo, SP',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
-  }).select().single();
+  }, { onConflict: 'id' }).select().single();
 
   if (error) {
     log.error(`Erro ao criar organização: ${error.message}`);
@@ -109,8 +110,8 @@ async function seedUser() {
     return null;
   }
 
-  // Criar entrada na tabela users
-  const { data: userData, error: userError } = await supabase.from('users').insert({
+  // Criar entrada na tabela users (UPSERT caso já exista)
+  const { data: userData, error: userError } = await supabase.from('users').upsert({
     id: authData.user.id,
     organization_id: ORG_ID,
     email: 'admin@petparadise.com',
@@ -119,7 +120,7 @@ async function seedUser() {
     auth_user_id: authData.user.id,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
-  }).select().single();
+  }, { onConflict: 'id' }).select().single();
 
   if (userError) {
     log.error(`Erro ao criar usuário na tabela: ${userError.message}`);
@@ -133,7 +134,7 @@ async function seedUser() {
 async function seedWhatsAppInstance() {
   log.info('📱 Criando instância WhatsApp...');
 
-  const { data, error } = await supabase.from('whatsapp_instances').insert({
+  const { data, error } = await supabase.from('whatsapp_instances').upsert({
     id: INSTANCE_ID,
     organization_id: ORG_ID,
     instance_name: 'Pet Paradise Principal',
@@ -143,7 +144,7 @@ async function seedWhatsAppInstance() {
     last_connected_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
-  }).select().single();
+  }, { onConflict: 'id' }).select().single();
 
   if (error) {
     log.error(`Erro ao criar instância: ${error.message}`);
@@ -157,7 +158,7 @@ async function seedWhatsAppInstance() {
 async function seedSettings() {
   log.info('⚙️  Criando configurações da IA...');
 
-  const { data, error } = await supabase.from('organization_settings').insert({
+  const { data, error } = await supabase.from('organization_settings').upsert({
     organization_id: ORG_ID,
     ai_client_enabled: true,
     ai_client_model: 'gpt-4',
@@ -178,7 +179,7 @@ async function seedSettings() {
     },
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
-  }).select().single();
+  }, { onConflict: 'organization_id' }).select().single();
 
   if (error) {
     log.error(`Erro ao criar settings: ${error.message}`);
@@ -522,8 +523,10 @@ async function main() {
     const contacts = await seedContacts();
     const pets = await seedPets(contacts);
     const conversations = await seedConversations(contacts);
-    // Note: Messages, AI Interactions, Bookings and Followups require schema adjustments
-    // They're commented out for now - basic seed is functional
+    const messages = await seedMessages(conversations, contacts);
+    const aiInteractions = await seedAIInteractions(conversations, contacts, pets);
+    const bookings = await seedBookings(contacts, pets);
+    const followups = await seedFollowups(contacts);
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
 
@@ -535,6 +538,10 @@ async function main() {
     console.log(`   • ${contacts.length} contatos brasileiros`);
     console.log(`   • ${pets.length} pets (mix de cães e gatos)`);
     console.log(`   • ${conversations.length} conversas (3 ativas, 1 escalada, 1 resolvida)`);
+    console.log(`   • ${messages.length} mensagens`);
+    console.log(`   • ${aiInteractions.length} interações da IA`);
+    console.log(`   • ${bookings.length} agendamentos`);
+    console.log(`   • ${followups.length} follow-ups pendentes`);
     console.log(`\n⏱️  Tempo: ${duration}s\n`);
     console.log('🔑 Credenciais de acesso:');
     console.log('   Email: admin@petparadise.com');
