@@ -61,7 +61,7 @@ export class AdminAuthService {
         .select('*')
         .eq('email', email.toLowerCase())
         .eq('is_active', true)
-        .single();
+        .single() as { data: any; error: any };
 
       if (error || !user) {
         logger.warn({ email }, 'Internal user not found or inactive');
@@ -93,7 +93,7 @@ export class AdminAuthService {
       await (supabaseAdmin as any)
         .from('internal_users')
         .update({ last_login_at: new Date().toISOString() })
-        .eq('id', user.id);
+        .eq('id', user.id) as { data: any; error: any };
 
       // Gerar JWT
       const payload: AdminJWTPayload = {
@@ -165,7 +165,7 @@ export class AdminAuthService {
         .select('id, name, email, role, is_active, last_login_at')
         .eq('id', userId)
         .eq('is_active', true)
-        .single();
+        .single() as { data: any; error: any };
 
       if (error || !user) {
         return null;
@@ -188,7 +188,7 @@ export class AdminAuthService {
         .from('internal_users')
         .select('password_hash')
         .eq('id', userId)
-        .single();
+        .single() as { data: any; error: any };
 
       if (error || !user) {
         return false;
@@ -207,7 +207,7 @@ export class AdminAuthService {
       const { error: updateError } = await (supabaseAdmin as any)
         .from('internal_users')
         .update({ password_hash: newPasswordHash })
-        .eq('id', userId);
+        .eq('id', userId) as { data: any; error: any };
 
       if (updateError) {
         logger.error({ error: updateError, userId }, 'Error updating password');
@@ -238,7 +238,7 @@ export class AdminAuthService {
       const { error } = await (supabaseAdmin as any)
         .from('internal_users')
         .update({ password_hash: newPasswordHash })
-        .eq('id', targetUserId);
+        .eq('id', targetUserId) as { data: any; error: any };
 
       if (error) {
         logger.error({ error, targetUserId }, 'Error resetting password');
