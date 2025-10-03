@@ -11,10 +11,14 @@
             "id": "435ce28ca065eda0",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Visualização de diagrama de grafo"
+              "type": "markdown",
+              "state": {
+                "file": "dual-cerebros.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "dual-cerebros"
             }
           }
         ]
@@ -74,8 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "right": {
     "id": "b09fa0c39bbaf777",
@@ -165,6 +168,9 @@
   },
   "active": "435ce28ca065eda0",
   "lastOpenFiles": [
+    "atendente.md",
+    "dinheiro-vazando.md",
+    "sozinho.md",
     "oportunidades.md",
     "README.md",
     "liberdade.md",
@@ -181,7 +187,6 @@
     "booking.md",
     "resposta-rapida.md",
     "aurora.md",
-    "dinheiro-vazando.md",
     "conexao-8dig.md",
     "whatsapp-ferramenta.md",
     "paz.md",
@@ -189,8 +194,6 @@
     "recuperar.md",
     "contexto.md",
     "dual-cerebros.md",
-    "atendente.md",
-    "no-shows.md",
     "4_TRANSFORMACIONAL",
     "3_ARQUITETURAL",
     "2_ESTRATEGICO",
