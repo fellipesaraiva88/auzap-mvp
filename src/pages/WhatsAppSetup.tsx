@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,11 +18,24 @@ import { useWhatsAppInstances, useInitializeWhatsApp } from '@/hooks/useWhatsApp
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Loader2, MessageSquare, QrCode, Smartphone, Check, ArrowLeft } from 'lucide-react';
 import { isValidPhoneNumber, formatPhoneNumberIntl } from 'react-phone-number-input';
+import { ModalDinheiroEsquecido } from '@/components/esquecidos/ModalDinheiroEsquecido';
+import { ProgressoDaIA } from '@/components/esquecidos/ProgressoDaIA';
+import { useClientesEsquecidos } from '@/hooks/useClientesEsquecidos';
 
 export default function WhatsAppSetup() {
   const { toast } = useToast();
   const { data, isLoading, refetch } = useWhatsAppInstances();
   const initializeWhatsApp = useInitializeWhatsApp();
+
+  // Dinheiro Esquecido
+  const {
+    progresso,
+    vasculhandoAgora,
+    resultadoVasculhada,
+    estatisticas
+  } = useClientesEsquecidos();
+
+  const [modalEsquecidosOpen, setModalEsquecidosOpen] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -31,6 +44,16 @@ export default function WhatsAppSetup() {
   const [showConfirmation, setShowConfirmation] = useState(false);
 
   const instances = data?.instances || [];
+
+  // Abrir modal automaticamente quando vasculhada terminar
+  useEffect(() => {
+    if (resultadoVasculhada && resultadoVasculhada.total_clientes_esquecidos > 0) {
+      // Aguardar 2s para dar tempo de processar
+      setTimeout(() => {
+        setModalEsquecidosOpen(true);
+      }, 2000);
+    }
+  }, [resultadoVasculhada]);
 
   const handleNext = () => {
     // Validar telefone se for pairing code
@@ -324,6 +347,13 @@ export default function WhatsAppSetup() {
         }
       />
 
+      {/* Progresso da Vasculhada */}
+      {vasculhandoAgora && (
+        <div className="mb-6">
+          <ProgressoDaIA progresso={progresso} vasculhandoAgora={vasculhandoAgora} />
+        </div>
+      )}
+
       {instances.length === 0 ? (
         <Card className="glass-card">
           <CardContent className="flex flex-col items-center justify-center py-16">
@@ -349,6 +379,12 @@ export default function WhatsAppSetup() {
           ))}
         </div>
       )}
+
+      {/* Modal Dinheiro Esquecido */}
+      <ModalDinheiroEsquecido
+        open={modalEsquecidosOpen}
+        onOpenChange={setModalEsquecidosOpen}
+      />
 
       {/* Info Cards */}
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">

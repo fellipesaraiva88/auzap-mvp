@@ -297,6 +297,33 @@ export class BaileysService {
         instance.lastActivity = new Date();
         instance.reconnectAttempts = 0;
       }
+
+      // Trigger Vasculhada de Dinheiro Esquecido (primeira conexão)
+      this.checkAndTriggerVasculhada(organizationId, instanceId);
+    }
+  }
+
+  /**
+   * Verifica se deve triggerar vasculhada de Dinheiro Esquecido
+   * Executa apenas na PRIMEIRA conexão bem-sucedida
+   */
+  private async checkAndTriggerVasculhada(organizationId: string, instanceId: string): Promise<void> {
+    try {
+      // Importar dinamicamente para evitar dependência circular
+      const { triggerVasculhada, jaFezVasculhada } = await import('../queue/jobs/vasculhar-esquecidos.job.js');
+
+      // Verificar se já fez vasculhada antes
+      const jaFez = await jaFezVasculhada(organizationId, instanceId);
+
+      if (!jaFez) {
+        logger.info({ organizationId, instanceId }, '🔍 Primeira conexão! Triggering vasculhada de Dinheiro Esquecido...');
+        await triggerVasculhada(organizationId, instanceId);
+      } else {
+        logger.debug({ organizationId, instanceId }, 'Vasculhada já foi feita anteriormente');
+      }
+    } catch (error) {
+      logger.error({ error, organizationId, instanceId }, 'Erro ao verificar/trigger vasculhada');
+      // Não propagar erro - vasculhada é feature secundária
     }
   }
 

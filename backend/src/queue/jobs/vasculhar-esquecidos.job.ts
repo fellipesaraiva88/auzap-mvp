@@ -19,7 +19,7 @@ import { respostaProntaService } from '../../services/esquecidos/resposta-pronta
  * 5. Emite eventos Socket.IO em tempo real
  */
 
-interface VasculharEsquecidosJobData {
+export interface VasculharEsquecidosJobData {
   organization_id: string;
   instance_id: string;
 }
@@ -112,18 +112,28 @@ export async function processarVasculhada(job: Job<VasculharEsquecidosJobData>):
 
 /**
  * Verifica se já foi feita vasculhada para esta instância
+ * Checando se já tem clientes esquecidos no banco
  */
 export async function jaFezVasculhada(
   organizationId: string,
   instanceId: string
 ): Promise<boolean> {
   try {
-    const jobs = await vasculharQueue.getJobs(['completed']);
+    const { supabaseAdmin } = await import('../../config/supabase.js');
 
-    return jobs.some(
-      j =>
-        j.data.organization_id === organizationId && j.data.instance_id === instanceId
-    );
+    const { data, error } = await supabaseAdmin
+      .from('clientes_esquecidos')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('instance_id', instanceId)
+      .limit(1);
+
+    if (error) {
+      logger.error({ error }, 'Erro ao verificar vasculhadas anteriores');
+      return false;
+    }
+
+    return data && data.length > 0;
   } catch (error) {
     logger.error({ error }, 'Erro ao verificar histórico de vasculhadas');
     return false;
