@@ -8,8 +8,6 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PawLoader } from "@/components/PawLoader";
-import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
-import { PWAUpdateNotification } from "@/components/pwa/PWAUpdateNotification";
 
 // Lazy load pages for better code-splitting
 const Index = lazy(() => import("./pages/Index"));
@@ -47,8 +45,6 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <PWAInstallPrompt />
-      <PWAUpdateNotification />
       <BrowserRouter>
         <Suspense fallback={<PawLoader />}>
           <Routes>

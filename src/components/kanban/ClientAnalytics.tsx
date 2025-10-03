@@ -40,17 +40,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface Client {
-  id: string;
-  name: string;
-  status?: string;
-  lastInteraction?: string;
-  tags?: string[];
-  [key: string]: unknown;
-}
-
 interface ClientAnalyticsProps {
-  clients: Client[];
+  clients: any[];
   dateRange?: { start: Date; end: Date };
 }
 
