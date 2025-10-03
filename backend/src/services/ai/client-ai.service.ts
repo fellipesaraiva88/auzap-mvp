@@ -786,6 +786,361 @@ Informações que você pode coletar:
       };
     }
   }
+
+  /**
+   * Criar plano de adestramento (NEW)
+   */
+  private async criarPlanoAdestramento(
+    organizationId: string,
+    contactId: string,
+    args: any
+  ): Promise<any> {
+    try {
+      logger.info({ organizationId, contactId }, 'Creating training plan via new AI function');
+
+      const plan = await TrainingService.createTrainingPlan({
+        organizationId,
+        petId: args.petId,
+        contactId,
+        initialAssessment: {
+          rotina: args.goals.join(', '),
+          problemas: args.goals,
+          relacao_familia: 'A ser avaliado',
+          historico_saude: 'A ser avaliado',
+          observacao_pratica: 'A ser avaliado',
+          objetivos: args.goals
+        },
+        planType: args.planType,
+        durationWeeks: Math.ceil(args.totalSessions / 4),
+        methodology: args.planType === 'basico' ? 'positivo' : 'misto',
+        locationType: 'domicilio'
+      });
+
+      return {
+        success: true,
+        message: `Plano de adestramento ${args.planType} criado! Total de ${args.totalSessions} sessões.`,
+        planId: plan.id
+      };
+    } catch (error) {
+      logger.error({ error }, 'Error creating training plan');
+      return {
+        success: false,
+        message: 'Erro ao criar plano de adestramento'
+      };
+    }
+  }
+
+  /**
+   * Listar planos de adestramento (NEW)
+   */
+  private async listarPlanosAdestramento(
+    organizationId: string,
+    contactId: string,
+    petId?: string
+  ): Promise<any> {
+    try {
+      const { data: plans } = await supabaseAdmin
+        .from('training_plans')
+        .select(`
+          id,
+          plan_type,
+          status,
+          start_date,
+          end_date,
+          total_sessions,
+          completed_sessions
+        `)
+        .eq('organization_id', organizationId)
+        .eq('contact_id', contactId)
+        .eq(petId ? 'pet_id' : 'contact_id', petId || contactId)
+        .order('created_at', { ascending: false });
+
+      if (!plans || plans.length === 0) {
+        return {
+          success: true,
+          plans: [],
+          message: 'Nenhum plano de adestramento encontrado.'
+        };
+      }
+
+      return {
+        success: true,
+        plans: plans.map(p => ({
+          id: p.id,
+          tipo: p.plan_type,
+          status: p.status,
+          inicio: p.start_date,
+          fim: p.end_date,
+          sessoes: `${p.completed_sessions}/${p.total_sessions}`
+        })),
+        message: `Encontrados ${plans.length} plano(s) de adestramento.`
+      };
+    } catch (error) {
+      logger.error({ error }, 'Error listing training plans');
+      return {
+        success: false,
+        plans: [],
+        message: 'Erro ao listar planos'
+      };
+    }
+  }
+
+  /**
+   * Criar reserva de hospedagem (NEW)
+   */
+  private async criarReservaHospedagem(
+    organizationId: string,
+    contactId: string,
+    args: any
+  ): Promise<any> {
+    try {
+      const stay = await DaycareService.createStay({
+        organizationId,
+        petId: args.petId,
+        contactId,
+        healthAssessment: {
+          vacinas: true,
+          vermifugo: true,
+          exames: [],
+          restricoes_alimentares: args.specialRequests ? [args.specialRequests] : []
+        },
+        behaviorAssessment: {
+          socializacao: 'média',
+          ansiedade: 'média',
+          energia: 'média'
+        },
+        stayType: args.stayType === 'daycare_diario' ? 'daycare' : 'hotel',
+        checkInDate: args.checkInDate,
+        checkOutDate: args.checkOutDate,
+        extraServices: [],
+        notes: args.specialRequests
+      });
+
+      return {
+        success: true,
+        message: `Reserva de ${args.stayType.replace('_', ' ')} criada! Check-in: ${args.checkInDate}`,
+        stayId: stay.id,
+        status: stay.status
+      };
+    } catch (error) {
+      logger.error({ error }, 'Error creating daycare reservation');
+      return {
+        success: false,
+        message: 'Erro ao criar reserva'
+      };
+    }
+  }
+
+  /**
+   * Listar reservas de hospedagem (NEW)
+   */
+  private async listarReservasHospedagem(
+    organizationId: string,
+    contactId: string,
+    args: any
+  ): Promise<any> {
+    try {
+      let query = supabaseAdmin
+        .from('daycare_hotel_stays')
+        .select(`
+          id,
+          stay_type,
+          status,
+          check_in_date,
+          check_out_date,
+          pet_id
+        `)
+        .eq('organization_id', organizationId)
+        .eq('contact_id', contactId);
+
+      if (args.petId) {
+        query = query.eq('pet_id', args.petId);
+      }
+      if (args.status) {
+        query = query.eq('status', args.status);
+      }
+
+      const { data: reservations } = await query
+        .order('check_in_date', { ascending: false });
+
+      if (!reservations || reservations.length === 0) {
+        return {
+          success: true,
+          reservations: [],
+          message: 'Nenhuma reserva encontrada.'
+        };
+      }
+
+      return {
+        success: true,
+        reservations: reservations.map(r => ({
+          id: r.id,
+          tipo: r.stay_type,
+          status: r.status,
+          entrada: r.check_in_date,
+          saida: r.check_out_date
+        })),
+        message: `Encontradas ${reservations.length} reserva(s).`
+      };
+    } catch (error) {
+      logger.error({ error }, 'Error listing reservations');
+      return {
+        success: false,
+        reservations: [],
+        message: 'Erro ao listar reservas'
+      };
+    }
+  }
+
+  /**
+   * Consultar protocolo BIPE do pet (NEW)
+   */
+  private async consultarBipePet(
+    organizationId: string,
+    petId: string
+  ): Promise<any> {
+    try {
+      const { data: bipeData } = await supabaseAdmin
+        .from('bipe_protocol')
+        .select(`
+          id,
+          aspect,
+          value,
+          status,
+          last_updated
+        `)
+        .eq('organization_id', organizationId)
+        .eq('pet_id', petId)
+        .order('aspect');
+
+      if (!bipeData || bipeData.length === 0) {
+        return {
+          success: true,
+          message: 'Protocolo BIPE ainda não iniciado para este pet.',
+          protocol: null
+        };
+      }
+
+      // Organizar por aspecto
+      const protocol = {
+        behavioral: bipeData.find(b => b.aspect === 'behavioral'),
+        individual: bipeData.find(b => b.aspect === 'individual'),
+        preventive: bipeData.find(b => b.aspect === 'preventive'),
+        emergent: bipeData.find(b => b.aspect === 'emergent')
+      };
+
+      // Verificar alertas
+      const hasAlerts = bipeData.some(b => b.status === 'alert');
+
+      return {
+        success: true,
+        message: hasAlerts ? 'ATENÇÃO: Pet possui alertas no protocolo BIPE!' : 'Protocolo BIPE em dia.',
+        protocol,
+        hasAlerts
+      };
+    } catch (error) {
+      logger.error({ error }, 'Error consulting BIPE protocol');
+      return {
+        success: false,
+        message: 'Erro ao consultar protocolo BIPE'
+      };
+    }
+  }
+
+  /**
+   * Adicionar alerta de saúde ao BIPE (NEW)
+   */
+  private async adicionarAlertaSaude(
+    organizationId: string,
+    args: any
+  ): Promise<any> {
+    try {
+      // Mapear tipo de alerta para aspecto BIPE
+      const aspectMap = {
+        'vacina_atrasada': 'preventive',
+        'vermifugo_atrasado': 'preventive',
+        'comportamento_critico': 'behavioral',
+        'saude_urgente': 'emergent'
+      };
+
+      const aspect = aspectMap[args.type as keyof typeof aspectMap];
+
+      // Criar ou atualizar entrada BIPE
+      const { data } = await supabaseAdmin
+        .from('bipe_protocol')
+        .upsert({
+          organization_id: organizationId,
+          pet_id: args.petId,
+          aspect,
+          value: args.description,
+          status: 'alert',
+          last_updated: new Date().toISOString()
+        }, {
+          onConflict: 'organization_id,pet_id,aspect'
+        })
+        .select()
+        .single();
+
+      // Notificar Aurora sobre o alerta
+      await BipeService.triggerHealthAlert({
+        organizationId,
+        petId: args.petId,
+        alertType: args.type,
+        description: args.description
+      });
+
+      return {
+        success: true,
+        message: `Alerta de saúde registrado! Tipo: ${args.type}. O gestor foi notificado.`,
+        alertId: data?.id
+      };
+    } catch (error) {
+      logger.error({ error }, 'Error adding health alert');
+      return {
+        success: false,
+        message: 'Erro ao adicionar alerta de saúde'
+      };
+    }
+  }
+
+  /**
+   * Consultar base de conhecimento (NEW)
+   */
+  private async consultarBaseConhecimento(
+    organizationId: string,
+    question: string
+  ): Promise<any> {
+    try {
+      logger.info({ organizationId, question }, 'Searching knowledge base');
+
+      const results = await KnowledgeBaseService.searchKnowledge(organizationId, question);
+
+      if (results.length === 0) {
+        return {
+          success: false,
+          found: false,
+          message: 'Não encontrei resposta para sua pergunta. Vou consultar um especialista.'
+        };
+      }
+
+      // Incrementar uso
+      await KnowledgeBaseService.incrementUsage(results[0].id);
+
+      return {
+        success: true,
+        found: true,
+        answer: results[0].answer,
+        confidence: results.length > 1 ? 'medium' : 'high'
+      };
+    } catch (error) {
+      logger.error({ error }, 'Error searching knowledge base');
+      return {
+        success: false,
+        found: false,
+        message: 'Erro ao buscar resposta'
+      };
+    }
+  }
 }
 
 export const clientAIService = new ClientAIService();
