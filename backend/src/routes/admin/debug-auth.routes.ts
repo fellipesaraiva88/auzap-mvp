@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { supabaseAdmin } from '../../config/supabase.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { logger } from '../../config/logger.js';
 
 const router = Router();

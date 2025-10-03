@@ -6,7 +6,7 @@ import {
   type AdminRequest
 } from '../../middleware/admin-auth.middleware.js';
 import { logger } from '../../config/logger.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 const router = Router();
 
