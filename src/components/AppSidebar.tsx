@@ -52,8 +52,8 @@ const menuGroups: MenuGroup[] = [
       { title: "Família Pet", url: "/clientes", icon: Users },
       { title: "Faturamento", url: "/vendas", icon: TrendingUp },
       {
-        title: "Educar Pets",
-        url: "/training",
+        title: "Adestramento",
+        url: "/training-plans",
         icon: GraduationCap,
         badge: { text: "Novo", variant: "new" }
       },

@@ -313,17 +313,83 @@ router.post('/sessions', criticalLimiter, async (req: TenantRequest, res: Respon
       return;
     }
 
-    // TODO: Implement when training_sessions table is created
-    // const session = await TrainingService.createSession(organizationId, validation.data);
+    const sessionData = {
+      planId: validation.data.planId,
+      sessionNumber: parseInt(req.body.sessionNumber) || 1,
+      scheduledAt: validation.data.scheduledAt,
+      topics: validation.data.topics,
+      notes: validation.data.notes,
+      durationMinutes: req.body.durationMinutes
+    };
 
-    logger.info({ organizationId, planId: validation.data.planId }, 'Training session creation requested');
-    res.status(501).json({
-      error: 'Not implemented yet',
-      message: 'Training sessions will be available when training_sessions table is created'
-    });
+    const session = await TrainingService.createSession(organizationId, sessionData);
+
+    logger.info({ organizationId, sessionId: session.id }, 'Training session created');
+    res.status(201).json({ session });
   } catch (error: any) {
     logger.error({ error, organizationId: req.organizationId }, 'Error creating training session');
     res.status(500).json({ error: 'Failed to create session', message: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/training/sessions
+ * List training sessions with filters
+ * Rate limit: 120 req/min (read)
+ */
+router.get('/sessions', readLimiter, async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const organizationId = req.organizationId!;
+
+    if (!organizationId) {
+      res.status(401).json({ error: 'Organization context missing' });
+      return;
+    }
+
+    const filters = {
+      planId: req.query.planId as string,
+      status: req.query.status as string,
+      fromDate: req.query.fromDate as string,
+      toDate: req.query.toDate as string,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
+      offset: req.query.offset ? parseInt(req.query.offset as string) : undefined
+    };
+
+    const result = await TrainingService.listSessions(organizationId, filters);
+
+    res.json(result);
+  } catch (error: any) {
+    logger.error({ error, organizationId: req.organizationId }, 'Error listing sessions');
+    res.status(500).json({ error: 'Failed to list sessions', message: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/training/sessions/:id
+ * Get session by ID
+ * Rate limit: 120 req/min (read)
+ */
+router.get('/sessions/:id', readLimiter, async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const organizationId = req.organizationId!;
+    const { id } = req.params;
+
+    if (!organizationId) {
+      res.status(401).json({ error: 'Organization context missing' });
+      return;
+    }
+
+    const session = await TrainingService.getSession(id, organizationId);
+
+    if (!session) {
+      res.status(404).json({ error: 'Session not found' });
+      return;
+    }
+
+    res.json({ session });
+  } catch (error: any) {
+    logger.error({ error, sessionId: req.params.id }, 'Error fetching session');
+    res.status(500).json({ error: 'Failed to fetch session', message: error.message });
   }
 });
 
@@ -349,12 +415,10 @@ router.put('/sessions/:id', standardLimiter, async (req: TenantRequest, res: Res
       return;
     }
 
-    // TODO: Implement when training_sessions table is created
-    logger.info({ organizationId, sessionId: id }, 'Training session update requested');
-    res.status(501).json({
-      error: 'Not implemented yet',
-      message: 'Training sessions will be available when training_sessions table is created'
-    });
+    const session = await TrainingService.updateSession(id, organizationId, validation.data);
+
+    logger.info({ organizationId, sessionId: id }, 'Training session updated');
+    res.json({ session });
   } catch (error: any) {
     logger.error({ error, sessionId: req.params.id }, 'Error updating session');
     res.status(500).json({ error: 'Failed to update session', message: error.message });
@@ -376,14 +440,20 @@ router.post('/sessions/:id/complete', standardLimiter, async (req: TenantRequest
       return;
     }
 
-    const { notes, feedback, progressRating } = req.body;
+    const completionData = {
+      completedAt: req.body.completedAt,
+      trainerNotes: req.body.notes || req.body.trainerNotes,
+      achievements: req.body.achievements || [],
+      challenges: req.body.challenges || [],
+      petBehaviorRating: req.body.progressRating || req.body.petBehaviorRating,
+      skillsWorked: req.body.skillsWorked || [],
+      homework: req.body.homework
+    };
 
-    // TODO: Implement when training_sessions table is created
-    logger.info({ organizationId, sessionId: id }, 'Training session completion requested');
-    res.status(501).json({
-      error: 'Not implemented yet',
-      message: 'Training sessions will be available when training_sessions table is created'
-    });
+    const session = await TrainingService.completeSession(id, organizationId, completionData);
+
+    logger.info({ organizationId, sessionId: id }, 'Training session completed');
+    res.json({ session });
   } catch (error: any) {
     logger.error({ error, sessionId: req.params.id }, 'Error completing session');
     res.status(500).json({ error: 'Failed to complete session', message: error.message });
@@ -404,18 +474,65 @@ router.get('/sessions/upcoming', readLimiter, async (req: TenantRequest, res: Re
       return;
     }
 
-    const { limit = '10', days = '7' } = req.query;
+    const days = req.query.days ? parseInt(req.query.days as string) : 7;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
 
-    // TODO: Implement when training_sessions table is created
-    logger.info({ organizationId, limit, days }, 'Upcoming sessions query requested');
-    res.status(501).json({
-      error: 'Not implemented yet',
-      message: 'Training sessions will be available when training_sessions table is created',
-      sessions: []
-    });
+    const sessions = await TrainingService.getUpcomingSessions(organizationId, days, limit);
+
+    res.json({ sessions, total: sessions.length });
   } catch (error: any) {
     logger.error({ error, organizationId: req.organizationId }, 'Error fetching upcoming sessions');
     res.status(500).json({ error: 'Failed to fetch upcoming sessions', message: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/training/plans/:id/sessions
+ * Get sessions for a specific plan
+ * Rate limit: 120 req/min (read)
+ */
+router.get('/plans/:id/sessions', readLimiter, validateResource('id', 'training_plans'), async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const organizationId = req.organizationId!;
+    const { id } = req.params;
+
+    if (!organizationId) {
+      res.status(401).json({ error: 'Organization context missing' });
+      return;
+    }
+
+    const sessions = await TrainingService.getSessionsByPlan(id, organizationId);
+
+    res.json({ sessions, total: sessions.length });
+  } catch (error: any) {
+    logger.error({ error, planId: req.params.id }, 'Error fetching plan sessions');
+    res.status(500).json({ error: 'Failed to fetch plan sessions', message: error.message });
+  }
+});
+
+/**
+ * DELETE /api/v1/training/sessions/:id
+ * Cancel session
+ * Rate limit: 10 req/min (critical)
+ */
+router.delete('/sessions/:id', criticalLimiter, async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const organizationId = req.organizationId!;
+    const { id } = req.params;
+
+    if (!organizationId) {
+      res.status(401).json({ error: 'Organization context missing' });
+      return;
+    }
+
+    const reason = req.body.reason;
+    await TrainingService.cancelSession(id, organizationId, reason);
+
+    logger.info({ organizationId, sessionId: id }, 'Training session cancelled');
+    res.status(204).send();
+  } catch (error: any) {
+    logger.error({ error, sessionId: req.params.id }, 'Error cancelling session');
+    res.status(500).json({ error: 'Failed to cancel session', message: error.message });
   }
 });
 

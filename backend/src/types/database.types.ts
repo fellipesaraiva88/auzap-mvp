@@ -1661,6 +1661,91 @@ export type Database = {
           },
         ]
       }
+      training_sessions: {
+        Row: {
+          achievements: string[] | null
+          challenges: string[] | null
+          completed_at: string | null
+          created_at: string
+          duration_minutes: number | null
+          homework: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          pet_behavior_rating: number | null
+          scheduled_at: string
+          session_number: number
+          skills_worked: Json | null
+          status: string
+          topics: string[]
+          trainer_notes: string | null
+          training_plan_id: string
+          updated_at: string
+        }
+        Insert: {
+          achievements?: string[] | null
+          challenges?: string[] | null
+          completed_at?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          homework?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          pet_behavior_rating?: number | null
+          scheduled_at: string
+          session_number: number
+          skills_worked?: Json | null
+          status?: string
+          topics?: string[]
+          trainer_notes?: string | null
+          training_plan_id: string
+          updated_at?: string
+        }
+        Update: {
+          achievements?: string[] | null
+          challenges?: string[] | null
+          completed_at?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          homework?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          pet_behavior_rating?: number | null
+          scheduled_at?: string
+          session_number?: number
+          skills_worked?: Json | null
+          status?: string
+          topics?: string[]
+          trainer_notes?: string | null
+          training_plan_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_training_plan_id_fkey"
+            columns: ["training_plan_id"]
+            isOneToOne: false
+            referencedRelation: "training_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           auth_user_id: string | null
@@ -1829,131 +1914,6 @@ export type Database = {
           },
         ]
       }
-      admin_actions_log: {
-        Row: {
-          id: string
-          admin_id: string
-          target_client_id: string | null
-          target_user_id: string | null
-          action_type: string
-          action_details: string | null
-          metadata: Json
-          ip_address: string | null
-          user_agent: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          admin_id: string
-          target_client_id?: string | null
-          target_user_id?: string | null
-          action_type: string
-          action_details?: string | null
-          metadata?: Json
-          ip_address?: string | null
-          user_agent?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          admin_id?: string
-          target_client_id?: string | null
-          target_user_id?: string | null
-          action_type?: string
-          action_details?: string | null
-          metadata?: Json
-          ip_address?: string | null
-          user_agent?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "admin_actions_log_admin_id_fkey"
-            columns: ["admin_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "admin_actions_log_target_client_id_fkey"
-            columns: ["target_client_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "admin_actions_log_target_user_id_fkey"
-            columns: ["target_user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      admin_impersonation_sessions: {
-        Row: {
-          id: string
-          admin_id: string
-          target_client_id: string
-          target_user_id: string
-          impersonation_token: string
-          started_at: string
-          expires_at: string
-          ended_at: string | null
-          is_active: boolean
-          ip_address: string | null
-          user_agent: string | null
-        }
-        Insert: {
-          id?: string
-          admin_id: string
-          target_client_id: string
-          target_user_id: string
-          impersonation_token: string
-          started_at?: string
-          expires_at: string
-          ended_at?: string | null
-          is_active?: boolean
-          ip_address?: string | null
-          user_agent?: string | null
-        }
-        Update: {
-          id?: string
-          admin_id?: string
-          target_client_id?: string
-          target_user_id?: string
-          impersonation_token?: string
-          started_at?: string
-          expires_at?: string
-          ended_at?: string | null
-          is_active?: boolean
-          ip_address?: string | null
-          user_agent?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "admin_impersonation_sessions_admin_id_fkey"
-            columns: ["admin_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "admin_impersonation_sessions_target_client_id_fkey"
-            columns: ["target_client_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "admin_impersonation_sessions_target_user_id_fkey"
-            columns: ["target_user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
     }
     Views: {
       dashboard_metrics: {
@@ -1974,27 +1934,6 @@ export type Database = {
           organization_name: string | null
           revenue_this_month_cents: number | null
           revenue_this_week_cents: number | null
-        }
-        Relationships: []
-      }
-      admin_audit_history: {
-        Row: {
-          id: string
-          action_type: string
-          action_details: string | null
-          created_at: string
-          admin_id: string
-          admin_name: string | null
-          admin_email: string | null
-          client_id: string | null
-          client_name: string | null
-          client_email: string | null
-          target_user_id: string | null
-          target_user_name: string | null
-          target_user_email: string | null
-          metadata: Json
-          ip_address: string | null
-          user_agent: string | null
         }
         Relationships: []
       }

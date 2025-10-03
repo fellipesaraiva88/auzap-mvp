@@ -257,47 +257,362 @@ export class TrainingService {
   }
 
   /**
-   * 6-9. Métodos de Sessões
-   * NOTA: Requerem tabela training_sessions (não existe no schema atual)
-   * Estes métodos estão preparados para quando a tabela for criada
+   * ==================== MÉTODOS DE SESSÕES ====================
    */
 
   /**
-   * 6. Criar sessão
-   * NOTA: Requer tabela training_sessions (não existe no schema)
+   * 6. Criar nova sessão de adestramento
    */
-  static async createSession(planId: string, sessionData: any): Promise<any> {
-    logger.warn({ planId }, 'createSession: training_sessions table not implemented');
-    throw new Error(
-      'Training sessions table not yet implemented. ' +
-      'Migration required to create training_sessions table with columns: ' +
-      'id, organization_id, training_plan_id, session_number, scheduled_at, ' +
-      'duration_minutes, status, trainer_notes, skills_worked, pet_behavior_rating'
-    );
+  static async createSession(
+    organizationId: string,
+    sessionData: {
+      planId: string;
+      sessionNumber: number;
+      scheduledAt: string;
+      topics: string[];
+      notes?: string;
+      durationMinutes?: number;
+    }
+  ) {
+    try {
+      logger.info({
+        organizationId,
+        planId: sessionData.planId,
+        sessionNumber: sessionData.sessionNumber
+      }, 'Creating training session');
+
+      // Verificar se o plano existe e pertence à organização
+      const plan = await this.getTrainingPlan(sessionData.planId, organizationId);
+      if (!plan) {
+        throw new Error('Training plan not found');
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from('training_sessions')
+        .insert({
+          organization_id: organizationId,
+          training_plan_id: sessionData.planId,
+          session_number: sessionData.sessionNumber,
+          scheduled_at: sessionData.scheduledAt,
+          topics: sessionData.topics,
+          notes: sessionData.notes,
+          duration_minutes: sessionData.durationMinutes || 60,
+          status: 'agendada'
+        })
+        .select('*')
+        .single();
+
+      if (error) {
+        logger.error({ error }, 'Error creating training session');
+        throw error;
+      }
+
+      logger.info({ sessionId: data.id }, 'Training session created successfully');
+      return data;
+    } catch (error) {
+      logger.error({ error }, 'Failed to create training session');
+      throw error;
+    }
   }
 
   /**
-   * 7. Atualizar sessão
+   * 7. Listar sessões com filtros
    */
-  static async updateSession(sessionId: string, updates: any): Promise<any> {
-    logger.warn({ sessionId }, 'updateSession: training_sessions table not implemented');
-    throw new Error('Training sessions table not yet implemented. Migration required.');
+  static async listSessions(
+    organizationId: string,
+    filters?: {
+      planId?: string;
+      status?: string;
+      fromDate?: string;
+      toDate?: string;
+      limit?: number;
+      offset?: number;
+    }
+  ) {
+    try {
+      let query = supabaseAdmin
+        .from('training_sessions')
+        .select(`
+          *,
+          training_plan:training_plans(
+            id,
+            plan_type,
+            status,
+            pet:pets(id, name, species),
+            contact:contacts(id, full_name, phone_number)
+          )
+        `, { count: 'exact' })
+        .eq('organization_id', organizationId)
+        .order('scheduled_at', { ascending: false });
+
+      // Filtros opcionais
+      if (filters?.planId) {
+        query = query.eq('training_plan_id', filters.planId);
+      }
+      if (filters?.status) {
+        query = query.eq('status', filters.status);
+      }
+      if (filters?.fromDate) {
+        query = query.gte('scheduled_at', filters.fromDate);
+      }
+      if (filters?.toDate) {
+        query = query.lte('scheduled_at', filters.toDate);
+      }
+
+      // Paginação
+      const limit = filters?.limit || 20;
+      const offset = filters?.offset || 0;
+      query = query.range(offset, offset + limit - 1);
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      return {
+        sessions: data || [],
+        total: count || 0,
+        limit,
+        offset
+      };
+    } catch (error) {
+      logger.error({ error, organizationId }, 'Error listing training sessions');
+      throw error;
+    }
   }
 
   /**
-   * 8. Completar sessão
+   * 8. Buscar sessão por ID
    */
-  static async completeSession(sessionId: string): Promise<void> {
-    logger.warn({ sessionId }, 'completeSession: training_sessions table not implemented');
-    throw new Error('Training sessions table not yet implemented. Migration required.');
+  static async getSession(sessionId: string, organizationId: string) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('training_sessions')
+        .select(`
+          *,
+          training_plan:training_plans(
+            id,
+            plan_type,
+            duration_weeks,
+            pet:pets(id, name, species, breed),
+            contact:contacts(id, full_name, phone_number)
+          )
+        `)
+        .eq('id', sessionId)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return null;
+        }
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      logger.error({ error, sessionId }, 'Error fetching training session');
+      throw error;
+    }
   }
 
   /**
-   * 9. Obter próximas sessões
+   * 9. Atualizar sessão
    */
-  static async getUpcomingSessions(organizationId: string, limit: number = 10): Promise<any[]> {
-    logger.warn({ organizationId }, 'getUpcomingSessions: training_sessions table not implemented');
-    throw new Error('Training sessions table not yet implemented. Migration required.');
+  static async updateSession(
+    sessionId: string,
+    organizationId: string,
+    updates: {
+      scheduledAt?: string;
+      status?: string;
+      topics?: string[];
+      notes?: string;
+      trainerNotes?: string;
+      durationMinutes?: number;
+    }
+  ) {
+    try {
+      logger.info({ sessionId, updates }, 'Updating training session');
+
+      const updateData: any = {};
+      if (updates.scheduledAt) updateData.scheduled_at = updates.scheduledAt;
+      if (updates.status) updateData.status = updates.status;
+      if (updates.topics) updateData.topics = updates.topics;
+      if (updates.notes) updateData.notes = updates.notes;
+      if (updates.trainerNotes) updateData.trainer_notes = updates.trainerNotes;
+      if (updates.durationMinutes) updateData.duration_minutes = updates.durationMinutes;
+
+      const { data, error } = await supabaseAdmin
+        .from('training_sessions')
+        .update(updateData)
+        .eq('id', sessionId)
+        .eq('organization_id', organizationId)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      logger.info({ sessionId }, 'Training session updated successfully');
+      return data;
+    } catch (error) {
+      logger.error({ error, sessionId }, 'Error updating training session');
+      throw error;
+    }
+  }
+
+  /**
+   * 10. Completar sessão
+   */
+  static async completeSession(
+    sessionId: string,
+    organizationId: string,
+    completionData: {
+      completedAt?: string;
+      trainerNotes?: string;
+      achievements?: string[];
+      challenges?: string[];
+      petBehaviorRating?: number;
+      skillsWorked?: any[];
+      homework?: string;
+    }
+  ) {
+    try {
+      logger.info({ sessionId }, 'Completing training session');
+
+      const { data, error } = await supabaseAdmin
+        .from('training_sessions')
+        .update({
+          status: 'concluida',
+          completed_at: completionData.completedAt || new Date().toISOString(),
+          trainer_notes: completionData.trainerNotes,
+          achievements: completionData.achievements || [],
+          challenges: completionData.challenges || [],
+          pet_behavior_rating: completionData.petBehaviorRating,
+          skills_worked: completionData.skillsWorked || [],
+          homework: completionData.homework
+        })
+        .eq('id', sessionId)
+        .eq('organization_id', organizationId)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      logger.info({ sessionId }, 'Training session completed successfully');
+      return data;
+    } catch (error) {
+      logger.error({ error, sessionId }, 'Error completing training session');
+      throw error;
+    }
+  }
+
+  /**
+   * 11. Obter próximas sessões agendadas
+   */
+  static async getUpcomingSessions(
+    organizationId: string,
+    days: number = 7,
+    limit: number = 10
+  ) {
+    try {
+      const now = new Date();
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + days);
+
+      const { data, error } = await supabaseAdmin
+        .from('training_sessions')
+        .select(`
+          *,
+          training_plan:training_plans(
+            id,
+            plan_type,
+            pet:pets(id, name, species),
+            contact:contacts(id, full_name, phone_number)
+          )
+        `)
+        .eq('organization_id', organizationId)
+        .eq('status', 'agendada')
+        .gte('scheduled_at', now.toISOString())
+        .lte('scheduled_at', futureDate.toISOString())
+        .order('scheduled_at', { ascending: true })
+        .limit(limit);
+
+      if (error) {
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      logger.error({ error, organizationId }, 'Error fetching upcoming sessions');
+      throw error;
+    }
+  }
+
+  /**
+   * 12. Obter sessões de um plano específico
+   */
+  static async getSessionsByPlan(
+    planId: string,
+    organizationId: string
+  ) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('training_sessions')
+        .select('*')
+        .eq('training_plan_id', planId)
+        .eq('organization_id', organizationId)
+        .order('session_number', { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      logger.error({ error, planId }, 'Error fetching sessions by plan');
+      throw error;
+    }
+  }
+
+  /**
+   * 13. Cancelar sessão
+   */
+  static async cancelSession(
+    sessionId: string,
+    organizationId: string,
+    reason?: string
+  ) {
+    try {
+      const updateData: any = {
+        status: 'cancelada'
+      };
+      if (reason) {
+        updateData.notes = reason;
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from('training_sessions')
+        .update(updateData)
+        .eq('id', sessionId)
+        .eq('organization_id', organizationId)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      logger.info({ sessionId }, 'Training session cancelled');
+      return data;
+    } catch (error) {
+      logger.error({ error, sessionId }, 'Error cancelling session');
+      throw error;
+    }
   }
 
   /**

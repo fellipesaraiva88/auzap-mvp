@@ -98,7 +98,7 @@ const App = () => (
                             <Route path="/ajustes" element={<Ajustes />} />
                             <Route path="/whatsapp" element={<WhatsAppSetup />} />
                             <Route path="/aurora/meet" element={<AuroraMeetPage />} />
-                            <Route path="/training" element={<TrainingPlans />} />
+                            <Route path="/training-plans" element={<TrainingPlans />} />
                             <Route path="/daycare" element={<DaycareStays />} />
                             <Route path="*" element={<NotFound />} />
                           </Routes>
