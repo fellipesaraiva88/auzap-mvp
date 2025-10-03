@@ -370,4 +370,27 @@ router.delete('/instances/:instanceId', async (req: TenantRequest, res: Response
   }
 });
 
+/**
+ * POST /api/whatsapp/health-check
+ * Trigger manual health check (valida todas as instâncias)
+ */
+router.post('/health-check', async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const organizationId = req.organizationId;
+
+    const { triggerWhatsAppHealthCheck } = await import('../queue/jobs/whatsapp-health-check.job.js');
+
+    await triggerWhatsAppHealthCheck(organizationId);
+
+    res.json({
+      success: true,
+      message: 'Health check triggered',
+      organizationId: organizationId || 'all'
+    });
+  } catch (error: any) {
+    logger.error({ error }, 'Error triggering health check');
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

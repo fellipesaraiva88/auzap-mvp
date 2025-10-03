@@ -28,6 +28,10 @@ baileysService.setSocketEmitter((event: string, data: any) => {
   logger.debug({ event, organizationId: data.organizationId }, 'Socket.IO event emitted');
 });
 
+// WhatsApp Health Check Job (reconexão automática a cada 5 min)
+import './queue/jobs/whatsapp-health-check.job.js';
+logger.info('WhatsApp health check job loaded');
+
 // Middleware
 app.use(helmet({
   contentSecurityPolicy: {
@@ -135,6 +139,20 @@ app.get('/health/queues', async (_req: Request, res: Response): Promise<void> =>
     });
   } catch (error) {
     res.status(503).json({ status: 'error', queues: { connected: false, error } });
+  }
+});
+
+app.get('/health/whatsapp', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const { whatsappHealthCheckJob } = await import('./queue/jobs/whatsapp-health-check.job.js');
+    const stats = await whatsappHealthCheckJob.getStats();
+
+    res.json({
+      status: 'ok',
+      healthCheckJob: stats
+    });
+  } catch (error) {
+    res.status(503).json({ status: 'error', whatsapp: { connected: false, error } });
   }
 });
 
