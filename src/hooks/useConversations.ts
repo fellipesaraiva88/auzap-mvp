@@ -19,6 +19,39 @@ export function useConversations(params?: ListConversationsParams) {
     refetchInterval: 15000, // Atualizar a cada 15 segundos
   });
 
+  // 🔴 Supabase Realtime: Sincronização automática de conversas
+  useEffect(() => {
+    const organizationId = localStorage.getItem('organizationId');
+    if (!organizationId) return;
+
+    console.log('[Supabase Realtime] Setting up conversations subscription', { organizationId });
+
+    const channel = supabase
+      .channel('conversations-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'conversations',
+          filter: `organization_id=eq.${organizationId}`
+        },
+        (payload) => {
+          console.log('[Supabase Realtime] Conversation change detected', payload);
+          // Invalidar cache para forçar refetch
+          queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Supabase Realtime] Subscription status:', status);
+      });
+
+    return () => {
+      console.log('[Supabase Realtime] Cleaning up conversations subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   const assumeMutation = useMutation({
     mutationFn: (conversationId: string) =>
       conversationsService.assumeConversation(conversationId),
