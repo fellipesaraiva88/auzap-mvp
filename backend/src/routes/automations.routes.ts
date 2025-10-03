@@ -1,18 +1,19 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { supabaseAdmin } from '../config/supabase.js';
 import { logger } from '../config/logger.js';
+import { TenantRequest, tenantMiddleware } from '../middleware/tenant.middleware.js';
+import { standardLimiter } from '../middleware/rate-limiter.js';
 
 const router = Router();
 
-// Get automation status summary
-router.get('/status', async (req, res): Promise<void> => {
-  try {
-    const organizationId = req.headers['x-organization-id'] as string;
+// Apply tenant middleware and rate limiting to all routes
+router.use(tenantMiddleware);
+router.use(standardLimiter);
 
-    if (!organizationId) {
-      res.status(400).json({ error: 'Organization ID required' });
-      return;
-    }
+// Get automation status summary
+router.get('/status', async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const organizationId = req.organizationId!;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -91,14 +92,9 @@ router.get('/status', async (req, res): Promise<void> => {
 });
 
 // Get recent automation activities (last 10)
-router.get('/activities', async (req, res): Promise<void> => {
+router.get('/activities', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
-
-    if (!organizationId) {
-      res.status(400).json({ error: 'Organization ID required' });
-      return;
-    }
+    const organizationId = req.organizationId!;
 
     // Get recent AI actions from the ai_interactions table
     const { data: activities } = await supabaseAdmin

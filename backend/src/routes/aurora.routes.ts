@@ -1,19 +1,23 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { AuroraService } from '../services/aurora/aurora.service.js';
 import { auroraProactiveService } from '../services/aurora/aurora-proactive.service.js';
+import { TenantRequest, tenantMiddleware } from '../middleware/tenant.middleware.js';
 import { auroraAuthMiddleware } from '../middleware/aurora-auth.middleware.js';
+import { standardLimiter } from '../middleware/rate-limiter.js';
 import { logger } from '../config/logger.js';
 
 const router = Router();
 const auroraService = new AuroraService();
 
-// Aplicar middleware de autenticação em todas as rotas
+// Aplicar tenant middleware PRIMEIRO, depois Aurora auth
+router.use(tenantMiddleware);
+router.use(standardLimiter);
 router.use(auroraAuthMiddleware);
 
 // Generate daily summary
-router.post('/summary/daily', async (req: Request, res: Response): Promise<void> => {
+router.post('/summary/daily', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
+    const { organizationId } = req.auroraContext!;
     const summary = await auroraService.generateDailySummary(organizationId);
 
     res.json({ summary });
@@ -24,9 +28,9 @@ router.post('/summary/daily', async (req: Request, res: Response): Promise<void>
 });
 
 // Get analytics insights
-router.get('/analytics', async (req: Request, res: Response): Promise<void> => {
+router.get('/analytics', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
+    const { organizationId } = req.auroraContext!;
     const summary = await auroraService.generateDailySummary(organizationId);
 
     res.json({ summary });
@@ -37,15 +41,14 @@ router.get('/analytics', async (req: Request, res: Response): Promise<void> => {
 });
 
 // Suggest campaigns
-router.post('/campaigns/suggest', async (req: Request, res: Response): Promise<void> => {
+router.post('/campaigns/suggest', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
-    const { phoneNumber, ownerName } = req.body;
+    const { organizationId, phoneNumber, ownerName } = req.auroraContext!;
 
     const response = await auroraService.processOwnerMessage(
       {
         organizationId,
-        ownerPhone: phoneNumber || '5511999999999',
+        ownerPhone: phoneNumber,
         ownerName: ownerName || 'Proprietário'
       },
       'Sugira campanhas de marketing para aumentar o faturamento'
@@ -59,16 +62,15 @@ router.post('/campaigns/suggest', async (req: Request, res: Response): Promise<v
 });
 
 // Identify opportunities
-router.get('/opportunities', async (req: Request, res: Response): Promise<void> => {
+router.get('/opportunities', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
-    const { phoneNumber, ownerName } = req.query;
+    const { organizationId, phoneNumber, ownerName } = req.auroraContext!;
 
     const response = await auroraService.processOwnerMessage(
       {
         organizationId,
-        ownerPhone: phoneNumber as string || '5511999999999',
-        ownerName: ownerName as string || 'Proprietário'
+        ownerPhone: phoneNumber,
+        ownerName: ownerName || 'Proprietário'
       },
       'Identifique oportunidades de crescimento e aumento de faturamento'
     );
@@ -81,7 +83,7 @@ router.get('/opportunities', async (req: Request, res: Response): Promise<void> 
 });
 
 // Process owner message (from WhatsApp)
-router.post('/message', async (req: Request, res: Response): Promise<void> => {
+router.post('/message', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
     const { organizationId, phoneNumber, organizationName } = req.auroraContext!;
     const { message, ownerName } = req.body;
@@ -105,7 +107,7 @@ router.post('/message', async (req: Request, res: Response): Promise<void> => {
 // Proactive messages endpoints
 
 // Analyze and generate proactive notifications
-router.post('/proactive/analyze', async (req: Request, res: Response): Promise<void> => {
+router.post('/proactive/analyze', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
     const { organizationId } = req.auroraContext!;
 
@@ -126,7 +128,7 @@ router.post('/proactive/analyze', async (req: Request, res: Response): Promise<v
 });
 
 // Generate weekly report
-router.post('/proactive/weekly-report', async (req: Request, res: Response): Promise<void> => {
+router.post('/proactive/weekly-report', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
     const { organizationId } = req.auroraContext!;
 
@@ -145,7 +147,7 @@ router.post('/proactive/weekly-report', async (req: Request, res: Response): Pro
 });
 
 // Send proactive message
-router.post('/proactive/send', async (req: Request, res: Response): Promise<void> => {
+router.post('/proactive/send', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
     const { organizationId, phoneNumber } = req.auroraContext!;
     const { type, message, priority } = req.body;

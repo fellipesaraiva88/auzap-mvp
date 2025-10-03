@@ -1,30 +1,23 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { supabase } from '../config/supabase.js';
 import { logger } from '../config/logger.js';
+import { TenantRequest } from './tenant.middleware.js';
 
 /**
  * Middleware para validar se o número de telefone é autorizado a usar Aurora
  * Apenas donos/admins da organização podem conversar com Aurora
+ * IMPORTANTE: Este middleware REQUER que tenantMiddleware seja aplicado primeiro
  */
 export async function auroraAuthMiddleware(
-  req: Request,
+  req: TenantRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
+    const organizationId = req.organizationId!; // From JWT via tenantMiddleware
     const phoneNumber = req.body.phoneNumber || req.query.phoneNumber;
 
-    // Validar headers obrigatórios
-    if (!organizationId) {
-      logger.warn('Missing organization ID in Aurora request');
-      res.status(400).json({
-        error: 'Missing organization ID',
-        code: 'MISSING_ORG_ID'
-      });
-      return;
-    }
-
+    // Validar phone number obrigatório
     if (!phoneNumber) {
       logger.warn('Missing phone number in Aurora request');
       res.status(400).json({

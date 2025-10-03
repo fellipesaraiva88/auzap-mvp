@@ -1,17 +1,23 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { supabaseAdmin } from '../config/supabase.js';
 import { logger } from '../config/logger.js';
+import { TenantRequest, tenantMiddleware } from '../middleware/tenant.middleware.js';
+import { standardLimiter } from '../middleware/rate-limiter.js';
 
 const router = Router();
 
+// Apply tenant middleware and rate limiting to all routes
+router.use(tenantMiddleware);
+router.use(standardLimiter);
+
 // Get organization settings (including AI personality)
-router.get('/:organizationId', async (req, res): Promise<void> => {
+router.get('/:organizationId', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
     const { organizationId } = req.params;
-    const requestOrgId = req.headers['x-organization-id'] as string;
+    const authenticatedOrgId = req.organizationId!;
 
     // Verify user has access to this organization
-    if (organizationId !== requestOrgId) {
+    if (organizationId !== authenticatedOrgId) {
       res.status(403).json({ error: 'Access denied' });
       return;
     }
@@ -49,12 +55,12 @@ router.get('/:organizationId', async (req, res): Promise<void> => {
 });
 
 // Update organization settings
-router.patch('/:organizationId', async (req, res): Promise<void> => {
+router.patch('/:organizationId', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
     const { organizationId } = req.params;
-    const requestOrgId = req.headers['x-organization-id'] as string;
+    const authenticatedOrgId = req.organizationId!;
 
-    if (organizationId !== requestOrgId) {
+    if (organizationId !== authenticatedOrgId) {
       res.status(403).json({ error: 'Access denied' });
       return;
     }
