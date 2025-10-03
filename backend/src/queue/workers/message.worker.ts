@@ -6,6 +6,7 @@ import { clientAIService } from '../../services/ai/client-ai.service.js';
 import { auroraService } from '../../services/aurora/aurora.service.js';
 import { contactsService } from '../../services/contacts/contacts.service.js';
 import { baileysService } from '../../services/baileys/baileys.service.js';
+import { BipeService } from '../../services/bipe/bipe.service.js';
 import { sendToDLQ, type MessageJobData } from '../queue-manager.js';
 import type { TablesInsert, Tables } from '../../types/database.types.js';
 
@@ -160,6 +161,39 @@ export class MessageWorker {
       instanceId,
       contact.id
     );
+
+    // ⚠️ VERIFICAR HANDOFF MODE (BIPE Protocol - Cenário 2)
+    if (conversation.handoff_mode) {
+      logger.info({ conversationId: conversation.id }, 'Handoff mode active - notifying manager only');
+
+      // Notificar gestor via WhatsApp (não processar com IA)
+      await BipeService.notifyManagerOfMessage(
+        organizationId,
+        conversation.id,
+        content,
+        instanceId
+      );
+
+      // Salvar apenas a mensagem inbound (gestor responderá manualmente)
+      const inboundMsg: TablesInsert<'messages'> = {
+        organization_id: organizationId,
+        conversation_id: conversation.id,
+        direction: 'inbound',
+        content,
+        sent_by_ai: false,
+        metadata: { handoff_active: true }
+      };
+
+      await supabaseAdmin.from('messages').insert(inboundMsg);
+
+      // Atualizar timestamp
+      await supabaseAdmin
+        .from('conversations')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', conversation.id);
+
+      return; // Não processar com IA
+    }
 
     // Processar com IA Cliente (contexto será construído internamente)
     const response = await clientAIService.processMessage(
