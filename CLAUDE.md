@@ -1018,3 +1018,4 @@ chore(scope): Update dependencies
 
 *This CLAUDE.md is the single source of truth for Claude Code working on AuZap. Updated October 2025 with comprehensive architecture details.*
 - Quero sempre que vc ao finalizar a implantação de uma feature, ao inves de me dar o link para acessar, vc vai entrar com o playwright e fazer todo o percurso, validar tudo e trazer o resultado após essa validação de navegação.
+- sempre faça o git no final da validação da ferramenta.... pusha ele e se lembre q tem q passar nas validações.
