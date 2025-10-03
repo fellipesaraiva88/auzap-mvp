@@ -2,7 +2,6 @@ import { Router, type Response } from 'express';
 import { tenantMiddleware, TenantRequest } from '../middleware/tenant.middleware.js';
 import { clientAIService } from '../services/ai/client-ai.service.js';
 import { logger } from '../config/logger.js';
-import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
@@ -27,11 +26,11 @@ router.post('/playground', async (req: TenantRequest, res: Response) => {
       });
     }
 
-    logger.info('🎮 AI Playground: Processing message', {
+    logger.info({
       organizationId,
       messageLength: message.length,
       historyLength: conversationHistory.length
-    });
+    }, '🎮 AI Playground: Processing message');
 
     // Processar mensagem usando o Client AI Service (modo playground)
     const response = await clientAIService.processPlaygroundMessage(
@@ -39,25 +38,24 @@ router.post('/playground', async (req: TenantRequest, res: Response) => {
       conversationHistory
     );
 
-    logger.info('✅ AI Playground: Response generated', {
+    logger.info({
       organizationId,
       responseLength: response.length
-    });
+    }, '✅ AI Playground: Response generated');
 
     return res.status(200).json({
       response,
       metadata: {
-        conversationId: playgroundConversationId,
         timestamp: new Date().toISOString(),
         mode: 'playground'
       }
     });
 
   } catch (error) {
-    logger.error('❌ AI Playground: Error processing message', {
+    logger.error({
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined
-    });
+    }, '❌ AI Playground: Error processing message');
 
     return res.status(500).json({
       error: 'Failed to process message',
