@@ -161,16 +161,16 @@ export default function Agenda() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-3 md:p-4 lg:p-6 max-w-7xl mx-auto">
       <PageHeader
         title="Agenda"
         subtitle="Gerencie todos os agendamentos"
         actions={
           <Dialog open={isNewBookingOpen} onOpenChange={setIsNewBookingOpen}>
             <DialogTrigger asChild>
-              <Button className="btn-gradient text-white">
-                <CalendarIcon className="w-4 h-4" />
-                Novo Agendamento
+              <Button className="btn-gradient text-white text-xs md:text-sm min-h-[44px] md:min-h-0" size="sm">
+                <CalendarIcon className="w-4 h-4 md:mr-2" />
+                <span className="hidden sm:inline">Novo Agendamento</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -245,9 +245,9 @@ export default function Agenda() {
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="start">Início *</Label>
+                    <Label htmlFor="start" className="text-sm md:text-base">Início *</Label>
                     <Input
                       id="start"
                       type="datetime-local"
@@ -256,10 +256,11 @@ export default function Agenda() {
                         setNewBooking({ ...newBooking, scheduled_start: e.target.value })
                       }
                       disabled={isCreating}
+                      className="h-11 md:h-10 text-sm md:text-base"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="end">Fim *</Label>
+                    <Label htmlFor="end" className="text-sm md:text-base">Fim *</Label>
                     <Input
                       id="end"
                       type="datetime-local"
@@ -268,6 +269,7 @@ export default function Agenda() {
                         setNewBooking({ ...newBooking, scheduled_end: e.target.value })
                       }
                       disabled={isCreating}
+                      className="h-11 md:h-10 text-sm md:text-base"
                     />
                   </div>
                 </div>
@@ -288,7 +290,7 @@ export default function Agenda() {
                 <Button
                   onClick={handleCreateBooking}
                   disabled={isCreating}
-                  className="w-full btn-gradient text-white"
+                  className="w-full btn-gradient text-white min-h-[44px] text-sm md:text-base"
                 >
                   {isCreating ? (
                     <>
@@ -297,7 +299,7 @@ export default function Agenda() {
                     </>
                   ) : (
                     <>
-                      <Calendar className="w-4 h-4 mr-2" />
+                      <CalendarIcon className="w-4 h-4 mr-2" />
                       Criar Agendamento
                     </>
                   )}
@@ -309,7 +311,7 @@ export default function Agenda() {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
         <StatCard
           icon={CalendarIcon}
           title="Agendamentos Hoje"
@@ -338,10 +340,10 @@ export default function Agenda() {
 
       {/* Calendário Visual Completo */}
       <Card className="glass-card">
-        <CardContent className="p-6">
+        <CardContent className="p-3 md:p-4 lg:p-6">
           {isLoading ? (
-            <div className="flex items-center justify-center py-24">
-              <Loader2 className="w-8 h-8 text-ocean-blue animate-spin" />
+            <div className="flex items-center justify-center py-16 md:py-24">
+              <Loader2 className="w-6 h-6 md:w-8 md:h-8 text-ocean-blue animate-spin" />
             </div>
           ) : (
             <CalendarView
