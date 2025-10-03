@@ -299,30 +299,33 @@ export default function ClientesKanban() {
   };
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto">
+    <div className="p-3 md:p-4 lg:p-6 max-w-[1600px] mx-auto">
       <PageHeader
         title="Clientes & Pets"
         subtitle="Gestão visual e intuitiva dos seus clientes"
         actions={
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 md:gap-2 flex-wrap">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowAnalytics(!showAnalytics)}
-              className={showAnalytics ? "bg-primary text-primary-foreground" : ""}
+              className={cn("h-9 w-9 md:w-auto px-2 md:px-3", showAnalytics && "bg-primary text-primary-foreground")}
             >
               <BarChart3 className="w-4 h-4" />
+              <span className="hidden md:inline ml-2">Analytics</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setViewMode(viewMode === "kanban" ? "list" : "kanban")}
+              className="h-9 w-9 md:w-auto px-2 md:px-3"
             >
               {viewMode === "kanban" ? <List className="w-4 h-4" /> : <Grid3x3 className="w-4 h-4" />}
+              <span className="hidden md:inline ml-2">{viewMode === "kanban" ? "Lista" : "Kanban"}</span>
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="hidden md:flex">
                   <Download className="w-4 h-4 mr-2" />
                   Exportar
                   <ChevronDown className="w-4 h-4 ml-2" />
@@ -344,42 +347,45 @@ export default function ClientesKanban() {
               </DropdownMenuContent>
             </DropdownMenu>
             <Button
-              className="btn-gradient text-white"
+              className="btn-gradient text-white text-xs md:text-sm min-h-[44px] md:min-h-0"
+              size="sm"
               onClick={() => setIsCreateModalOpen(true)}
             >
-              <Plus className="w-4 h-4 mr-1" />
-              Novo Cliente
+              <Plus className="w-4 h-4 md:mr-1" />
+              <span className="hidden sm:inline">Novo Cliente</span>
             </Button>
           </div>
         }
       />
 
       {/* Tabs de Visualização */}
-      <Card className="mb-6">
-        <CardContent className="p-4">
+      <Card className="mb-4 md:mb-6">
+        <CardContent className="p-3 md:p-4">
           <Tabs value={currentView} onValueChange={(v) => setCurrentView(v as KanbanView)}>
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="status">
-                <Activity className="w-4 h-4 mr-2" />
-                Por Status
-              </TabsTrigger>
-              <TabsTrigger value="interaction">
-                <Clock className="w-4 h-4 mr-2" />
-                Por Interação
-              </TabsTrigger>
-              <TabsTrigger value="pets">
-                <Dog className="w-4 h-4 mr-2" />
-                Por Pets
-              </TabsTrigger>
-              <TabsTrigger value="value">
-                <DollarSign className="w-4 h-4 mr-2" />
-                Por Valor
-              </TabsTrigger>
-              <TabsTrigger value="region">
-                <MapPin className="w-4 h-4 mr-2" />
-                Por Região
-              </TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0">
+              <TabsList className="grid w-full grid-cols-5 min-w-[600px] md:min-w-0">
+                <TabsTrigger value="status" className="text-xs md:text-sm">
+                  <Activity className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+                  <span className="hidden sm:inline">Por </span>Status
+                </TabsTrigger>
+                <TabsTrigger value="interaction" className="text-xs md:text-sm">
+                  <Clock className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+                  <span className="hidden sm:inline">Por </span>Interação
+                </TabsTrigger>
+                <TabsTrigger value="pets" className="text-xs md:text-sm">
+                  <Dog className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+                  <span className="hidden sm:inline">Por </span>Pets
+                </TabsTrigger>
+                <TabsTrigger value="value" className="text-xs md:text-sm">
+                  <DollarSign className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+                  <span className="hidden sm:inline">Por </span>Valor
+                </TabsTrigger>
+                <TabsTrigger value="region" className="text-xs md:text-sm">
+                  <MapPin className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+                  <span className="hidden sm:inline">Por </span>Região
+                </TabsTrigger>
+              </TabsList>
+            </div>
           </Tabs>
         </CardContent>
       </Card>

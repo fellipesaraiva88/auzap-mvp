@@ -1,4 +1,17 @@
-import { Home, MessageSquare, Calendar, Users, ShoppingCart, Bot, Settings } from "lucide-react";
+import {
+  Home,
+  MessageSquare,
+  Calendar,
+  Users,
+  ShoppingCart,
+  Bot,
+  Settings,
+  Stethoscope,
+  GraduationCap,
+  Hotel,
+  Sparkles,
+  MessageCircle
+} from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -17,6 +30,11 @@ const items = [
   { title: "Agenda", url: "/agenda", icon: Calendar },
   { title: "Clientes & Pets", url: "/clientes", icon: Users },
   { title: "Vendas", url: "/vendas", icon: ShoppingCart },
+  { title: "Adestramento", url: "/training", icon: GraduationCap },
+  { title: "Hospedagem", url: "/daycare", icon: Hotel },
+  { title: "BIPE Protocol", url: "/bipe", icon: Stethoscope },
+  { title: "WhatsApp", url: "/whatsapp", icon: MessageCircle },
+  { title: "Aurora Meet", url: "/aurora/meet", icon: Sparkles },
   { title: "IA", url: "/ia", icon: Bot },
   { title: "Ajustes", url: "/ajustes", icon: Settings },
 ];
