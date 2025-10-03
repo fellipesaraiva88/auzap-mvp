@@ -256,7 +256,7 @@ router.put('/protocol/:petId/behavioral', async (req: TenantRequest, res: Respon
     }
 
     // Update behavioral data
-    const protocol = await BipeService.updateBehavioral(petId, organizationId, {
+    const protocol = await petHealthService.updateBehavioral(petId, organizationId, {
       behavioralScore: data.behavioralScore,
       behavioralNotes: data.behavioralNotes,
       assessedBy: data.assessedBy,
@@ -312,7 +312,7 @@ router.put('/protocol/:petId/individual', async (req: TenantRequest, res: Respon
     }
 
     // Update individual needs
-    const protocol = await BipeService.updateIndividualNeeds(petId, organizationId, data);
+    const protocol = await petHealthService.updateIndividualNeeds(petId, organizationId, data);
 
     logger.info({ organizationId, petId }, 'BIPE individual needs updated');
     res.json({ protocol });
@@ -363,7 +363,7 @@ router.put('/protocol/:petId/preventive', async (req: TenantRequest, res: Respon
     }
 
     // Update preventive care
-    const protocol = await BipeService.updatePreventiveCare(petId, organizationId, data);
+    const protocol = await petHealthService.updatePreventiveCare(petId, organizationId, data);
 
     logger.info({ organizationId, petId }, 'BIPE preventive care updated');
     res.json({ protocol });
@@ -414,7 +414,7 @@ router.post('/protocol/:petId/alert', async (req: TenantRequest, res: Response):
     }
 
     // Add alert
-    const alert = await BipeService.addEmergentAlert(petId, organizationId, {
+    const alert = await petHealthService.addEmergentAlert(petId, organizationId, {
       type: data.type,
       severity: data.severity,
       description: data.description,
@@ -461,7 +461,7 @@ router.delete('/protocol/:petId/alert/:alertId', async (req: TenantRequest, res:
 
     // Resolve alert
     const resolvedBy = req.userId || 'system';
-    const result = await BipeService.resolveAlert(alertId, petId, organizationId, resolvedBy);
+    const result = await petHealthService.resolveAlert(alertId, petId, organizationId, resolvedBy);
 
     logger.info({ organizationId, petId, alertId }, 'BIPE alert resolved');
     res.json({ message: 'Alert resolved successfully', alert: result });
@@ -480,7 +480,7 @@ router.get('/alerts', async (req: TenantRequest, res: Response): Promise<void> =
     const organizationId = req.organizationId!;
     const { severity, type, petId } = req.query;
 
-    const alerts = await BipeService.getActiveAlerts(organizationId, {
+    const alerts = await petHealthService.getActiveAlerts(organizationId, {
       severity: severity as any,
       type: type as any,
       petId: petId as string
@@ -534,7 +534,7 @@ router.post('/protocol/:petId/assessment', async (req: TenantRequest, res: Respo
     }
 
     // Schedule assessment
-    const assessment = await BipeService.scheduleAssessment(petId, organizationId, {
+    const assessment = await petHealthService.scheduleAssessment(petId, organizationId, {
       type: data.type,
       scheduledAt: data.scheduledAt,
       veterinarian: data.veterinarian,
@@ -580,7 +580,7 @@ router.get('/protocol/:petId/history', async (req: TenantRequest, res: Response)
     }
 
     // Get history
-    const history = await BipeService.getProtocolHistory(
+    const history = await petHealthService.getProtocolHistory(
       petId,
       organizationId,
       parseInt(limit as string),
@@ -623,7 +623,7 @@ router.get('/protocol/:petId/report', async (req: TenantRequest, res: Response):
     }
 
     // Generate comprehensive report
-    const report = await BipeService.generateHealthReport(petId, organizationId);
+    const report = await petHealthService.generateHealthReport(petId, organizationId);
 
     logger.info({ organizationId, petId }, 'BIPE health report generated');
     res.json({
