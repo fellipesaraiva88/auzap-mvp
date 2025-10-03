@@ -315,6 +315,45 @@ export class BaileysService {
         instance.lastActivity = new Date();
         instance.reconnectAttempts = 0;
 
+        // 🆕 Persistir instância no banco de dados
+        try {
+          const { data: existingInstance } = await supabaseAdmin
+            .from('whatsapp_instances')
+            .select('id')
+            .eq('organization_id', organizationId)
+            .eq('phone_number', instance.phoneNumber || '')
+            .maybeSingle();
+
+          if (!existingInstance) {
+            // Criar novo registro
+            const instanceName = `WhatsApp ${instance.phoneNumber || instanceId.slice(0, 8)}`;
+            await supabaseAdmin
+              .from('whatsapp_instances')
+              .insert({
+                organization_id: organizationId,
+                instance_name: instanceName,
+                phone_number: instance.phoneNumber || null,
+                status: 'connected',
+                last_connected_at: new Date().toISOString(),
+                session_data: null // Session é persistida no filesystem
+              });
+            logger.info({ organizationId, instanceId }, 'WhatsApp instance persisted to database');
+          } else {
+            // Atualizar registro existente
+            await supabaseAdmin
+              .from('whatsapp_instances')
+              .update({
+                status: 'connected',
+                last_connected_at: new Date().toISOString()
+              })
+              .eq('id', existingInstance.id);
+            logger.info({ organizationId, instanceId }, 'WhatsApp instance status updated in database');
+          }
+        } catch (dbError) {
+          logger.error({ error: dbError, organizationId, instanceId }, 'Failed to persist instance to database');
+          // Não propagar erro - a conexão WhatsApp ainda funciona
+        }
+
         // Backup automático no Supabase - DISABLED (tabela não existe)
         // const sessionDir = sessionManager['getSessionPath'](organizationId, instanceId);
         // await sessionBackupService.backupSession(
