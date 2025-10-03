@@ -155,7 +155,7 @@ router.post('/protocol', async (req: TenantRequest, res: Response): Promise<void
     }
 
     // Create protocol
-    const protocol = await BipeService.createProtocol({
+    const protocol = await petHealthService.createProtocol({
       organizationId,
       petId: data.petId,
       behavioralScore: data.behavioralScore,
@@ -201,7 +201,7 @@ router.get('/protocol/:petId', async (req: TenantRequest, res: Response): Promis
     }
 
     // Get protocol
-    const protocol = await BipeService.getProtocolByPet(petId, organizationId);
+    const protocol = await petHealthService.getProtocol(petId);
 
     if (!protocol) {
       res.status(404).json({ error: 'BIPE protocol not found for this pet' });

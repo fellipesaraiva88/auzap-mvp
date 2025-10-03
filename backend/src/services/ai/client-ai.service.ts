@@ -757,13 +757,19 @@ Informações que você pode coletar:
     try {
       logger.info({ organizationId, date, planType }, 'Checking training availability');
 
-      // Buscar planos na data
+      // Buscar planos criados na data (usando created_at como referência)
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
       const { data: existingPlans } = await supabaseAdmin
         .from('training_plans')
         .select('id')
         .eq('organization_id', organizationId)
-        .eq('start_date', date)
-        .eq('status', 'active');
+        .gte('created_at', startOfDay.toISOString())
+        .lte('created_at', endOfDay.toISOString())
+        .eq('status', 'em_andamento');
 
       const bookedSlots = existingPlans?.length || 0;
       const maxSlots = 5; // Máximo de treinos por dia
