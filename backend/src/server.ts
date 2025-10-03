@@ -151,6 +151,10 @@ app.use('/api/settings', (await import('./routes/settings.routes.js')).default);
 app.use('/api/automations', (await import('./routes/automations.routes.js')).default);
 app.use('/api/conversations', (await import('./routes/conversations.routes.js')).default);
 
+// Admin Panel Routes (internal users only)
+app.use('/api/internal/auth', (await import('./routes/admin/auth.routes.js')).default);
+app.use('/api/internal/clients', (await import('./routes/admin/clients.routes.js')).default);
+
 // Bull Board - Queue Monitoring UI (owner-only)
 const { serverAdapter, bullBoardAuthMiddleware, bullBoardHealthCheck } =
   await import('./queue/monitoring/bull-board.js');
