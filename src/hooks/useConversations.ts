@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import {
   conversationsService,
   type Conversation,
   type ListConversationsParams,
 } from '@/services/conversations.service';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useConversations(params?: ListConversationsParams) {
   const { toast } = useToast();

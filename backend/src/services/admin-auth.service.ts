@@ -55,6 +55,8 @@ export class AdminAuthService {
    */
   async login(email: string, password: string, ipAddress?: string): Promise<LoginResult> {
     try {
+      logger.info({ email }, '[AdminAuth] Login attempt started');
+
       // Buscar usuário (service role bypass RLS)
       const { data: user, error } = await (supabaseAdmin as any)
         .from('internal_users')
@@ -63,19 +65,31 @@ export class AdminAuthService {
         .eq('is_active', true)
         .single() as { data: any; error: any };
 
-      if (error || !user) {
-        logger.warn({ email }, 'Internal user not found or inactive');
+      if (error) {
+        logger.error({ email, error }, '[AdminAuth] Database query error');
         return {
           success: false,
           error: 'Invalid credentials'
         };
       }
 
+      if (!user) {
+        logger.warn({ email }, '[AdminAuth] User not found or inactive');
+        return {
+          success: false,
+          error: 'Invalid credentials'
+        };
+      }
+
+      logger.info({ email, userId: user.id, hasHash: !!user.password_hash }, '[AdminAuth] User found, verifying password');
+
       // Verificar senha
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
+      logger.info({ email, userId: user.id, isValidPassword }, '[AdminAuth] Password verification result');
+
       if (!isValidPassword) {
-        logger.warn({ email, userId: user.id }, 'Invalid password for internal user');
+        logger.warn({ email, userId: user.id }, '[AdminAuth] Invalid password for internal user');
 
         // Log tentativa de login falha
         await this.logAction(user.id, 'login', 'auth', null, {

@@ -51,6 +51,49 @@ import './queue/jobs/aurora-daily-summary.job.js';
 import './queue/jobs/aurora-opportunities.job.js';
 logger.info('Aurora automation jobs loaded');
 
+// ==========================================
+// WORKERS AUTO-START (Production Only)
+// ==========================================
+// Em produção, se não houver worker service separado rodando,
+// inicializa workers junto com o servidor API
+const ENABLE_EMBEDDED_WORKERS = process.env.ENABLE_EMBEDDED_WORKERS === 'true' ||
+  (process.env.NODE_ENV === 'production' && !process.env.SEPARATE_WORKER_SERVICE);
+
+if (ENABLE_EMBEDDED_WORKERS) {
+  logger.info('🔄 Initializing embedded workers (no separate worker service detected)...');
+
+  (async () => {
+    try {
+      const { MessageWorker } = await import('./queue/workers/message.worker.js');
+      const { CampaignWorker } = await import('./queue/workers/campaign.worker.js');
+      const { AutomationWorker } = await import('./queue/workers/automation.worker.js');
+      const { VasculhadaWorker } = await import('./queue/workers/vasculhada.worker.js');
+
+      const messageWorker = new MessageWorker();
+      const campaignWorker = new CampaignWorker();
+      const automationWorker = new AutomationWorker();
+      const vasculhadaWorker = new VasculhadaWorker();
+
+      logger.info('✅ All embedded workers started successfully');
+
+      // Graceful shutdown dos workers
+      process.on('SIGTERM', async () => {
+        logger.info('Shutting down embedded workers...');
+        await Promise.all([
+          messageWorker.close(),
+          campaignWorker.close(),
+          automationWorker.close(),
+          vasculhadaWorker.close()
+        ]);
+      });
+    } catch (error) {
+      logger.error({ error }, '❌ Failed to initialize embedded workers');
+    }
+  })();
+} else {
+  logger.info('ℹ️ Embedded workers disabled (using separate worker service)');
+}
+
 // Middleware
 app.use(helmet({
   contentSecurityPolicy: {
@@ -181,6 +224,55 @@ app.get('/health/whatsapp', async (_req: Request, res: Response): Promise<void> 
     });
   } catch (error) {
     res.status(503).json({ status: 'error', whatsapp: { connected: false, error } });
+  }
+});
+
+app.get('/health/workers', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const { messageQueue, campaignQueue, automationQueue, vasculhadaQueue } = await import('./queue/queue-manager.js');
+
+    // Buscar estatísticas de cada queue
+    const [messageStats, campaignStats, automationStats, vasculhadaStats] = await Promise.all([
+      messageQueue.getJobCounts(),
+      campaignQueue.getJobCounts(),
+      automationQueue.getJobCounts(),
+      vasculhadaQueue.getJobCounts()
+    ]);
+
+    // Verificar se há workers processando (pelo menos 1 job ativo ou completo recentemente)
+    const hasActiveWorkers =
+      messageStats.active > 0 ||
+      campaignStats.active > 0 ||
+      automationStats.active > 0 ||
+      vasculhadaStats.active > 0 ||
+      messageStats.completed > 0;
+
+    const totalProcessing =
+      messageStats.active +
+      campaignStats.active +
+      automationStats.active +
+      vasculhadaStats.active;
+
+    const totalWaiting =
+      messageStats.waiting +
+      campaignStats.waiting +
+      automationStats.waiting +
+      vasculhadaStats.waiting;
+
+    res.json({
+      status: hasActiveWorkers || totalWaiting === 0 ? 'ok' : 'warning',
+      workers: {
+        enabled: ENABLE_EMBEDDED_WORKERS,
+        processing: totalProcessing,
+        waiting: totalWaiting,
+        message: messageStats,
+        campaign: campaignStats,
+        automation: automationStats,
+        vasculhada: vasculhadaStats
+      }
+    });
+  } catch (error) {
+    res.status(503).json({ status: 'error', workers: { connected: false, error } });
   }
 });
 

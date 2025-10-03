@@ -9,6 +9,7 @@ import QRCode from 'qrcode';
 import { logger } from '../../config/logger.js';
 import { messageQueue } from '../../queue/queue-manager.js';
 import { sessionManager } from '../whatsapp/session-manager.js';
+import { sessionBackupService } from '../whatsapp/session-backup.service.js';
 import { connectionHandler } from '../whatsapp/connection-handler.js';
 import type {
   BaileysInstance,
@@ -289,13 +290,24 @@ export class BaileysService {
       // Atualizar metadata da sessão
       await sessionManager.updateLastConnected(organizationId, instanceId);
 
-      // Atualizar instância local
+      // Fazer backup da sessão no Supabase (redundância)
       const instanceKey = this.getInstanceKey(organizationId, instanceId);
       const instance = this.instances.get(instanceKey);
       if (instance) {
         instance.status = 'connected';
         instance.lastActivity = new Date();
         instance.reconnectAttempts = 0;
+
+        // Backup automático no Supabase
+        const sessionDir = sessionManager['getSessionPath'](organizationId, instanceId);
+        await sessionBackupService.backupSession(
+          organizationId,
+          instanceId,
+          sessionDir,
+          instance.phoneNumber
+        ).catch(err => {
+          logger.warn({ err, organizationId, instanceId }, 'Failed to backup session to Supabase');
+        });
       }
 
       // Trigger Vasculhada de Dinheiro Esquecido (primeira conexão)

@@ -4,6 +4,7 @@ import * as fsSync from 'fs';
 import { useMultiFileAuthState } from '@whiskeysockets/baileys';
 import { logger } from '../../config/logger.js';
 import { redisCache } from '../../config/redis.js';
+import { sessionBackupService } from './session-backup.service.js';
 import type { SessionData } from '../../types/whatsapp.types.js';
 
 /**
@@ -98,50 +99,119 @@ export class SessionManager {
    * Inicializa estado de autenticação para uma instância
    */
   async initAuthState(organizationId: string, instanceId: string) {
-    try {
-      const sessionDir = this.getSessionPath(organizationId, instanceId);
+    const sessionDir = this.getSessionPath(organizationId, instanceId);
 
-      // Log completo para debug
-      logger.info({
-        organizationId,
-        instanceId,
-        sessionPath: this.sessionPath,
-        sessionDir,
-        env: process.env.WHATSAPP_SESSION_PATH
-      }, 'Attempting to initialize auth state');
+    // Log completo para debug
+    logger.info({
+      organizationId,
+      instanceId,
+      sessionPath: this.sessionPath,
+      sessionDir,
+      env: process.env.WHATSAPP_SESSION_PATH
+    }, '🔑 Attempting to initialize auth state');
 
-      // Garantir que diretório base existe primeiro
+    // Retry logic: 3 tentativas com diferentes estratégias
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        await fs.access(this.sessionPath);
-        logger.info({ sessionPath: this.sessionPath }, 'Base session path accessible');
+        logger.info({ attempt, maxRetries, sessionDir }, `📂 Auth state initialization attempt ${attempt}/${maxRetries}`);
+
+        // Garantir que diretório base existe primeiro
+        try {
+          await fs.access(this.sessionPath);
+          logger.info({ sessionPath: this.sessionPath }, '✅ Base session path accessible');
+        } catch (error) {
+          logger.warn({
+            sessionPath: this.sessionPath,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            attempt
+          }, '⚠️ Base session path not accessible, attempting to create');
+
+          await fs.mkdir(this.sessionPath, { recursive: true, mode: 0o777 });
+          logger.info({ sessionPath: this.sessionPath }, '✅ Base session path created');
+        }
+
+        // Criar diretório da instância
+        await fs.mkdir(sessionDir, { recursive: true, mode: 0o777 });
+        logger.info({ sessionDir }, '✅ Session directory created successfully');
+
+        // Verificar permissões de escrita
+        const testFile = path.join(sessionDir, '.write-test');
+        await fs.writeFile(testFile, 'test', 'utf-8');
+        await fs.unlink(testFile);
+        logger.info({ sessionDir }, '✅ Session directory write permissions verified');
+
+        const authState = await useMultiFileAuthState(sessionDir);
+
+        // Salvar metadados da sessão
+        await this.saveSessionMetadata(organizationId, instanceId, {
+          organizationId,
+          instanceId,
+          authMethod: 'pairing_code',
+          createdAt: new Date()
+        });
+
+        logger.info({ organizationId, instanceId, sessionDir }, '🎉 Auth state initialized successfully');
+
+        // Tentar fazer backup no Supabase (não crítico, não bloqueia)
+        await sessionBackupService.backupSession(organizationId, instanceId, sessionDir).catch(() => {});
+
+        return authState;
+
       } catch (error) {
-        logger.warn({
-          sessionPath: this.sessionPath,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }, 'Base session path not accessible, attempting to create');
+        lastError = error as Error;
+        logger.error({
+          error: lastError,
+          attempt,
+          maxRetries,
+          organizationId,
+          instanceId,
+          sessionDir
+        }, `❌ Auth state initialization attempt ${attempt} failed`);
 
-        await fs.mkdir(this.sessionPath, { recursive: true, mode: 0o777 });
+        // Se não é última tentativa, aguardar antes de retry
+        if (attempt < maxRetries) {
+          const delayMs = attempt * 1000; // 1s, 2s
+          logger.info({ delayMs }, `⏳ Waiting ${delayMs}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
       }
-
-      // Criar diretório da instância
-      await fs.mkdir(sessionDir, { recursive: true, mode: 0o777 });
-      logger.info({ sessionDir }, 'Session directory created successfully');
-
-      const authState = await useMultiFileAuthState(sessionDir);
-
-      // Salvar metadados da sessão
-      await this.saveSessionMetadata(organizationId, instanceId, {
-        organizationId,
-        instanceId,
-        authMethod: 'pairing_code',
-        createdAt: new Date()
-      });
-
-      return authState;
-    } catch (error) {
-      logger.error({ error, organizationId, instanceId }, 'Failed to initialize auth state');
-      throw error;
     }
+
+    // Se chegou aqui, todas as tentativas falharam
+    // Última tentativa: restaurar do backup Supabase
+    logger.warn({
+      organizationId,
+      instanceId
+    }, '🔄 All filesystem attempts failed, trying to restore from Supabase backup...');
+
+    const restored = await sessionBackupService.restoreSession(organizationId, instanceId, sessionDir);
+
+    if (restored) {
+      try {
+        const authState = await useMultiFileAuthState(sessionDir);
+        logger.info({
+          organizationId,
+          instanceId
+        }, '✅ Session successfully restored from Supabase backup!');
+        return authState;
+      } catch (error) {
+        logger.error({ error }, '❌ Restored session is corrupted');
+      }
+    }
+
+    // Se chegou aqui, não há solução
+    logger.error({
+      error: lastError,
+      organizationId,
+      instanceId,
+      sessionPath: this.sessionPath,
+      sessionDir
+    }, '💥 Failed to initialize auth state after all retries (including Supabase restore)');
+
+    throw new Error(`Failed to initialize auth state after ${maxRetries} attempts: ${lastError?.message}`);
   }
 
   /**
