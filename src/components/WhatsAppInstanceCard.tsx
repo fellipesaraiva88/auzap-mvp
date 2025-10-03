@@ -179,7 +179,7 @@ export function WhatsAppInstanceCard({ instance, onUpdate }: WhatsAppInstanceCar
               placeholder="5511999998888"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-              disabled={loading}
+              disabled={initializeWhatsApp.isPending}
             />
             <p className="text-xs text-muted-foreground">
               Ex: 5511999998888 (sem + ou espaços)

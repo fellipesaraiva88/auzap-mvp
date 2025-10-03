@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { WhatsAppInstanceCard } from '@/components/WhatsAppInstanceCard';
+import { WhatsAppDeviceManager } from '@/components/WhatsAppDeviceManager';
 import { PhoneInput } from '@/components/PhoneInput';
 import { useWhatsAppInstances, useInitializeWhatsApp } from '@/hooks/useWhatsApp';
 import { useToast } from '@/hooks/use-toast';
@@ -216,7 +216,7 @@ export default function WhatsAppSetup() {
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {instances.map((instance) => (
-            <WhatsAppInstanceCard
+            <WhatsAppDeviceManager
               key={instance.instanceId}
               instance={instance}
               onUpdate={refetch}
