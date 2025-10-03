@@ -1,15 +1,8 @@
-import { ImpactHero } from "@/components/ImpactHero";
-import { ImpactDashboard } from "@/components/ImpactDashboard";
-import { AITimeline } from "@/components/AITimeline";
-import { ImpactCharts } from "@/components/ImpactCharts";
 import { AlertCircle, Clock, TrendingUp, Zap } from "lucide-react";
 import { QuickActions } from "@/components/QuickActions";
 import { WhatsAppStatusCard } from "@/components/WhatsAppStatus";
-import { PendingFollowupsCard } from "@/components/PendingFollowups";
-import { AIPersonalityCard } from "@/components/AIPersonalityCard";
 import { AutomationBadges } from "@/components/AutomationBadges";
 import { useDashboardStats } from "@/hooks/useDashboard";
-import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboardSocketUpdates } from "@/hooks/useSocket";
 import { useNavigate } from "react-router-dom";
@@ -18,25 +11,11 @@ const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { data: stats, isLoading } = useDashboardStats();
-  const { data: impactMetrics, isLoading: isLoadingMetrics } = useDashboardMetrics();
 
   // Enable real-time updates via Socket.io
   useDashboardSocketUpdates();
 
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
   const userName = user?.full_name?.split(' ')[0] || 'Usuário';
-  const isWhatsAppOnline = stats?.whatsappStatus === 'connected';
 
   return (
     <div className="min-h-screen bg-background">
@@ -92,35 +71,8 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Main Impact Hero */}
-        <ImpactHero />
-
-        {/* Priority Cards Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 fade-in">
-          <AIPersonalityCard />
-          <PendingFollowupsCard />
-          <div className="glass-card rounded-2xl p-4 md:p-6">
-            <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4">Ações Rápidas</h3>
-            <QuickActions />
-          </div>
-        </div>
-
         {/* Automation Badges */}
         <AutomationBadges />
-
-        {/* Impact Dashboard - Métricas de Valor em Tempo Real */}
-        {impactMetrics && (
-          <ImpactDashboard 
-            metrics={impactMetrics} 
-            isLoading={isLoadingMetrics}
-          />
-        )}
-
-        {/* AI Activity Machine */}
-        <AITimeline />
-
-        {/* Performance Charts */}
-        <ImpactCharts />
 
         {/* Action Required Section */}
         <div className="glass-card rounded-2xl p-4 md:p-6 fade-in">

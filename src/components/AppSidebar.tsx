@@ -58,15 +58,9 @@ const menuGroups: MenuGroup[] = [
         badge: { text: "Novo", variant: "new" }
       },
       {
-        title: "Cuidado Estendido",
+        title: "Hotelzinho & Creche",
         url: "/daycare",
         icon: Hotel,
-        badge: { text: "Novo", variant: "new" }
-      },
-      {
-        title: "Bem-Estar 360°",
-        url: "/bipe",
-        icon: HeartPulse,
         badge: { text: "Novo", variant: "new" }
       },
     ]

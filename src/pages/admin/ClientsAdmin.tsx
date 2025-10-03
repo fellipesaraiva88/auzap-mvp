@@ -20,11 +20,13 @@ import {
   Activity,
   MessageSquare,
   ChevronRight,
+  Plus,
 } from 'lucide-react';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import ClientDetailModal from '@/components/admin/ClientDetailModal';
+import ClientManagementModal from '@/components/admin/ClientManagementModal';
+import CreateClientModal from '@/components/admin/CreateClientModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -72,6 +74,7 @@ export default function ClientsAdmin() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     fetchClients();
@@ -136,9 +139,15 @@ export default function ClientsAdmin() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Clientes</h1>
-        <p className="text-muted-foreground">Gerencie todas as organizações da plataforma</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold">Clientes</h1>
+          <p className="text-muted-foreground">Gerencie todas as organizações da plataforma</p>
+        </div>
+        <Button onClick={() => setIsCreateModalOpen(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Novo Cliente
+        </Button>
       </div>
 
       {/* Stats */}
@@ -289,8 +298,8 @@ export default function ClientsAdmin() {
         </Table>
       </Card>
 
-      {/* Client Detail Modal */}
-      <ClientDetailModal
+      {/* Client Management Modal */}
+      <ClientManagementModal
         client={selectedClient}
         isOpen={isModalOpen}
         onClose={() => {
@@ -298,6 +307,13 @@ export default function ClientsAdmin() {
           setSelectedClient(null);
         }}
         onRefresh={fetchClients}
+      />
+
+      {/* Create Client Modal */}
+      <CreateClientModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={fetchClients}
       />
     </div>
   );

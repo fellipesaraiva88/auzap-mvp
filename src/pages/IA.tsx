@@ -5,6 +5,7 @@ import { AIActivityFeed } from '@/components/ai/AIActivityFeed';
 import { AIConfigTabs } from '@/components/ai/AIConfigTabs';
 import { AIHealthBadge } from '@/components/ai/AIHealthBadge';
 import { WhatsAppSyncCard } from '@/components/ai/WhatsAppSyncCard';
+import { BipeNotifications } from '@/components/ai/BipeNotifications';
 import { useAIMetrics } from '@/hooks/useAIMetrics';
 import { useAIActivity } from '@/hooks/useAIActivity';
 import { useAIConfig } from '@/hooks/useAIConfig';
@@ -38,6 +39,9 @@ export default function IA() {
         title="Sua Assistente Virtual"
         subtitle="Trabalhando 24/7 para você crescer"
       />
+
+      {/* BIPE Notifications - Prioridade Máxima */}
+      <BipeNotifications />
 
       {/* Hero Card - Impacto */}
       <AIHeroCard

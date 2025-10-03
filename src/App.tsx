@@ -8,6 +8,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PawLoader } from "@/components/PawLoader";
+import ImpersonationBanner from "@/components/ImpersonationBanner";
 
 // Lazy load pages for better code-splitting
 const Index = lazy(() => import("./pages/Index"));
@@ -20,12 +21,12 @@ const IA = lazy(() => import("./pages/IA"));
 const Ajustes = lazy(() => import("./pages/Ajustes"));
 const WhatsAppSetup = lazy(() => import("./pages/WhatsAppSetup"));
 const AuroraMeetPage = lazy(() => import("./pages/AuroraMeetPage"));
-const BipePanel = lazy(() => import("./pages/BipePanel"));
 const TrainingPlans = lazy(() => import("./pages/TrainingPlans"));
 const DaycareStays = lazy(() => import("./pages/DaycareStays"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
+const Impersonate = lazy(() => import("./pages/Impersonate"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Admin Panel
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/impersonate" element={<Impersonate />} />
 
             {/* Admin Panel Routes (separate auth) */}
             <Route path="/admin/login" element={<LoginAdmin />} />
@@ -78,6 +80,7 @@ const App = () => (
                     <div className="min-h-screen flex w-full">
                       <AppSidebar />
                       <main className="flex-1 overflow-x-hidden">
+                        <ImpersonationBanner />
                         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-md border-b border-border">
                           <div className="flex items-center h-14 md:h-16 px-3 md:px-6">
                             <SidebarTrigger className="h-9 w-9 md:h-10 md:w-10" />
@@ -95,7 +98,6 @@ const App = () => (
                             <Route path="/ajustes" element={<Ajustes />} />
                             <Route path="/whatsapp" element={<WhatsAppSetup />} />
                             <Route path="/aurora/meet" element={<AuroraMeetPage />} />
-                            <Route path="/bipe" element={<BipePanel />} />
                             <Route path="/training" element={<TrainingPlans />} />
                             <Route path="/daycare" element={<DaycareStays />} />
                             <Route path="*" element={<NotFound />} />
