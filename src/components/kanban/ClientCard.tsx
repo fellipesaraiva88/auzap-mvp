@@ -33,6 +33,7 @@ import { usePets } from "@/hooks/usePets";
 import { useToast } from "@/hooks/use-toast";
 import { contactsService } from "@/services/contacts.service";
 import { ClientTagSelector } from "./ClientTagSelector";
+import { ClientInteractionHistory } from "./ClientInteractionHistory";
 
 interface ClientCardProps {
   client: any;
@@ -44,6 +45,7 @@ export function ClientCard({ client, isDragging = false, columnId }: ClientCardP
   const { toast } = useToast();
   const { pets } = usePets(client.id);
   const [isEditing, setIsEditing] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [editData, setEditData] = useState({
     full_name: client.full_name || client.name || "",
     email: client.email || "",
@@ -199,6 +201,11 @@ export function ClientCard({ client, isDragging = false, columnId }: ClientCardP
                       <Edit2 className="w-4 h-4 mr-2" />
                       Editar
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowHistory(true)}>
+                      <Clock className="w-4 h-4 mr-2" />
+                      Histórico
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleWhatsApp}>
                       <MessageSquare className="w-4 h-4 mr-2" />
                       WhatsApp
@@ -337,6 +344,14 @@ export function ClientCard({ client, isDragging = false, columnId }: ClientCardP
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Modal de Histórico de Interações */}
+      <ClientInteractionHistory
+        open={showHistory}
+        onOpenChange={setShowHistory}
+        clientName={client.full_name || client.name}
+        clientId={client.id}
+      />
     </div>
   );
 }

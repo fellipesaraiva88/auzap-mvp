@@ -12,7 +12,7 @@ interface ExportOptions {
 
 // Função principal de exportação
 export async function exportData(
-  data: any[],
+  data: Record<string, unknown>[],
   format: ExportFormat,
   options: ExportOptions = {}
 ) {
@@ -51,7 +51,7 @@ export async function exportData(
 
 // Exportar como CSV
 export function exportCSV(
-  data: any[],
+  data: Record<string, unknown>[],
   filename: string,
   includeHeaders: boolean = true,
   columns?: string[]

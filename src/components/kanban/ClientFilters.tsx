@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useClientTags } from "@/hooks/useClientTags";
 import {
   Popover,
   PopoverContent,
@@ -118,6 +119,7 @@ const FILTERS: FilterConfig[] = [
 ];
 
 export function ClientFilters({ activeFilters, onFiltersChange }: ClientFiltersProps) {
+  const { availableTags } = useClientTags();
   const [isOpen, setIsOpen] = useState(false);
   const [tempFilters, setTempFilters] = useState<Record<string, any>>({});
 
@@ -274,31 +276,36 @@ export function ClientFilters({ activeFilters, onFiltersChange }: ClientFiltersP
 
                     {filter.type === "tags" && (
                       <div className="flex flex-wrap gap-1">
-                        {["VIP", "Frequente", "Novo", "Risco", "Premium"].map((tag) => (
-                          <Badge
-                            key={tag}
-                            variant={
-                              tempFilters.tags?.includes(tag) ? "default" : "outline"
-                            }
-                            className="cursor-pointer text-xs"
-                            onClick={() => {
-                              const currentTags = tempFilters.tags || [];
-                              if (currentTags.includes(tag)) {
-                                setTempFilters({
-                                  ...tempFilters,
-                                  tags: currentTags.filter((t: string) => t !== tag),
-                                });
-                              } else {
-                                setTempFilters({
-                                  ...tempFilters,
-                                  tags: [...currentTags, tag],
-                                });
-                              }
-                            }}
-                          >
-                            {tag}
-                          </Badge>
-                        ))}
+                        {availableTags.map((tag) => {
+                          const isSelected = tempFilters.tags?.includes(tag.id);
+                          return (
+                            <Badge
+                              key={tag.id}
+                              variant={isSelected ? "default" : "outline"}
+                              className={cn(
+                                "cursor-pointer text-xs transition-all",
+                                isSelected && tag.color,
+                                isSelected && "text-white"
+                              )}
+                              onClick={() => {
+                                const currentTags = tempFilters.tags || [];
+                                if (currentTags.includes(tag.id)) {
+                                  setTempFilters({
+                                    ...tempFilters,
+                                    tags: currentTags.filter((t: string) => t !== tag.id),
+                                  });
+                                } else {
+                                  setTempFilters({
+                                    ...tempFilters,
+                                    tags: [...currentTags, tag.id],
+                                  });
+                                }
+                              }}
+                            >
+                              {tag.label}
+                            </Badge>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
