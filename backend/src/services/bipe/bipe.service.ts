@@ -161,7 +161,7 @@ export class BipeService {
       }
 
       // 3. Salvar no Knowledge Base (apenas se houver pergunta do cliente)
-      if (bipe.client_question) {
+      if (bipe.client_question && bipe.organization_id) {
         await supabaseAdmin
           .from('knowledge_base')
           .insert({

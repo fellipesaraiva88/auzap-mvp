@@ -32,18 +32,18 @@ export class AuroraWelcomeService {
       const businessName = org?.name || 'seu petshop';
 
       // Buscar analytics rápido para primeira mensagem
-      const { data: bookingsCount } = await supabaseAdmin
+      const { count: bookingsCount } = await supabaseAdmin
         .from('bookings')
         .select('id', { count: 'exact', head: true })
         .eq('organization_id', organizationId);
 
-      const { data: petsCount } = await supabaseAdmin
+      const { count: petsCount } = await supabaseAdmin
         .from('pets')
         .select('id', { count: 'exact', head: true })
         .eq('organization_id', organizationId);
 
-      const totalBookings = (bookingsCount as any)?.count || 0;
-      const totalPets = (petsCount as any)?.count || 0;
+      const totalBookings = bookingsCount || 0;
+      const totalPets = petsCount || 0;
 
       // SEQUÊNCIA DE MENSAGENS DO RITUAL
       const messages = this.buildWelcomeSequence(

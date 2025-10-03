@@ -157,18 +157,18 @@ export class ServicesService {
         if (booking.services && booking.service_id) {
           const serviceId = booking.service_id;
           const serviceName = booking.services.name;
-          const price = booking.services.price_cents;
+          const price = Number(booking.services.price_cents) || 0;
 
           const existing = revenueMap.get(serviceId) || {
             name: serviceName,
             bookings: 0,
             revenue: 0,
-            prices: []
+            prices: [] as number[]
           };
 
           existing.bookings += 1;
           existing.revenue += price;
-          (existing.prices as number[]).push(price);
+          existing.prices.push(price);
 
           revenueMap.set(serviceId, existing);
         }

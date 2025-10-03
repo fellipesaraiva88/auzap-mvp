@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { supabaseAdmin } from '../config/supabase.js';
 import { logger } from '../config/logger.js';
 import { authLimiter } from '../middleware/rate-limiter.js';
-import type { TablesInsert } from '../types/database.types.js';
+import type { TablesInsert, Tables } from '../types/database.types.js';
 
 const router = Router();
 
