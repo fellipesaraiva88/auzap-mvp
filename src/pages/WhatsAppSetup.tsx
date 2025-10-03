@@ -309,31 +309,41 @@ export default function WhatsAppSetup() {
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {/* Código Gigante */}
                 <div className="relative">
-                  <div className="p-8 bg-gradient-to-br from-ocean-blue to-sunset-orange rounded-2xl text-center">
+                  <div
+                    onClick={handleCopyCode}
+                    className="p-8 bg-gradient-to-br from-ocean-blue to-sunset-orange rounded-2xl text-center cursor-pointer hover:scale-[1.02] transition-transform duration-200 group"
+                  >
                     <p className="text-white/90 text-sm font-medium mb-3">
-                      Seu código de pareamento:
+                      👆 Clique no código para copiar:
                     </p>
-                    <div className="text-6xl font-bold text-white tracking-[0.2em] font-mono mb-4">
+                    <div className="text-6xl font-bold text-white tracking-[0.2em] font-mono mb-2 select-all">
                       {pairingCode}
                     </div>
-                    <Button
-                      onClick={handleCopyCode}
-                      variant="secondary"
-                      className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-                    >
-                      {copied ? (
-                        <>
-                          <Check className="w-4 h-4 mr-2" />
-                          Copiado!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4 mr-2" />
-                          Copiar Código
-                        </>
-                      )}
-                    </Button>
+                    {copied && (
+                      <div className="text-white/90 text-sm font-medium mb-3 animate-pulse">
+                        ✅ Copiado!
+                      </div>
+                    )}
                   </div>
+
+                  {/* Botão de Copiar GIGANTE */}
+                  <Button
+                    onClick={handleCopyCode}
+                    size="lg"
+                    className="w-full mt-4 bg-white hover:bg-gray-50 text-ocean-blue font-bold text-xl h-16 shadow-lg border-2 border-ocean-blue/20"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-6 h-6 mr-3 text-green-600" />
+                        <span className="text-green-600">Código Copiado! ✅</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-6 h-6 mr-3" />
+                        Copiar Código para o WhatsApp
+                      </>
+                    )}
+                  </Button>
 
                   {/* Timer Visual */}
                   <div className="mt-3">
