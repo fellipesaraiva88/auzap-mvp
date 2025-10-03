@@ -56,10 +56,10 @@ export class MessageWorker {
   }
 
   private async processMessage(job: Job<MessageJobData>): Promise<void> {
-    const { organizationId, instanceId, from, content } = job.data;
+    const { organizationId, instanceId, from, content, messageId, timestamp } = job.data;
 
     try {
-      logger.info({ organizationId, from, jobId: job.id }, 'Processing incoming message');
+      logger.info({ organizationId, from, messageId, jobId: job.id }, 'Processing incoming message');
 
       // Extrair número de telefone limpo
       const phoneNumber = from.split('@')[0];
@@ -69,10 +69,10 @@ export class MessageWorker {
 
       if (isOwner) {
         // Processar com Aurora (IA do Dono)
-        await this.processOwnerMessage(organizationId, instanceId, phoneNumber, content);
+        await this.processOwnerMessage(organizationId, instanceId, phoneNumber, content, messageId, from);
       } else {
         // Processar com IA Cliente
-        await this.processClientMessage(organizationId, instanceId, phoneNumber, from, content);
+        await this.processClientMessage(organizationId, instanceId, phoneNumber, from, content, messageId);
       }
     } catch (error: any) {
       logger.error({ error, job: job.data }, 'Error processing message');
@@ -102,7 +102,9 @@ export class MessageWorker {
     organizationId: string,
     instanceId: string,
     phoneNumber: string,
-    content: string
+    content: string,
+    messageId?: string,
+    from?: string
   ): Promise<void> {
     logger.info({ organizationId, phoneNumber }, 'Processing as owner message (Aurora)');
 
@@ -133,7 +135,7 @@ export class MessageWorker {
     });
 
     // Salvar mensagem no banco
-    await this.saveMessage(organizationId, instanceId, phoneNumber, content, response, true);
+    await this.saveMessage(organizationId, instanceId, phoneNumber, content, response, true, undefined, messageId, from);
   }
 
   /**
@@ -144,7 +146,8 @@ export class MessageWorker {
     instanceId: string,
     phoneNumber: string,
     jid: string,
-    content: string
+    content: string,
+    messageId?: string
   ): Promise<void> {
     logger.info({ organizationId, phoneNumber }, 'Processing as client message');
 
@@ -214,7 +217,7 @@ export class MessageWorker {
     });
 
     // Salvar mensagens
-    await this.saveMessage(organizationId, instanceId, phoneNumber, content, response, false, conversation.id);
+    await this.saveMessage(organizationId, instanceId, phoneNumber, content, response, false, conversation.id, messageId, jid);
 
     // Atualizar timestamp da conversa
     await supabaseAdmin
@@ -275,7 +278,9 @@ export class MessageWorker {
     inboundContent: string,
     outboundContent: string,
     _isOwner: boolean,
-    conversationId?: string
+    conversationId?: string,
+    messageId?: string,
+    remoteJid?: string
   ): Promise<void> {
     const messages: TablesInsert<'messages'>[] = [
       {
@@ -284,7 +289,11 @@ export class MessageWorker {
         direction: 'inbound',
         content: inboundContent,
         sent_by_ai: false,
-        metadata: {}
+        metadata: messageId && remoteJid ? {
+          messageId,
+          remoteJid,
+          timestamp: Date.now()
+        } : {}
       },
       {
         organization_id: organizationId,

@@ -9,6 +9,7 @@ import QRCode from 'qrcode';
 import { logger } from '../../config/logger.js';
 import { messageQueue } from '../../queue/queue-manager.js';
 import { sessionManager } from '../whatsapp/session-manager.js';
+import { supabaseAdmin } from '../../config/supabase.js';
 // import { sessionBackupService } from '../whatsapp/session-backup.service.js'; // DISABLED - tabela não existe
 import { connectionHandler } from '../whatsapp/connection-handler.js';
 import type {
@@ -99,8 +100,24 @@ export class BaileysService {
         browser: Browsers.ubuntu('Chrome'),
         generateHighQualityLinkPreview: true,
         markOnlineOnConnect: true,
-        syncFullHistory: false,
-        getMessage: async () => undefined // Prevenir erros de mensagens antigas
+        syncFullHistory: true, // ✅ ATIVADO: Sincronizar histórico completo do WhatsApp
+        getMessage: async (key) => {
+          // Tentar recuperar mensagem do banco para histórico
+          const { data } = await supabaseAdmin
+            .from('messages')
+            .select('content, metadata')
+            .eq('metadata->>messageId', key.id!)
+            .eq('metadata->>remoteJid', key.remoteJid!)
+            .single();
+
+          if (data?.metadata && typeof data.metadata === 'object') {
+            const metadata = data.metadata as { rawMessage?: any };
+            if (metadata.rawMessage) {
+              return metadata.rawMessage;
+            }
+          }
+          return undefined;
+        }
       });
 
       // Event: credentials update
