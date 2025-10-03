@@ -437,6 +437,54 @@
   .scrollbar-custom::-webkit-scrollbar-thumb {
     @apply bg-primary/30 rounded-full hover:bg-primary/50;
   }
+
+  /* Touch Target Utilities - Garantir acessibilidade mobile */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  .touch-target-large {
+    @apply min-h-[48px] min-w-[48px];
+  }
+
+  /* Typography Scale Mobile-First */
+  .text-responsive-xs {
+    @apply text-xs md:text-sm;
+  }
+
+  .text-responsive-sm {
+    @apply text-sm md:text-base;
+  }
+
+  .text-responsive-base {
+    @apply text-base md:text-lg;
+  }
+
+  .text-responsive-lg {
+    @apply text-lg md:text-xl;
+  }
+
+  .text-responsive-xl {
+    @apply text-xl md:text-2xl;
+  }
+
+  /* Spacing Utilities */
+  .spacing-responsive {
+    @apply space-y-3 md:space-y-4 lg:space-y-6;
+  }
+
+  .gap-responsive {
+    @apply gap-3 md:gap-4 lg:gap-6;
+  }
+
+  .padding-responsive {
+    @apply p-3 md:p-4 lg:p-6;
+  }
+
+  /* Focus Visible para Acessibilidade */
+  .focus-accessible {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
 }
 
 /* React Big Calendar Custom Styles */
@@ -573,10 +621,26 @@
 /* Responsive */
 @media (max-width: 768px) {
   .rbc-toolbar {
-    @apply flex-col items-stretch;
+    @apply flex-col items-stretch gap-2;
   }
 
   .rbc-toolbar button {
-    @apply w-full;
+    @apply w-full min-h-[44px];
+  }
+
+  .rbc-header {
+    @apply text-xs py-2 px-1;
+  }
+
+  .rbc-date-cell {
+    @apply p-1 text-xs;
+  }
+
+  .rbc-event {
+    @apply text-[10px];
+  }
+
+  .rbc-show-more {
+    @apply text-[10px] px-1 py-0.5;
   }
 }
