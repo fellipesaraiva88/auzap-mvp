@@ -41,12 +41,12 @@ router.get('/health/redis', async (_req, res) => {
 // Supabase health check
 router.get('/health/supabase', async (_req, res) => {
   try {
-    const { error } = await supabaseAdmin
+    const { error: _error } = await supabaseAdmin
       .from('organizations')
       .select('id')
       .limit(1);
 
-    if (error) throw error;
+    if (_error) throw _error;
 
     res.json({
       status: 'ok',

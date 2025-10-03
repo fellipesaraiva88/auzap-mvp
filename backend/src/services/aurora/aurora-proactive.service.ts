@@ -15,7 +15,8 @@ export enum ProactiveMessageType {
   INACTIVE_CLIENTS = 'inactive_clients',
   MILESTONE_CELEBRATION = 'milestone_celebration',
   OPPORTUNITY_ALERT = 'opportunity_alert',
-  NO_SHOW_ALERT = 'no_show_alert'
+  NO_SHOW_ALERT = 'no_show_alert',
+  CUSTOM = 'custom'
 }
 
 interface ProactiveMessage {

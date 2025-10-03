@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { tenantMiddleware, TenantRequest } from '../middleware/tenant.middleware.js';
 import { auroraAuthMiddleware } from '../middleware/aurora-auth.middleware.js';
 import { auroraService } from '../services/aurora/aurora.service.js';
-import { auroraProactiveService } from '../services/aurora/aurora-proactive.service.js';
+import { auroraProactiveService, ProactiveMessageType } from '../services/aurora/aurora-proactive.service.js';
 import { auroraWelcomeService } from '../services/aurora/aurora-welcome.service.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import { logger } from '../config/logger.js';
@@ -19,7 +19,7 @@ router.use(tenantMiddleware);
  * 
  * Body: { phoneNumber, ownerName }
  */
-router.post('/register-owner', async (req: TenantRequest, res): Promise<void> => {
+router.post('/register-owner', async (req: TenantRequest, res) => {
   try {
     const organizationId = req.organizationId!;
     const { phoneNumber, ownerName } = req.body;
@@ -64,7 +64,7 @@ router.post('/register-owner', async (req: TenantRequest, res): Promise<void> =>
     }
 
     // Criar novo authorized owner
-    const { data: newOwner, error: insertError } = await supabaseAdmin
+    const { error: insertError } = await supabaseAdmin
       .from('authorized_owner_numbers')
       .insert({
         organization_id: organizationId,
@@ -133,7 +133,7 @@ router.post('/register-owner', async (req: TenantRequest, res): Promise<void> =>
  * Verifica se número já está cadastrado como owner
  * Query: ?phoneNumber=5511999999999
  */
-router.get('/check-owner', async (req: TenantRequest, res): Promise<void> => {
+router.get('/check-owner', async (req: TenantRequest, res) => {
   try {
     const organizationId = req.organizationId!;
     const { phoneNumber } = req.query;
@@ -177,7 +177,7 @@ router.use(auroraAuthMiddleware);
  * POST /api/aurora/message
  * Processar mensagem do dono
  */
-router.post('/message', async (req: TenantRequest, res): Promise<void> => {
+router.post('/message', async (req: TenantRequest, res) => {
   try {
     const { message } = req.body;
     const context = req.auroraContext!;
@@ -206,7 +206,7 @@ router.post('/message', async (req: TenantRequest, res): Promise<void> => {
  * POST /api/aurora/summary/daily
  * Gerar resumo diário
  */
-router.post('/summary/daily', async (req: TenantRequest, res): Promise<void> => {
+router.post('/summary/daily', async (req: TenantRequest, res) => {
   try {
     const organizationId = req.auroraContext!.organizationId;
     const summary = await auroraService.generateDailySummary(organizationId);
@@ -221,7 +221,7 @@ router.post('/summary/daily', async (req: TenantRequest, res): Promise<void> => 
  * GET /api/aurora/analytics
  * Obter analytics
  */
-router.get('/analytics', async (req: TenantRequest, res): Promise<void> => {
+router.get('/analytics', async (req: TenantRequest, res) => {
   try {
     const organizationId = req.auroraContext!.organizationId;
     const { period = 'week' } = req.query;
@@ -240,7 +240,7 @@ router.get('/analytics', async (req: TenantRequest, res): Promise<void> => {
  * POST /api/aurora/campaigns/suggest
  * Sugerir campanha
  */
-router.post('/campaigns/suggest', async (req: TenantRequest, res): Promise<void> => {
+router.post('/campaigns/suggest', async (req: TenantRequest, res) => {
   try {
     const { type } = req.body;
     
@@ -265,7 +265,7 @@ router.post('/campaigns/suggest', async (req: TenantRequest, res): Promise<void>
  * GET /api/aurora/opportunities
  * Identificar oportunidades
  */
-router.get('/opportunities', async (req: TenantRequest, res): Promise<void> => {
+router.get('/opportunities', async (req: TenantRequest, res) => {
   try {
     const organizationId = req.auroraContext!.organizationId;
     const opportunities = await auroraService.identifyOpportunities(organizationId);
@@ -280,7 +280,7 @@ router.get('/opportunities', async (req: TenantRequest, res): Promise<void> => {
  * POST /api/aurora/proactive/analyze
  * Analisar e gerar notificações proativas
  */
-router.post('/proactive/analyze', async (req: TenantRequest, res): Promise<void> => {
+router.post('/proactive/analyze', async (req: TenantRequest, res) => {
   try {
     const organizationId = req.auroraContext!.organizationId;
     const messages = await auroraProactiveService.analyzeAndNotify(organizationId);
@@ -295,7 +295,7 @@ router.post('/proactive/analyze', async (req: TenantRequest, res): Promise<void>
  * POST /api/aurora/proactive/weekly-report
  * Gerar relatório semanal
  */
-router.post('/proactive/weekly-report', async (req: TenantRequest, res): Promise<void> => {
+router.post('/proactive/weekly-report', async (req: TenantRequest, res) => {
   try {
     const organizationId = req.auroraContext!.organizationId;
     const report = await auroraProactiveService.generateWeeklyReport(organizationId);
@@ -310,21 +310,22 @@ router.post('/proactive/weekly-report', async (req: TenantRequest, res): Promise
  * POST /api/aurora/proactive/send
  * Enviar mensagem proativa
  */
-router.post('/proactive/send', async (req: TenantRequest, res): Promise<void> => {
+router.post('/proactive/send', async (req: TenantRequest, res) => {
   try {
-    const organizationId = req.auroraContext!.organizationId;
+    const { organizationId, phoneNumber } = req.auroraContext!;
     const { message, priority = 'medium' } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    await auroraProactiveService.sendProactiveMessage(
+    await auroraProactiveService.sendProactiveMessage({
+      type: ProactiveMessageType.CUSTOM,
       organizationId,
+      ownerPhone: phoneNumber,
       message,
-      'CUSTOM',
-      priority
-    );
+      priority: priority as 'low' | 'medium' | 'high'
+    });
 
     return res.json({ success: true });
   } catch (error) {

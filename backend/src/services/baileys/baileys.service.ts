@@ -310,7 +310,7 @@ export class BaileysService {
   private async checkAndTriggerVasculhada(organizationId: string, instanceId: string): Promise<void> {
     try {
       // Importar dinamicamente para evitar dependência circular
-      const { triggerVasculhada, jaFezVasculhada } = await import('../queue/jobs/vasculhar-esquecidos.job');
+      const { triggerVasculhada, jaFezVasculhada } = await import('../../queue/jobs/vasculhar-esquecidos.job.js');
 
       // Verificar se já fez vasculhada antes
       const jaFez = await jaFezVasculhada(organizationId, instanceId);

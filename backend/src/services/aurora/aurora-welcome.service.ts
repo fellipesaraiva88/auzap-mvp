@@ -1,7 +1,6 @@
 import { supabaseAdmin } from '../../config/supabase.js';
 import { logger } from '../../config/logger.js';
 import { baileysService } from '../baileys/baileys.service.js';
-import { auroraService } from './aurora.service.js';
 
 /**
  * Serviço responsável pelo "ritual" de boas-vindas da Aurora
@@ -43,8 +42,8 @@ export class AuroraWelcomeService {
         .select('id', { count: 'exact', head: true })
         .eq('organization_id', organizationId);
 
-      const totalBookings = bookingsCount?.count || 0;
-      const totalPets = petsCount?.count || 0;
+      const totalBookings = (bookingsCount as any)?.count || 0;
+      const totalPets = (petsCount as any)?.count || 0;
 
       // SEQUÊNCIA DE MENSAGENS DO RITUAL
       const messages = this.buildWelcomeSequence(

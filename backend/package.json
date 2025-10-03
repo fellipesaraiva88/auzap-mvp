@@ -27,6 +27,7 @@
     "simulate:event": "tsx scripts/simulate-event.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.65.0",
     "@bull-board/api": "^6.13.0",
     "@bull-board/express": "^6.13.0",
     "@bull-board/ui": "^6.13.0",
