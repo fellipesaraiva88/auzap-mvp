@@ -6,6 +6,29 @@ import { logger } from '../../config/logger.js';
 const router = Router();
 
 /**
+ * DEBUG ENDPOINT - Verifica configuração do Supabase
+ */
+router.get('/config-check', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const hasServiceKey = !!(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY);
+    const hasUrl = !!process.env.SUPABASE_URL;
+    const serviceKeyPreview = hasServiceKey
+      ? (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY)!.substring(0, 20) + '...'
+      : 'NOT SET';
+
+    res.json({
+      supabase_url: process.env.SUPABASE_URL?.substring(0, 30) + '...' || 'NOT SET',
+      has_service_key: hasServiceKey,
+      service_key_preview: serviceKeyPreview,
+      has_anon_key: !!process.env.SUPABASE_ANON_KEY
+    });
+  } catch (error: any) {
+    logger.error({ error }, 'Config check error');
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * DEBUG ENDPOINT - REMOVER EM PRODUÇÃO
  * Verifica se o hash de senha está correto
  */
@@ -23,7 +46,8 @@ router.post('/debug-password', async (req: Request, res: Response): Promise<void
     if (error || !user) {
       res.json({
         found: false,
-        error: error?.message || 'User not found'
+        error: error?.message || 'User not found',
+        error_details: error
       });
       return;
     }
