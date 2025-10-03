@@ -41,7 +41,7 @@ export default function IA() {
         title="Inteligência Artificial"
         subtitle="Configure e monitore sua assistente virtual"
         actions={
-          <Button onClick={() => navigate("/whatsapp-setup")} className="btn-gradient text-white">
+          <Button onClick={() => navigate("/whatsapp")} className="btn-gradient text-white">
             <Settings className="w-4 h-4" />
             Configurar WhatsApp
           </Button>
@@ -94,7 +94,7 @@ export default function IA() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Configure sua primeira instância WhatsApp para começar
                 </p>
-                <Button onClick={() => navigate("/whatsapp-setup")} className="btn-gradient text-white">
+                <Button onClick={() => navigate("/whatsapp")} className="btn-gradient text-white">
                   <Settings className="w-4 h-4 mr-2" />
                   Configurar WhatsApp
                 </Button>
