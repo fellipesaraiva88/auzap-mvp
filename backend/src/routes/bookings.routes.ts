@@ -1,10 +1,14 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { BookingsService } from '../services/bookings/bookings.service.js';
 import { logger } from '../config/logger.js';
 import { readLimiter, criticalLimiter } from '../middleware/rate-limiter.js';
+import { TenantRequest, tenantMiddleware, validateResource } from '../middleware/tenant.middleware.js';
 
 const router = Router();
 const bookingsService = new BookingsService();
+
+// Apply tenant middleware FIRST (before rate limiting)
+router.use(tenantMiddleware);
 
 // GET routes: read limiter (120 req/min)
 router.use(['/', '/:id'], readLimiter);
@@ -18,9 +22,9 @@ router.use(['/', '/:id'], (req, _res, next) => {
 });
 
 // List bookings by organization
-router.get('/', async (req, res): Promise<void> => {
+router.get('/', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
+    const organizationId = req.organizationId!;
     const { startDate, endDate, status, contactId, petId } = req.query;
 
     const bookings = await bookingsService.listByOrganization(organizationId, {
@@ -38,8 +42,8 @@ router.get('/', async (req, res): Promise<void> => {
   }
 });
 
-// Get booking by ID
-router.get('/:id', async (req, res): Promise<void> => {
+// Get booking by ID (with organization validation)
+router.get('/:id', validateResource('id', 'bookings'), async (req: TenantRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const booking = await bookingsService.findById(id);
@@ -57,9 +61,9 @@ router.get('/:id', async (req, res): Promise<void> => {
 });
 
 // Check availability
-router.post('/check-availability', async (req: Request, res: Response): Promise<void> => {
+router.post('/check-availability', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
+    const organizationId = req.organizationId!;
     const { start, end, excludeBookingId } = req.body;
 
     const available = await bookingsService.checkAvailability(
@@ -77,9 +81,9 @@ router.post('/check-availability', async (req: Request, res: Response): Promise<
 });
 
 // Create booking
-router.post('/', async (req: Request, res: Response): Promise<void> => {
+router.post('/', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
+    const organizationId = req.organizationId!;
     const bookingData = { ...req.body, organization_id: organizationId };
 
     const booking = await bookingsService.create(bookingData);
@@ -90,8 +94,8 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Update booking
-router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
+// Update booking (with organization validation)
+router.patch('/:id', validateResource('id', 'bookings'), async (req: TenantRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const booking = await bookingsService.update(id, req.body);
@@ -103,8 +107,8 @@ router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Cancel booking
-router.post('/:id/cancel', async (req: Request, res: Response): Promise<void> => {
+// Cancel booking (with organization validation)
+router.post('/:id/cancel', validateResource('id', 'bookings'), async (req: TenantRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
