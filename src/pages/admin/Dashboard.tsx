@@ -73,7 +73,7 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 text-ocean-blue animate-spin" />
+        <Loader2 className="w-6 h-6 md:w-8 md:h-8 text-ocean-blue animate-spin" />
       </div>
     );
   }
@@ -90,14 +90,14 @@ export default function Dashboard() {
   }));
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-3 md:p-4 lg:p-6 max-w-7xl mx-auto space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Visão geral do sistema</p>
+        <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Visão geral do sistema</p>
       </div>
 
       {/* Métricas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <StatCard
           title="Organizações"
           value={metrics?.organizations?.total || 0}
@@ -127,24 +127,24 @@ export default function Dashboard() {
       </div>
 
       {/* Gráficos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="p-4">
-          <h3 className="text-lg font-semibold mb-4">Mensagens (últimos 7 dias)</h3>
-          <ResponsiveContainer width="100%" height={250}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+        <Card className="p-3 md:p-4">
+          <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">Mensagens (últimos 7 dias)</h3>
+          <ResponsiveContainer width="100%" height={200}>
             <LineChart data={messagesByDayData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" />
-              <YAxis />
+              <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
               <Tooltip />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: '12px' }} />
               <Line type="monotone" dataKey="messages" stroke="#0088FE" />
             </LineChart>
           </ResponsiveContainer>
         </Card>
 
-        <Card className="p-4">
-          <h3 className="text-lg font-semibold mb-4">Distribuição de Planos</h3>
-          <ResponsiveContainer width="100%" height={250}>
+        <Card className="p-3 md:p-4">
+          <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">Distribuição de Planos</h3>
+          <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
                 data={planDistributionData}
@@ -152,7 +152,7 @@ export default function Dashboard() {
                 cy="50%"
                 labelLine={false}
                 label={(entry) => entry.name}
-                outerRadius={80}
+                outerRadius={60}
                 fill="#8884d8"
                 dataKey="value"
               >
@@ -165,27 +165,27 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </Card>
 
-        <Card className="p-4">
-          <h3 className="text-lg font-semibold mb-4">Top 5 Clientes (Mensagens Hoje)</h3>
-          <ResponsiveContainer width="100%" height={250}>
+        <Card className="p-3 md:p-4">
+          <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">Top 5 Clientes (Mensagens Hoje)</h3>
+          <ResponsiveContainer width="100%" height={200}>
             <BarChart data={charts?.top_clients || []}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
               <Tooltip />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: '12px' }} />
               <Bar dataKey="count" fill="#00C49F" />
             </BarChart>
           </ResponsiveContainer>
         </Card>
 
-        <Card className="p-4">
-          <h3 className="text-lg font-semibold mb-4">Atividades Recentes</h3>
-          <div className="space-y-2 max-h-[250px] overflow-y-auto">
+        <Card className="p-3 md:p-4">
+          <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">Atividades Recentes</h3>
+          <div className="space-y-2 max-h-[200px] overflow-y-auto">
             {activities.map((activity) => (
-              <div key={(activity as { id: string }).id} className="text-sm border-b pb-2">
-                <p className="font-medium">{(activity as { user_email: string }).user_email}</p>
-                <p className="text-muted-foreground">
+              <div key={(activity as { id: string }).id} className="text-xs md:text-sm border-b pb-2">
+                <p className="font-medium truncate">{(activity as { user_email: string }).user_email}</p>
+                <p className="text-muted-foreground truncate">
                   {(activity as { action: string }).action} - {(activity as { resource_type: string }).resource_type}
                 </p>
                 <p className="text-xs text-muted-foreground">
