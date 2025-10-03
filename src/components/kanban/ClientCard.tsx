@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { usePets } from "@/hooks/usePets";
 import { useToast } from "@/hooks/use-toast";
 import { contactsService } from "@/services/contacts.service";
+import { ClientTagSelector } from "./ClientTagSelector";
 
 interface ClientCardProps {
   client: any;
@@ -233,6 +234,11 @@ export function ClientCard({ client, isDragging = false, columnId }: ClientCardP
                   {petsCount}
                 </Badge>
               )}
+            </div>
+
+            {/* Tags do Cliente */}
+            <div className="mb-3">
+              <ClientTagSelector contactId={client.id} compact />
             </div>
 
             {/* Métricas do Cliente */}
