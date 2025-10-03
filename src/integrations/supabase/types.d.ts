@@ -1242,6 +1242,7 @@ export type Database = {
                     business_hours: Json | null;
                     created_at: string | null;
                     emergency_contact: Json | null;
+                    feature_flags: Json | null;
                     id: string;
                     organization_id: string;
                     payment_methods: Json | null;
@@ -1260,6 +1261,7 @@ export type Database = {
                     business_hours?: Json | null;
                     created_at?: string | null;
                     emergency_contact?: Json | null;
+                    feature_flags?: Json | null;
                     id?: string;
                     organization_id: string;
                     payment_methods?: Json | null;
@@ -1278,6 +1280,7 @@ export type Database = {
                     business_hours?: Json | null;
                     created_at?: string | null;
                     emergency_contact?: Json | null;
+                    feature_flags?: Json | null;
                     id?: string;
                     organization_id?: string;
                     payment_methods?: Json | null;

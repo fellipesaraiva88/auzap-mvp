@@ -10,7 +10,7 @@ export interface ServiceStats {
   top_services: Array<{
     id: string;
     name: string;
-    category: string;
+    type: string;
     price_cents: number;
     bookings_count: number;
   }>;
@@ -91,7 +91,7 @@ export class ServicesService {
       const servicesWithCounts = services.map(service => ({
         id: service.id,
         name: service.name,
-        category: service.category,
+        type: service.type,
         price_cents: service.price_cents,
         bookings_count: bookingCounts.get(service.id) || 0
       }));
@@ -204,7 +204,7 @@ export class ServicesService {
         .from('services')
         .select('*')
         .eq('organization_id', organizationId)
-        .eq('category', category)
+        .eq('type', category)
         .eq('is_active', true)
         .order('name');
 

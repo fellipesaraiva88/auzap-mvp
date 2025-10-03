@@ -652,13 +652,13 @@ Informações que você pode coletar:
       }
 
       // Buscar instanceId da organização
-      const { data: settings } = await supabaseAdmin
-        .from('organization_settings')
-        .select('whatsapp_instance_id')
+      const { data: instance } = await supabaseAdmin
+        .from('whatsapp_instances')
+        .select('id')
         .eq('organization_id', organizationId)
         .single();
 
-      if (!settings?.whatsapp_instance_id) {
+      if (!instance?.id) {
         return {
           success: false,
           message: 'WhatsApp não configurado.'
@@ -669,7 +669,7 @@ Informações que você pode coletar:
         organizationId,
         conversationId: conversation.id,
         clientQuestion: question,
-        instanceId: settings.whatsapp_instance_id
+        instanceId: instance.id
       });
 
       return {

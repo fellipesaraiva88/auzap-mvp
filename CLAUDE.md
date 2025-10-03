@@ -1023,3 +1023,4 @@ chore(scope): Update dependencies
 VITE_SUPABASE_PROJECT_ID=cdndnwglcieylfgzbwts
 VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkbmRud2dsY2lleWxmZ3pid3RzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNjU1NzMsImV4cCI6MjA3NDk0MTU3M30.BwvlhpRijTbdofpU06mH84-SjOWH9GFr9tzEpuN1DUM
 VITE_SUPABASE_URL=https://cdndnwglcieylfgzbwts.supabase.co
+- esse é o site da front auzap-frontend-d84c.onrender.com

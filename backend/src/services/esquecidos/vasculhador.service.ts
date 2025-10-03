@@ -425,9 +425,9 @@ export class VasculhadorService {
       // Buscar média de valores de bookings
       const { data } = await supabaseAdmin
         .from('bookings')
-        .select('total_price_cents')
+        .select('price_cents')
         .eq('organization_id', organizationId)
-        .not('total_price_cents', 'is', null)
+        .not('price_cents', 'is', null)
         .limit(100);
 
       if (!data || data.length === 0) {
@@ -435,7 +435,7 @@ export class VasculhadorService {
         return 10000; // centavos
       }
 
-      const soma = data.reduce((acc, b) => acc + (b.total_price_cents || 0), 0);
+      const soma = data.reduce((acc, b) => acc + (b.price_cents || 0), 0);
       return Math.round(soma / data.length);
     } catch (error) {
       logger.error({ error }, 'Erro ao buscar ticket médio');

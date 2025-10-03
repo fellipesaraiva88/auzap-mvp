@@ -341,7 +341,7 @@ NUNCA:
         },
         services: services.map(s => ({
           nome: s.name,
-          categoria: s.category,
+          categoria: s.type,
           preco: s.price_cents,
           duracao: s.duration_minutes || undefined
         })),
@@ -519,7 +519,7 @@ NUNCA:
             total: services.length,
             servicos: services.map(s => ({
               nome: s.name,
-              categoria: s.category,
+              categoria: s.type,
               preco_reais: (s.price_cents / 100).toFixed(2),
               duracao_min: s.duration_minutes || 'N/A'
             }))

@@ -228,13 +228,13 @@ Agora gere a resposta:`;
       logger.info({ total: clientes.length }, 'Processando respostas em lote');
 
       // Buscar nome do negócio
-      const { data: orgSettings } = await supabaseAdmin
-        .from('organization_settings')
-        .select('business_name')
-        .eq('organization_id', organizationId)
+      const { data: org } = await supabaseAdmin
+        .from('organizations')
+        .select('name')
+        .eq('id', organizationId)
         .single();
 
-      const nomeNegocio = orgSettings?.business_name || 'nosso petshop';
+      const nomeNegocio = org?.name || 'nosso petshop';
 
       let processados = 0;
 

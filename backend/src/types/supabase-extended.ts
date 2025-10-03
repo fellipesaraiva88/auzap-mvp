@@ -1,5 +1,5 @@
 // Extended Supabase types with missing columns/tables
-import type { Database } from '../../../src/integrations/supabase/types.js';
+import type { Database } from './database.types.js';
 
 export interface ExtendedDatabase extends Database {
   public: Database['public'] & {
