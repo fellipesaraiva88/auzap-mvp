@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       ai_interactions: {
@@ -114,6 +89,118 @@ export type Database = {
             foreignKeyName: "ai_interactions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "ai_interactions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_events: {
+        Row: {
+          created_at: string
+          event_category: string
+          event_name: string
+          id: string
+          organization_id: string
+          properties: Json | null
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_category: string
+          event_name: string
+          id?: string
+          organization_id: string
+          properties?: Json | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_category?: string
+          event_name?: string
+          id?: string
+          organization_id?: string
+          properties?: Json | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "analytics_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          ip_address: unknown | null
+          new_values: Json | null
+          old_values: Json | null
+          organization_id: string
+          record_id: string
+          table_name: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          organization_id: string
+          record_id: string
+          table_name: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          organization_id?: string
+          record_id?: string
+          table_name?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "audit_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -170,6 +257,13 @@ export type Database = {
             foreignKeyName: "aurora_automations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "aurora_automations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -217,6 +311,13 @@ export type Database = {
             foreignKeyName: "aurora_proactive_messages_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "aurora_proactive_messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -256,6 +357,131 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "authorized_owner_numbers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "authorized_owner_numbers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backup_metadata: {
+        Row: {
+          backup_type: string
+          checksum: string
+          created_at: string
+          expires_at: string | null
+          file_size_bytes: number
+          id: string
+          organization_id: string
+          storage_path: string
+          tables_included: string[]
+        }
+        Insert: {
+          backup_type: string
+          checksum: string
+          created_at?: string
+          expires_at?: string | null
+          file_size_bytes: number
+          id?: string
+          organization_id: string
+          storage_path: string
+          tables_included: string[]
+        }
+        Update: {
+          backup_type?: string
+          checksum?: string
+          created_at?: string
+          expires_at?: string | null
+          file_size_bytes?: number
+          id?: string
+          organization_id?: string
+          storage_path?: string
+          tables_included?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backup_metadata_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "backup_metadata_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bipe_protocol: {
+        Row: {
+          client_question: string | null
+          conversation_id: string | null
+          created_at: string
+          handoff_active: boolean | null
+          handoff_reason: string | null
+          id: string
+          learned: boolean | null
+          manager_response: string | null
+          organization_id: string
+          resolved_at: string | null
+          status: string
+          trigger_type: string
+        }
+        Insert: {
+          client_question?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          handoff_active?: boolean | null
+          handoff_reason?: string | null
+          id?: string
+          learned?: boolean | null
+          manager_response?: string | null
+          organization_id: string
+          resolved_at?: string | null
+          status?: string
+          trigger_type: string
+        }
+        Update: {
+          client_question?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          handoff_active?: boolean | null
+          handoff_reason?: string | null
+          id?: string
+          learned?: boolean | null
+          manager_response?: string | null
+          organization_id?: string
+          resolved_at?: string | null
+          status?: string
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bipe_protocol_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bipe_protocol_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "bipe_protocol_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -330,6 +556,13 @@ export type Database = {
             foreignKeyName: "bookings_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "bookings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -352,6 +585,119 @@ export type Database = {
             columns: ["whatsapp_instance_id"]
             isOneToOne: false
             referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clientes_esquecidos: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          explicacao_ia: string
+          horas_de_vacuo: number
+          id: string
+          instance_id: string
+          metadata: Json | null
+          nome_cliente: string | null
+          organization_id: string
+          quando_converteu: string | null
+          quando_foi: string
+          quando_respondi: string | null
+          quem_mandou_ultima: string
+          resposta_pronta: string
+          status: string
+          telefone_cliente: string
+          temperatura: number
+          temperatura_emoji: string
+          temperatura_explicacao: string | null
+          temperatura_label: string
+          tipo_vacuo: string
+          ultima_mensagem: string
+          updated_at: string
+          valor_estimado_centavos: number
+          valor_real_convertido_centavos: number | null
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          explicacao_ia: string
+          horas_de_vacuo: number
+          id?: string
+          instance_id: string
+          metadata?: Json | null
+          nome_cliente?: string | null
+          organization_id: string
+          quando_converteu?: string | null
+          quando_foi: string
+          quando_respondi?: string | null
+          quem_mandou_ultima: string
+          resposta_pronta: string
+          status?: string
+          telefone_cliente: string
+          temperatura: number
+          temperatura_emoji: string
+          temperatura_explicacao?: string | null
+          temperatura_label: string
+          tipo_vacuo: string
+          ultima_mensagem: string
+          updated_at?: string
+          valor_estimado_centavos?: number
+          valor_real_convertido_centavos?: number | null
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          explicacao_ia?: string
+          horas_de_vacuo?: number
+          id?: string
+          instance_id?: string
+          metadata?: Json | null
+          nome_cliente?: string | null
+          organization_id?: string
+          quando_converteu?: string | null
+          quando_foi?: string
+          quando_respondi?: string | null
+          quem_mandou_ultima?: string
+          resposta_pronta?: string
+          status?: string
+          telefone_cliente?: string
+          temperatura?: number
+          temperatura_emoji?: string
+          temperatura_explicacao?: string | null
+          temperatura_label?: string
+          tipo_vacuo?: string
+          ultima_mensagem?: string
+          updated_at?: string
+          valor_estimado_centavos?: number
+          valor_real_convertido_centavos?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_esquecidos_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_esquecidos_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_esquecidos_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "clientes_esquecidos_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -407,6 +753,13 @@ export type Database = {
             foreignKeyName: "contacts_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "contacts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -421,10 +774,12 @@ export type Database = {
       }
       conversations: {
         Row: {
+          ai_enabled: boolean | null
           contact_id: string | null
           created_at: string | null
           escalated_to_human_at: string | null
           escalation_reason: string | null
+          handoff_mode: boolean | null
           id: string
           last_message_at: string | null
           organization_id: string
@@ -435,10 +790,12 @@ export type Database = {
           whatsapp_instance_id: string
         }
         Insert: {
+          ai_enabled?: boolean | null
           contact_id?: string | null
           created_at?: string | null
           escalated_to_human_at?: string | null
           escalation_reason?: string | null
+          handoff_mode?: boolean | null
           id?: string
           last_message_at?: string | null
           organization_id: string
@@ -449,10 +806,12 @@ export type Database = {
           whatsapp_instance_id: string
         }
         Update: {
+          ai_enabled?: boolean | null
           contact_id?: string | null
           created_at?: string | null
           escalated_to_human_at?: string | null
           escalation_reason?: string | null
+          handoff_mode?: boolean | null
           id?: string
           last_message_at?: string | null
           organization_id?: string
@@ -474,6 +833,13 @@ export type Database = {
             foreignKeyName: "conversations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -482,6 +848,323 @@ export type Database = {
             columns: ["whatsapp_instance_id"]
             isOneToOne: false
             referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daycare_hotel_stays: {
+        Row: {
+          behavior_assessment: Json
+          check_in_date: string
+          check_out_date: string | null
+          contact_id: string
+          created_at: string
+          daily_routine: Json | null
+          extra_services: string[] | null
+          health_assessment: Json
+          id: string
+          monitoring_config: Json | null
+          notes: string | null
+          organization_id: string
+          pet_id: string
+          status: string
+          stay_type: string
+          updated_at: string
+        }
+        Insert: {
+          behavior_assessment?: Json
+          check_in_date: string
+          check_out_date?: string | null
+          contact_id: string
+          created_at?: string
+          daily_routine?: Json | null
+          extra_services?: string[] | null
+          health_assessment?: Json
+          id?: string
+          monitoring_config?: Json | null
+          notes?: string | null
+          organization_id: string
+          pet_id: string
+          status?: string
+          stay_type: string
+          updated_at?: string
+        }
+        Update: {
+          behavior_assessment?: Json
+          check_in_date?: string
+          check_out_date?: string | null
+          contact_id?: string
+          created_at?: string
+          daily_routine?: Json | null
+          extra_services?: string[] | null
+          health_assessment?: Json
+          id?: string
+          monitoring_config?: Json | null
+          notes?: string | null
+          organization_id?: string
+          pet_id?: string
+          status?: string
+          stay_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daycare_hotel_stays_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daycare_hotel_stays_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "daycare_hotel_stays_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daycare_hotel_stays_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      internal_audit_log: {
+        Row: {
+          action: string
+          changes: Json | null
+          created_at: string
+          id: string
+          ip_address: unknown | null
+          resource_id: string | null
+          resource_type: string
+          user_agent: string | null
+          user_email: string
+          user_id: string
+          user_role: Database["public"]["Enums"]["internal_role"]
+        }
+        Insert: {
+          action: string
+          changes?: Json | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          resource_id?: string | null
+          resource_type: string
+          user_agent?: string | null
+          user_email: string
+          user_id: string
+          user_role: Database["public"]["Enums"]["internal_role"]
+        }
+        Update: {
+          action?: string
+          changes?: Json | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          resource_id?: string | null
+          resource_type?: string
+          user_agent?: string | null
+          user_email?: string
+          user_id?: string
+          user_role?: Database["public"]["Enums"]["internal_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internal_audit_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      internal_users: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string
+          id: string
+          is_active: boolean
+          last_login_at: string | null
+          name: string
+          password_hash: string
+          role: Database["public"]["Enums"]["internal_role"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email: string
+          id?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          name: string
+          password_hash: string
+          role?: Database["public"]["Enums"]["internal_role"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          name?: string
+          password_hash?: string
+          role?: Database["public"]["Enums"]["internal_role"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internal_users_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_base: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          last_used_at: string | null
+          learned_from_bipe_id: string | null
+          organization_id: string
+          question: string
+          source: string | null
+          updated_at: string
+          usage_count: number | null
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          learned_from_bipe_id?: string | null
+          organization_id: string
+          question: string
+          source?: string | null
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          learned_from_bipe_id?: string | null
+          organization_id?: string
+          question?: string
+          source?: string | null
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_base_learned_from_bipe_id_fkey"
+            columns: ["learned_from_bipe_id"]
+            isOneToOne: false
+            referencedRelation: "bipe_protocol"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_base_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "knowledge_base_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_queue: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          job_type: string
+          max_attempts: number
+          message_id: string | null
+          organization_id: string
+          payload: Json
+          priority: number
+          scheduled_for: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type: string
+          max_attempts?: number
+          message_id?: string | null
+          organization_id: string
+          payload: Json
+          priority?: number
+          scheduled_for?: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          max_attempts?: number
+          message_id?: string | null
+          organization_id?: string
+          payload?: Json
+          priority?: number
+          scheduled_for?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_queue_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_queue_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "message_queue_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -541,6 +1224,13 @@ export type Database = {
             foreignKeyName: "messages_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -554,10 +1244,14 @@ export type Database = {
           aurora_daily_summary_time: string | null
           aurora_enabled: boolean | null
           aurora_model: string | null
+          bipe_limit_triggers: Json | null
+          bipe_phone_number: string | null
           business_hours: Json | null
           created_at: string | null
+          emergency_contact: Json | null
           id: string
           organization_id: string
+          payment_methods: Json | null
           services_config: Json | null
           updated_at: string | null
         }
@@ -568,10 +1262,14 @@ export type Database = {
           aurora_daily_summary_time?: string | null
           aurora_enabled?: boolean | null
           aurora_model?: string | null
+          bipe_limit_triggers?: Json | null
+          bipe_phone_number?: string | null
           business_hours?: Json | null
           created_at?: string | null
+          emergency_contact?: Json | null
           id?: string
           organization_id: string
+          payment_methods?: Json | null
           services_config?: Json | null
           updated_at?: string | null
         }
@@ -582,14 +1280,25 @@ export type Database = {
           aurora_daily_summary_time?: string | null
           aurora_enabled?: boolean | null
           aurora_model?: string | null
+          bipe_limit_triggers?: Json | null
+          bipe_phone_number?: string | null
           business_hours?: Json | null
           created_at?: string | null
+          emergency_contact?: Json | null
           id?: string
           organization_id?: string
+          payment_methods?: Json | null
           services_config?: Json | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "organization_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
           {
             foreignKeyName: "organization_settings_organization_id_fkey"
             columns: ["organization_id"]
@@ -605,9 +1314,14 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          is_active: boolean
           name: string
           phone: string | null
+          quota_instances: number
+          quota_messages_monthly: number
           settings: Json | null
+          subscription_plan: string
+          subscription_status: string
           updated_at: string | null
         }
         Insert: {
@@ -615,9 +1329,14 @@ export type Database = {
           created_at?: string | null
           email: string
           id?: string
+          is_active?: boolean
           name: string
           phone?: string | null
+          quota_instances?: number
+          quota_messages_monthly?: number
           settings?: Json | null
+          subscription_plan?: string
+          subscription_status?: string
           updated_at?: string | null
         }
         Update: {
@@ -625,9 +1344,14 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          is_active?: boolean
           name?: string
           phone?: string | null
+          quota_instances?: number
+          quota_messages_monthly?: number
           settings?: Json | null
+          subscription_plan?: string
+          subscription_status?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -705,6 +1429,13 @@ export type Database = {
             foreignKeyName: "pets_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "pets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -769,6 +1500,13 @@ export type Database = {
             foreignKeyName: "scheduled_followups_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "scheduled_followups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -822,7 +1560,100 @@ export type Database = {
             foreignKeyName: "services_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "services_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_plans: {
+        Row: {
+          contact_id: string
+          created_at: string
+          duration_weeks: number
+          id: string
+          initial_assessment: Json
+          location_type: string | null
+          long_term_goals: string[] | null
+          methodology: string | null
+          organization_id: string
+          pet_id: string
+          plan_type: string
+          session_duration_minutes: number | null
+          session_frequency: number
+          short_term_goals: string[] | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          duration_weeks: number
+          id?: string
+          initial_assessment?: Json
+          location_type?: string | null
+          long_term_goals?: string[] | null
+          methodology?: string | null
+          organization_id: string
+          pet_id: string
+          plan_type: string
+          session_duration_minutes?: number | null
+          session_frequency: number
+          short_term_goals?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          duration_weeks?: number
+          id?: string
+          initial_assessment?: Json
+          location_type?: string | null
+          long_term_goals?: string[] | null
+          methodology?: string | null
+          organization_id?: string
+          pet_id?: string
+          plan_type?: string
+          session_duration_minutes?: number | null
+          session_frequency?: number
+          short_term_goals?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plans_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_plans_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_plans_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_plans_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
             referencedColumns: ["id"]
           },
         ]
@@ -861,6 +1692,79 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "users_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "users_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_deliveries: {
+        Row: {
+          attempts: number
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          event_type: string
+          id: string
+          max_attempts: number
+          next_retry_at: string | null
+          organization_id: string
+          payload: Json
+          response_body: string | null
+          response_status: number | null
+          status: string
+          webhook_url: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          organization_id: string
+          payload: Json
+          response_body?: string | null
+          response_status?: number | null
+          status?: string
+          webhook_url: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          organization_id?: string
+          payload?: Json
+          response_body?: string | null
+          response_status?: number | null
+          status?: string
+          webhook_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_deliveries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "webhook_deliveries_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -910,6 +1814,13 @@ export type Database = {
             foreignKeyName: "whatsapp_instances_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "whatsapp_instances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -917,16 +1828,99 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      dashboard_metrics: {
+        Row: {
+          active_contacts: number | null
+          active_conversations: number | null
+          active_pets: number | null
+          ai_interactions_7d: number | null
+          avg_ai_confidence_7d: number | null
+          bookings_this_month: number | null
+          bookings_this_week: number | null
+          bookings_today: number | null
+          conversations_waiting_human: number | null
+          last_refreshed_at: string | null
+          messages_today: number | null
+          new_contacts_today: number | null
+          organization_id: string | null
+          organization_name: string | null
+          revenue_this_month_cents: number | null
+          revenue_this_week_cents: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      cleanup_expired_backups: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      get_clientes_esquecidos_stats: {
+        Args: { p_organization_id: string }
+        Returns: {
+          taxa_conversao: number
+          total_achei: number
+          total_clientes: number
+          total_deixei_quieto: number
+          total_frios: number
+          total_ja_respondi: number
+          total_mornos: number
+          total_quentes: number
+          total_virou_cliente: number
+          valor_real_convertido_reais: number
+          valor_total_estimado_reais: number
+        }[]
+      }
+      get_organization_stats: {
+        Args: { org_id: string }
+        Returns: Json
+      }
       get_user_organization_id: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      increment_knowledge_usage: {
+        Args: { knowledge_id: string }
+        Returns: undefined
+      }
+      log_internal_action: {
+        Args: {
+          p_action: string
+          p_changes?: Json
+          p_ip_address?: unknown
+          p_resource_id?: string
+          p_resource_type: string
+          p_user_agent?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      process_pending_queue_jobs: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          job_id: string
+          job_type: string
+          organization_id: string
+          payload: Json
+        }[]
+      }
+      refresh_analytics_views: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      retry_failed_queue_jobs: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
     }
     Enums: {
-      [_ in never]: never
+      internal_role:
+        | "super_admin"
+        | "tech"
+        | "cs"
+        | "sales"
+        | "marketing"
+        | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1052,27 +2046,16 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
-    Enums: {},
+    Enums: {
+      internal_role: [
+        "super_admin",
+        "tech",
+        "cs",
+        "sales",
+        "marketing",
+        "viewer",
+      ],
+    },
   },
 } as const
-
-// Helper exports
-export type Organization = Tables<'organizations'>
-export type User = Tables<'users'>
-export type OrganizationSettings = Tables<'organization_settings'>
-export type Service = Tables<'services'>
-export type Contact = Tables<'contacts'>
-export type Pet = Tables<'pets'>
-export type Booking = Tables<'bookings'>
-export type WhatsAppInstance = Tables<'whatsapp_instances'>
-export type Conversation = Tables<'conversations'>
-export type Message = Tables<'messages'>
-export type AIInteraction = Tables<'ai_interactions'>
-export type AuthorizedOwnerNumber = Tables<'authorized_owner_numbers'>
-export type ScheduledFollowup = Tables<'scheduled_followups'>
-export type AuroraProactiveMessage = Tables<'aurora_proactive_messages'>
-export type AuroraAutomation = Tables<'aurora_automations'>
