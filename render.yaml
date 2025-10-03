@@ -1,0 +1,142 @@
+services:
+  # ==========================================
+  # Backend Web Service (API + Socket.IO)
+  # ==========================================
+  - type: web
+    name: auzap-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    region: oregon
+    plan: starter
+    branch: main
+
+    # Auto-scaling configuration
+    autoDeploy: true
+    numInstances: 1
+
+    # Health check
+    healthCheckPath: /health
+
+    # Persistent disk for WhatsApp sessions (Baileys)
+    disk:
+      name: whatsapp-sessions
+      mountPath: /app/sessions
+      sizeGB: 1
+
+    # Environment variables
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: PORT
+        value: 3001
+
+      # Supabase (from Render environment)
+      - key: SUPABASE_URL
+        sync: false
+
+      - key: SUPABASE_ANON_KEY
+        sync: false
+
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+      # Upstash Redis (from Render environment)
+      - key: REDIS_URL
+        sync: false
+
+      # OpenAI
+      - key: OPENAI_API_KEY
+        sync: false
+
+      # Frontend URL for CORS
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: auzap-frontend
+          property: url
+
+  # ==========================================
+  # Background Worker (Message Processor)
+  # ==========================================
+  - type: worker
+    name: auzap-worker
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    dockerCommand: node dist/workers/message-processor.js
+    region: oregon
+    plan: starter
+    branch: main
+
+    # Auto-scaling
+    autoDeploy: true
+
+    # Persistent disk (shared with web service)
+    disk:
+      name: whatsapp-sessions
+      mountPath: /app/sessions
+      sizeGB: 1
+
+    # Environment variables (same as web service)
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: SUPABASE_URL
+        sync: false
+
+      - key: SUPABASE_ANON_KEY
+        sync: false
+
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+      - key: REDIS_URL
+        sync: false
+
+      - key: OPENAI_API_KEY
+        sync: false
+
+  # ==========================================
+  # Frontend Static Site (React + Vite)
+  # ==========================================
+  - type: web
+    name: auzap-frontend
+    runtime: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    region: oregon
+    branch: main
+
+    # Auto-deploy
+    autoDeploy: true
+
+    # Custom headers for security
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+
+    # Environment variables for build
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: auzap-backend
+          property: url
+
+      - key: VITE_SUPABASE_URL
+        sync: false
+
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
