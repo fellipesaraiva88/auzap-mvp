@@ -21,12 +21,12 @@ export const io = new Server(httpServer, {
   }
 });
 
-// TODO: Re-enable Baileys Socket.IO integration after fixing BaileysService
-// import { baileysService } from './services/baileys/baileys.service.js';
-// baileysService.setSocketEmitter((event: string, data: any) => {
-//   io.to(`org:${data.organizationId}`).emit(event, data);
-//   logger.debug({ event, organizationId: data.organizationId }, 'Socket.IO event emitted');
-// });
+// Baileys Socket.IO integration (Real-time WhatsApp events)
+import { baileysService } from './services/baileys/baileys.service.js';
+baileysService.setSocketEmitter((event: string, data: any) => {
+  io.to(`org:${data.organizationId}`).emit(event, data);
+  logger.debug({ event, organizationId: data.organizationId }, 'Socket.IO event emitted');
+});
 
 // Middleware
 app.use(helmet({
