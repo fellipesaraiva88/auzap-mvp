@@ -1,13 +1,43 @@
 import { Wifi, WifiOff, Loader2 } from "lucide-react";
-import { useWhatsAppStatus } from "@/hooks/useWhatsApp";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { DashboardCardSkeleton, ErrorState } from "./LoadingStates";
 
 interface WhatsAppStatusProps {
-  instanceId: string;
+  instanceId?: string;
 }
 
 export function WhatsAppStatusCard({ instanceId }: WhatsAppStatusProps) {
-  const { data, isLoading, error, refetch } = useWhatsAppStatus(instanceId);
+  const { user } = useAuth();
+
+  // Buscar primeira instância WhatsApp da organização
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['whatsapp-instance', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) {
+        throw new Error('Organization ID not found');
+      }
+
+      const { data, error } = await supabase
+        .from('whatsapp_instances')
+        .select('*')
+        .eq('organization_id', user.organization_id)
+        .eq('status', 'connected')
+        .order('last_connected_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    },
+    enabled: !!user?.organization_id,
+    refetchInterval: 30000, // Atualizar a cada 30 segundos
+    staleTime: 10000,
+  });
 
   if (isLoading) {
     return <DashboardCardSkeleton />;
@@ -24,8 +54,8 @@ export function WhatsAppStatusCard({ instanceId }: WhatsAppStatusProps) {
     );
   }
 
-  const isConnected = data?.connected || false;
-  const isConnecting = data?.status === 'connecting';
+  const isConnected = !!data;
+  const isConnecting = false; // Podemos adicionar esse status depois
 
   return (
     <div className={`flex items-center gap-3 px-4 py-2 ${
@@ -61,9 +91,9 @@ export function WhatsAppStatusCard({ instanceId }: WhatsAppStatusProps) {
         {isConnecting ? 'Conectando...' : isConnected ? 'IA Online' : 'WhatsApp Offline'}
       </span>
 
-      {data?.instance?.phone_number && (
+      {data?.phone_number && (
         <span className="text-xs text-muted-foreground ml-auto">
-          {data.instance.phone_number}
+          {data.phone_number}
         </span>
       )}
     </div>

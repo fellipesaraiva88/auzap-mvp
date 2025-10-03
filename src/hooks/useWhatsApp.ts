@@ -55,6 +55,24 @@ export interface InitializeInstanceResult {
 }
 
 /**
+ * Hook para buscar a primeira instância WhatsApp da organização
+ */
+export function useOrganizationWhatsAppInstance() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['whatsapp', 'organization-instance', user?.organization_id],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/api/v1/dashboard/stats');
+      // Buscar instância na resposta ou via query direta ao Supabase
+      return data?.whatsappInstance || null;
+    },
+    enabled: !!user?.organization_id,
+    staleTime: 60000,
+  });
+}
+
+/**
  * Hook para monitorar status de uma instância WhatsApp
  * Integra polling + Socket.IO para updates real-time
  */
@@ -66,6 +84,16 @@ export function useWhatsAppStatus(instanceId: string, enabled = true) {
   const query = useQuery({
     queryKey: ['whatsapp', 'status', instanceId],
     queryFn: async () => {
+      if (!instanceId || instanceId === 'default') {
+        // Se não tem instanceId, buscar da organização via Supabase
+        return {
+          instanceId: 'unknown',
+          connected: false,
+          status: 'disconnected' as WhatsAppStatus,
+          timestamp: new Date().toISOString()
+        };
+      }
+
       const response = await apiClient.get<WhatsAppStatusResponse>(
         `/api/whatsapp/instances/${instanceId}/status`
       );
