@@ -30,7 +30,8 @@ WORKDIR /app
 # Install runtime dependencies only
 RUN apk add --no-cache \
     tini \
-    dumb-init
+    dumb-init \
+    git
 
 # Create sessions directory for Baileys persistence
 RUN mkdir -p /app/sessions && chown -R node:node /app/sessions
