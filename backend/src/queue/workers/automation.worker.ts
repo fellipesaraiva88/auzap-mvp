@@ -79,15 +79,15 @@ export class AutomationWorker {
       // Processar baseado no tipo
       switch (type) {
         case 'reminder':
-          await this.processReminder(instanceId, recipientNumber, content, metadata);
+          await this.processReminder(organizationId, instanceId, recipientNumber, content, metadata);
           break;
 
         case 'followup':
-          await this.processFollowup(instanceId, recipientNumber, content, metadata);
+          await this.processFollowup(organizationId, instanceId, recipientNumber, content, metadata);
           break;
 
         case 'scheduled':
-          await this.processScheduled(instanceId, recipientNumber, content, metadata);
+          await this.processScheduled(organizationId, instanceId, recipientNumber, content, metadata);
           break;
 
         default:
@@ -109,6 +109,7 @@ export class AutomationWorker {
    * Processa lembretes (ex: consulta agendada)
    */
   private async processReminder(
+    organizationId: string,
     instanceId: string,
     recipientNumber: string,
     content: string,
@@ -120,7 +121,12 @@ export class AutomationWorker {
     const message = this.renderContent(content, metadata || {});
 
     // Enviar mensagem
-    await baileysService.sendTextMessage(instanceId, recipientNumber, message);
+    await baileysService.sendTextMessage({
+      instanceId,
+      to: recipientNumber,
+      text: message,
+      organizationId
+    });
 
     // Se é lembrete de agendamento, atualizar status
     if (metadata?.bookingId) {
@@ -135,6 +141,7 @@ export class AutomationWorker {
    * Processa follow-ups (ex: 24h após primeira visita)
    */
   private async processFollowup(
+    organizationId: string,
     instanceId: string,
     recipientNumber: string,
     content: string,
@@ -146,7 +153,12 @@ export class AutomationWorker {
     const message = this.renderContent(content, metadata || {});
 
     // Enviar mensagem
-    await baileysService.sendTextMessage(instanceId, recipientNumber, message);
+    await baileysService.sendTextMessage({
+      instanceId,
+      to: recipientNumber,
+      text: message,
+      organizationId
+    });
 
     // Registrar follow-up enviado (usar scheduled_followups)
     if (metadata?.contactId) {
@@ -165,6 +177,7 @@ export class AutomationWorker {
    * Processa mensagens agendadas (ex: promoção às 10h)
    */
   private async processScheduled(
+    organizationId: string,
     instanceId: string,
     recipientNumber: string,
     content: string,
@@ -176,7 +189,12 @@ export class AutomationWorker {
     const message = this.renderContent(content, metadata || {});
 
     // Enviar mensagem
-    await baileysService.sendTextMessage(instanceId, recipientNumber, message);
+    await baileysService.sendTextMessage({
+      instanceId,
+      to: recipientNumber,
+      text: message,
+      organizationId
+    });
   }
 
   /**
