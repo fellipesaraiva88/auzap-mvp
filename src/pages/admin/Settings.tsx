@@ -254,60 +254,45 @@ export default function Settings() {
           </div>
         </motion.div>
 
-        {/* Organization Overview */}
+        {/* Organization Overview - Compact */}
         {organization && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-blue-50">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Building2 className="w-6 h-6 text-blue-600" />
-                    <CardTitle>Organização</CardTitle>
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-blue-50">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-blue-600" />
+                    <h3 className="font-semibold text-gray-900">{organization.name}</h3>
                   </div>
-                  <Badge className="bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0">
+                  <Badge className="bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 text-xs">
                     {organization.subscription_status === 'active' ? 'Ativo' : organization.subscription_status}
                   </Badge>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-gray-600">Nome da Organização</Label>
-                      <p className="text-lg font-semibold text-gray-900">{organization.name}</p>
-                    </div>
-                    <div>
-                      <Label className="text-gray-600">Email</Label>
-                      <p className="text-lg font-semibold text-gray-900">{organization.email}</p>
-                    </div>
-                    {organization.phone && (
-                      <div>
-                        <Label className="text-gray-600">Telefone</Label>
-                        <p className="text-lg font-semibold text-gray-900">{organization.phone}</p>
-                      </div>
-                    )}
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg text-white">
+                    <p className="text-xs opacity-90">Plano</p>
+                    <p className="text-sm font-bold capitalize">{organization.subscription_plan}</p>
                   </div>
-                  <div className="space-y-4">
-                    <div className="p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl text-white">
-                      <p className="text-sm opacity-90">Plano Atual</p>
-                      <p className="text-2xl font-bold capitalize">{organization.subscription_plan}</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-3 bg-white rounded-lg border border-gray-200">
-                        <p className="text-xs text-gray-600">Mensagens/mês</p>
-                        <p className="text-xl font-bold text-gray-900">
-                          {organization.quota_messages_monthly.toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="p-3 bg-white rounded-lg border border-gray-200">
-                        <p className="text-xs text-gray-600">Instâncias</p>
-                        <p className="text-xl font-bold text-gray-900">{organization.quota_instances}</p>
-                      </div>
-                    </div>
+                  <div className="p-2 bg-white rounded-lg border border-gray-200">
+                    <p className="text-xs text-gray-600">Mensagens/mês</p>
+                    <p className="text-sm font-bold text-gray-900">
+                      {organization.quota_messages_monthly.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="p-2 bg-white rounded-lg border border-gray-200">
+                    <p className="text-xs text-gray-600">Instâncias</p>
+                    <p className="text-sm font-bold text-gray-900">{organization.quota_instances}</p>
+                  </div>
+                  <div className="p-2 bg-white rounded-lg border border-gray-200">
+                    <p className="text-xs text-gray-600">Equipe Ativa</p>
+                    <p className="text-sm font-bold text-gray-900">
+                      {team.filter((m: { is_active: boolean }) => m.is_active).length}
+                    </p>
                   </div>
                 </div>
               </CardContent>
