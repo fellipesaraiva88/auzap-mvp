@@ -34,7 +34,10 @@ RUN apk add --no-cache \
     git
 
 # Create sessions directory for Baileys persistence
-RUN mkdir -p /app/sessions && chown -R node:node /app/sessions
+# Note: Render Disk will mount over this, but we set permissions anyway
+RUN mkdir -p /app/sessions && \
+    chmod 777 /app/sessions && \
+    chown -R node:node /app/sessions
 
 # Copy package files
 COPY package*.json ./
@@ -47,6 +50,15 @@ COPY --from=builder /app/dist ./dist
 
 # Copy any necessary runtime files
 COPY --from=builder /app/scripts ./scripts
+
+# Make init script executable
+RUN chmod +x ./scripts/init-sessions.sh
+
+# Create startup script that ensures sessions dir exists before starting
+RUN echo '#!/bin/sh\n\
+mkdir -p /app/sessions 2>/dev/null || true\n\
+chmod 755 /app/sessions 2>/dev/null || true\n\
+exec node dist/server.js\n' > /app/start.sh && chmod +x /app/start.sh
 
 # Switch to non-root user for security
 USER node
@@ -61,5 +73,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Use tini for proper signal handling
 ENTRYPOINT ["/sbin/tini", "--"]
 
-# Start server
-CMD ["node", "dist/server.js"]
+# Start with wrapper script
+CMD ["/bin/sh", "/app/start.sh"]
