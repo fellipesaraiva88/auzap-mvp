@@ -25,7 +25,12 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 // Admin Panel
 const AdminLayout = lazy(() => import("./layouts/AdminLayout"));
 const LoginAdmin = lazy(() => import("./pages/admin/LoginAdmin"));
+const Dashboard = lazy(() => import("./pages/admin/Dashboard"));
 const ClientsAdmin = lazy(() => import("./pages/admin/ClientsAdmin"));
+const Monitoring = lazy(() => import("./pages/admin/Monitoring"));
+const Logs = lazy(() => import("./pages/admin/Logs"));
+const Analytics = lazy(() => import("./pages/admin/Analytics"));
+const Settings = lazy(() => import("./pages/admin/Settings"));
 
 const queryClient = new QueryClient();
 
@@ -49,7 +54,12 @@ const App = () => (
                 <AdminLayout />
               }
             >
+              <Route index element={<Dashboard />} />
               <Route path="clients" element={<ClientsAdmin />} />
+              <Route path="monitoring" element={<Monitoring />} />
+              <Route path="logs" element={<Logs />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
 
             {/* Protected Routes */}
