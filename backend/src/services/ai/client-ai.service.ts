@@ -7,8 +7,7 @@ import { bookingsService } from '../bookings/bookings.service.js';
 import { contextBuilderService, type ClientContext } from '../context/context-builder.service.js';
 import { TrainingService } from '../training/training.service.js';
 import { DaycareService } from '../daycare/daycare.service.js';
-import { BipeService } from '../bipe/bipe.service.js';
-import { KnowledgeBaseService } from '../knowledge-base/knowledge-base.service.js';
+import { knowledgeBaseService } from '../knowledge-base/knowledge-base.service.js';
 
 interface AIContext {
   organizationId: string;

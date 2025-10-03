@@ -15,10 +15,12 @@ export interface KnowledgeEntry {
   organization_id: string;
   question: string;
   answer: string;
-  source?: 'bipe' | 'manual' | 'import';
-  learned_from_bipe_id?: string;
-  usage_count?: number;
-  last_used_at?: string;
+  source?: 'bipe' | 'manual' | 'import' | null;
+  learned_from_bipe_id?: string | null;
+  usage_count?: number | null;
+  last_used_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CreateKnowledgeEntryData {
@@ -231,7 +233,7 @@ export class KnowledgeBaseService {
 
     try {
       const completion = await openai.chat.completions.create({
-        model: AI_MODELS.GPT_4O,
+        model: AI_MODELS.CLIENT,
         messages: [
           {
             role: 'system',
@@ -271,10 +273,19 @@ Se a pergunta puder ser respondida com base nessas informações, use-as. Caso c
    * Increment usage count for an entry
    */
   async incrementUsage(entryId: string): Promise<void> {
+    // Get current count first
+    const { data: entry } = await supabaseAdmin
+      .from('knowledge_base')
+      .select('usage_count')
+      .eq('id', entryId)
+      .single();
+
+    const currentCount = entry?.usage_count || 0;
+
     const { error } = await supabaseAdmin
       .from('knowledge_base')
       .update({
-        usage_count: supabaseAdmin.rpc('increment', { row_id: entryId }),
+        usage_count: currentCount + 1,
         last_used_at: new Date().toISOString()
       })
       .eq('id', entryId);

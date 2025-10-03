@@ -117,10 +117,10 @@ router.get('/entries/:id', standardLimiter, async (req, res) => {
       return res.status(404).json({ error: 'Entrada não encontrada' });
     }
 
-    res.json({ entry });
+    return res.json({ entry });
   } catch (error) {
     logger.error({ error, entryId: req.params.id }, 'Failed to get KB entry');
-    res.status(500).json({ error: 'Erro ao buscar entrada' });
+    return res.status(500).json({ error: 'Erro ao buscar entrada' });
   }
 });
 
@@ -179,10 +179,10 @@ router.get('/search', searchLimiter, async (req, res) => {
       limit ? parseInt(limit as string) : 5
     );
 
-    res.json({ results, total: results.length, query: q });
+    return res.json({ results, total: results.length, query: q });
   } catch (error) {
     logger.error({ error, query: req.query.q }, 'Failed to search KB');
-    res.status(500).json({ error: 'Erro ao buscar na base de conhecimento' });
+    return res.status(500).json({ error: 'Erro ao buscar na base de conhecimento' });
   }
 });
 
@@ -203,10 +203,10 @@ router.post('/suggest', searchLimiter, async (req, res) => {
       req.organizationId!
     );
 
-    res.json(suggestion);
+    return res.json(suggestion);
   } catch (error) {
     logger.error({ error, question: req.body.question }, 'Failed to suggest answer');
-    res.status(500).json({ error: 'Erro ao gerar sugestão de resposta' });
+    return res.status(500).json({ error: 'Erro ao gerar sugestão de resposta' });
   }
 });
 
