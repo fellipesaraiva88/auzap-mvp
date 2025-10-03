@@ -21,7 +21,7 @@ router.use(requireAdminAuth);
  * - marketing: apenas métricas agregadas
  * - viewer: apenas leitura
  */
-router.get('/', requireAdminRole(['super_admin', 'tech', 'cs', 'sales', 'viewer']), async (req: AdminRequest, res: Response): Promise<void> => {
+router.get('/', requireAdminRole(['super_admin', 'tech', 'cs', 'sales', 'viewer']), async (_req: AdminRequest, res: Response): Promise<void> => {
   try {
     const { data: organizations, error } = await supabaseAdmin
       .from('organizations')
