@@ -56,7 +56,7 @@ export class AdminAuthService {
   async login(email: string, password: string, ipAddress?: string): Promise<LoginResult> {
     try {
       // Buscar usuário (service role bypass RLS)
-      const { data: user, error } = await supabaseAdmin
+      const { data: user, error } = await (supabaseAdmin as any)
         .from('internal_users')
         .select('*')
         .eq('email', email.toLowerCase())
@@ -72,7 +72,7 @@ export class AdminAuthService {
       }
 
       // Verificar senha
-      const isValidPassword = await bcrypt.compare(password, (user as any).password_hash);
+      const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
       if (!isValidPassword) {
         logger.warn({ email, userId: user.id }, 'Invalid password for internal user');
@@ -90,7 +90,7 @@ export class AdminAuthService {
       }
 
       // Atualizar last_login_at
-      await supabaseAdmin
+      await (supabaseAdmin as any)
         .from('internal_users')
         .update({ last_login_at: new Date().toISOString() })
         .eq('id', user.id);
@@ -160,7 +160,7 @@ export class AdminAuthService {
    */
   async getUserById(userId: string): Promise<InternalUser | null> {
     try {
-      const { data: user, error } = await supabaseAdmin
+      const { data: user, error } = await (supabaseAdmin as any)
         .from('internal_users')
         .select('id, name, email, role, is_active, last_login_at')
         .eq('id', userId)
@@ -184,7 +184,7 @@ export class AdminAuthService {
   async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<boolean> {
     try {
       // Buscar usuário
-      const { data: user, error } = await supabaseAdmin
+      const { data: user, error } = await (supabaseAdmin as any)
         .from('internal_users')
         .select('password_hash')
         .eq('id', userId)
@@ -204,7 +204,7 @@ export class AdminAuthService {
       const newPasswordHash = await bcrypt.hash(newPassword, 10);
 
       // Atualizar
-      const { error: updateError } = await supabaseAdmin
+      const { error: updateError } = await (supabaseAdmin as any)
         .from('internal_users')
         .update({ password_hash: newPasswordHash })
         .eq('id', userId);
@@ -235,7 +235,7 @@ export class AdminAuthService {
     try {
       const newPasswordHash = await bcrypt.hash(newPassword, 10);
 
-      const { error } = await supabaseAdmin
+      const { error } = await (supabaseAdmin as any)
         .from('internal_users')
         .update({ password_hash: newPasswordHash })
         .eq('id', targetUserId);
