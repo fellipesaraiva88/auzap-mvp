@@ -1,0 +1,173 @@
+{
+  "main": {
+    "id": "1d2e84c9302c1072",
+    "type": "split",
+    "children": [
+      {
+        "id": "040893a6f7d91561",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "435ce28ca065eda0",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Visualização de diagrama de grafo"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "23899bc3ac7895d8",
+    "type": "split",
+    "children": [
+      {
+        "id": "945fdeca601fb28e",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "6f48b28ed63aacce",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Explorador de ficheiros"
+            }
+          },
+          {
+            "id": "b6ba36c9a6437132",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Procurar"
+            }
+          },
+          {
+            "id": "b133078e863f4661",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "b09fa0c39bbaf777",
+    "type": "split",
+    "children": [
+      {
+        "id": "d29110398c1cdedc",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "0f73713c236f5190",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "a412c9896f55a11e",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Links Externos"
+            }
+          },
+          {
+            "id": "e5363b9393bd2fbd",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "2c813c9ed269978d",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Índice"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Abrir Quick Switcher": false,
+      "graph:Abrir Visualização de diagrama de grafo": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Abrir nota de hoje": false,
+      "templates:Inserir templates": false,
+      "command-palette:Abrir paleta de comando": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "435ce28ca065eda0",
+  "lastOpenFiles": [
+    "2-ARQUITETURA-SISTEMICA/Sistema-Completo.md",
+    "1-VISAO-E-FILOSOFIA/Cognitive-Level-4-5.md",
+    "1-VISAO-E-FILOSOFIA/Dual-AI-Philosophy.md",
+    "1-VISAO-E-FILOSOFIA/Principio-Impacto-Maior-Atividade.md",
+    "1-VISAO-E-FILOSOFIA/Visao-AuZap.md"
+  ]
+}

@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dev-dist
 *.local
 
 # Environment and credentials
@@ -22,6 +23,8 @@ RENDER_ENV_SETUP.md
 *.png
 test-*.mjs
 test-*.js
+test-results
+playwright-report
 
 # Editor directories and files
 .vscode/*

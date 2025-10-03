@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
 // Build: 2025-01-03
@@ -10,7 +11,129 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [
+    react(),
+    mode === "development" && componentTagger(),
+    VitePWA({
+      registerType: 'prompt',
+      includeAssets: ['favicon.ico', 'robots.txt'],
+      manifest: {
+        name: 'AuZap - Dashboard Pet Business com IA',
+        short_name: 'AuZap',
+        description: 'Dashboard revolucionário com IA que age, cadastra, agenda e gerencia seu negócio pet de forma autônoma.',
+        theme_color: '#8B5CF6',
+        background_color: '#0F172A',
+        display: 'standalone',
+        orientation: 'portrait',
+        scope: '/',
+        start_url: '/',
+        icons: [
+          {
+            src: 'icons/icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: 'icons/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: 'icons/icon-512x512-maskable.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
+          }
+        ]
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
+        runtimeCaching: [
+          // Supabase API - Network First (sempre tentar rede primeiro)
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-api-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 // 24 horas
+              },
+              networkTimeoutSeconds: 10
+            }
+          },
+          // Backend API - Network First
+          {
+            urlPattern: /^https?:\/\/.*\/api\/v1\/.*/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'backend-api-cache',
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 // 24 horas
+              },
+              networkTimeoutSeconds: 10
+            }
+          },
+          // Google Fonts - Cache First
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 ano
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'gstatic-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 ano
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          // Imagens - Cache First
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images-cache',
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 dias
+              }
+            }
+          },
+          // Socket.IO - Network Only (não cachear real-time)
+          {
+            urlPattern: /\/socket\.io\/.*/,
+            handler: 'NetworkOnly'
+          }
+        ],
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module'
+      }
+    })
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

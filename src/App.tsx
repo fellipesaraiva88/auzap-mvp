@@ -14,6 +14,7 @@ const Index = lazy(() => import("./pages/Index"));
 const Conversas = lazy(() => import("./pages/Conversas"));
 const Agenda = lazy(() => import("./pages/Agenda"));
 const Clientes = lazy(() => import("./pages/Clientes"));
+const ClientesKanban = lazy(() => import("./pages/ClientesKanban"));
 const Vendas = lazy(() => import("./pages/Vendas"));
 const IA = lazy(() => import("./pages/IA"));
 const Ajustes = lazy(() => import("./pages/Ajustes"));
@@ -87,7 +88,8 @@ const App = () => (
                             <Route path="/" element={<Index />} />
                             <Route path="/conversas" element={<Conversas />} />
                             <Route path="/agenda" element={<Agenda />} />
-                            <Route path="/clientes" element={<Clientes />} />
+                            <Route path="/clientes" element={<ClientesKanban />} />
+                            <Route path="/clientes-old" element={<Clientes />} />
                             <Route path="/vendas" element={<Vendas />} />
                             <Route path="/ia" element={<IA />} />
                             <Route path="/ajustes" element={<Ajustes />} />

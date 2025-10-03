@@ -5,7 +5,7 @@ export interface Pet {
   organization_id: string;
   contact_id: string;
   name: string;
-  species: 'dog' | 'cat' | 'bird' | 'rabbit' | 'other';
+  species: 'dog' | 'cat' | 'bird' | 'rabbit' | 'hamster' | 'fish' | 'other';
   breed?: string;
   age_years?: number;
   age_months?: number;
@@ -14,6 +14,11 @@ export interface Pet {
   color?: string;
   notes?: string;
   profile_image_url?: string;
+  microchip_number?: string;
+  medical_history?: string;
+  allergies?: string[];
+  medications?: string[];
+  temperament?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
