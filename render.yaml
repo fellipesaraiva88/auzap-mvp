@@ -50,6 +50,17 @@ services:
       - key: OPENAI_API_KEY
         sync: false
 
+      # WhatsApp Sessions
+      - key: WHATSAPP_SESSION_PATH
+        value: /app/sessions
+
+      # Security
+      - key: JWT_SECRET
+        sync: false
+
+      - key: ENCRYPTION_KEY
+        sync: false
+
       # Frontend URL for CORS
       - key: FRONTEND_URL
         fromService:
@@ -65,7 +76,7 @@ services:
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    dockerCommand: node dist/workers/message-processor.js
+    dockerCommand: node dist/queue/workers/all.js
     region: oregon
     plan: starter
     branch: main
@@ -83,6 +94,9 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+
+      - key: WHATSAPP_SESSION_PATH
+        value: /app/sessions
 
       - key: SUPABASE_URL
         sync: false
@@ -106,7 +120,6 @@ services:
     name: auzap-frontend
     runtime: static
     buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
     region: oregon
     branch: main
 
@@ -129,3 +142,6 @@ services:
 
       - key: VITE_SUPABASE_PUBLISHABLE_KEY
         sync: false
+
+      - key: VITE_SUPABASE_PROJECT_ID
+        value: cdndnwglcieylfgzbwts
