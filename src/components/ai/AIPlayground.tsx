@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Send, Bot, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { api } from '@/lib/api';
+import { apiClient } from '@/lib/api';
 
 interface Message {
   id: string;
@@ -42,7 +42,7 @@ export function AIPlayground() {
     setIsLoading(true);
 
     try {
-      const response = await api.post('/api/v1/ai/playground', {
+      const response = await apiClient.post('/api/v1/ai/playground', {
         message: input,
         conversationHistory: messages.map(m => ({
           role: m.role,

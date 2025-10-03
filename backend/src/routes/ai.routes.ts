@@ -33,23 +33,11 @@ router.post('/playground', async (req: TenantRequest, res: Response) => {
       historyLength: conversationHistory.length
     });
 
-    // Simular contexto de conversa do playground
-    const playgroundConversationId = `playground_${uuidv4()}`;
-    const playgroundContactPhone = '5511999999999'; // Número fictício
-
-    // Processar mensagem usando o Client AI Service
-    const response = await clientAIService.processMessage({
-      organizationId,
-      conversationId: playgroundConversationId,
-      from: playgroundContactPhone,
-      content: message,
-      timestamp: new Date(),
-      isPlayground: true, // Flag para indicar que é do playground
-      conversationHistory: conversationHistory.map((msg: any) => ({
-        role: msg.role,
-        content: msg.content
-      }))
-    });
+    // Processar mensagem usando o Client AI Service (modo playground)
+    const response = await clientAIService.processPlaygroundMessage(
+      message,
+      conversationHistory
+    );
 
     logger.info('✅ AI Playground: Response generated', {
       organizationId,
