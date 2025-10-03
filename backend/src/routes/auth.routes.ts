@@ -134,16 +134,34 @@ router.get('/me', async (req, res): Promise<void> => {
       return;
     }
 
+    logger.info({ auth_user_id: user.id }, 'Fetching profile for user');
+
+    // Try without join first
+    const { data: userOnly, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    logger.info({ userOnly, userError }, 'User without join fetched');
+
+    if (userError) {
+      logger.error({ userError, code: userError.code, details: userError.details }, 'Error fetching user');
+      res.status(500).json({ error: 'Failed to fetch user', details: userError.message });
+      return;
+    }
+
+    // Now try with join
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('users')
       .select('*, organizations(*)')
       .eq('auth_user_id', user.id)
       .single();
 
-    logger.info({ profile, profileError, auth_user_id: user.id }, 'Profile fetched');
+    logger.info({ profile, profileError }, 'Profile with org fetched');
 
     if (profileError) {
-      logger.error({ profileError }, 'Error fetching profile from database');
+      logger.error({ profileError, code: profileError.code }, 'Error fetching profile from database');
       res.status(500).json({ error: 'Failed to fetch user profile', details: profileError.message });
       return;
     }
