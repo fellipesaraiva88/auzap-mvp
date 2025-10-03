@@ -254,7 +254,7 @@ export default function ClientDetailModal({
               </DialogDescription>
             </div>
             <Badge className="text-lg px-4 py-2">
-              {client.subscription_plan.toUpperCase()}
+              {client.subscription_plan?.toUpperCase() || 'FREE'}
             </Badge>
           </div>
         </DialogHeader>

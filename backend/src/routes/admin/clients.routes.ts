@@ -31,7 +31,12 @@ router.get('/', requireAdminRole(['super_admin', 'tech', 'cs', 'sales', 'viewer'
         email,
         phone,
         created_at,
-        updated_at
+        updated_at,
+        is_active,
+        subscription_plan,
+        subscription_status,
+        quota_messages_monthly,
+        quota_instances
       `)
       .order('created_at', { ascending: false });
 
@@ -58,11 +63,16 @@ router.get('/', requireAdminRole(['super_admin', 'tech', 'cs', 'sales', 'viewer'
           .eq('organization_id', org.id)
           .gte('created_at', `${today}T00:00:00Z`);
 
+        const quotaUsagePct = org.quota_messages_monthly > 0
+          ? Math.round(((messagesToday || 0) / org.quota_messages_monthly) * 100)
+          : 0;
+
         return {
           ...org,
           metrics: {
             instances_count: instancesCount || 0,
-            messages_today: messagesToday || 0
+            messages_today: messagesToday || 0,
+            quota_usage_pct: quotaUsagePct
           }
         };
       })

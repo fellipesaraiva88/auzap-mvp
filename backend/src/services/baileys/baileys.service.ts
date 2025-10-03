@@ -328,6 +328,19 @@ export class BaileysService {
   }
 
   /**
+   * Força reconexão de uma instância (público para admin)
+   */
+  public async forceReconnectInstance(instanceId: string): Promise<void> {
+    // Buscar organizationId da instância
+    const instance = Array.from(this.instances.values()).find(i => i.instanceId === instanceId);
+    if (!instance) {
+      throw new Error('Instância não encontrada');
+    }
+
+    await this.reconnectInstance(instance.organizationId, instanceId);
+  }
+
+  /**
    * Reconecta instância (chamado pelo ConnectionHandler)
    */
   private async reconnectInstance(organizationId: string, instanceId: string): Promise<void> {

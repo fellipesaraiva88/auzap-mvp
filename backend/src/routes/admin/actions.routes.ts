@@ -34,7 +34,7 @@ router.post(
 
       // Forçar reconexão de todas as instâncias
       for (const instance of instances) {
-        await baileysService.reconnectInstance(instance.id);
+        await baileysService.forceReconnectInstance(instance.id);
         logger.info({ instanceId: instance.id, adminId: req.admin?.id }, 'Admin forced WhatsApp reconnection');
       }
 
