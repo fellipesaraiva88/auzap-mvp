@@ -24,6 +24,7 @@ import {
 import axios from 'axios';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import ClientDetailModal from '@/components/admin/ClientDetailModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -69,6 +70,8 @@ export default function ClientsAdmin() {
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchClients();
@@ -227,7 +230,14 @@ export default function ClientsAdmin() {
           </TableHeader>
           <TableBody>
             {filteredClients.map((client) => (
-              <TableRow key={client.id} className="cursor-pointer hover:bg-muted/50">
+              <TableRow 
+                key={client.id} 
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => {
+                  setSelectedClient(client);
+                  setIsModalOpen(true);
+                }}
+              >
                 <TableCell>
                   <div>
                     <p className="font-medium">{client.name}</p>
@@ -261,11 +271,14 @@ export default function ClientsAdmin() {
                     {client.is_active ? 'Ativo' : 'Inativo'}
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => navigate(`/admin/clients/${client.id}`)}
+                    onClick={() => {
+                      setSelectedClient(client);
+                      setIsModalOpen(true);
+                    }}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -275,6 +288,17 @@ export default function ClientsAdmin() {
           </TableBody>
         </Table>
       </Card>
+
+      {/* Client Detail Modal */}
+      <ClientDetailModal
+        client={selectedClient}
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedClient(null);
+        }}
+        onRefresh={fetchClients}
+      />
     </div>
   );
 }

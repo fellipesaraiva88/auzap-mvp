@@ -198,6 +198,7 @@ app.use('/api/internal/monitoring', (await import('./routes/admin/monitoring.rou
 app.use('/api/internal/logs', (await import('./routes/admin/logs.routes.js')).default);
 app.use('/api/internal/analytics', (await import('./routes/admin/analytics.routes.js')).default);
 app.use('/api/internal/settings', (await import('./routes/admin/settings.routes.js')).default);
+app.use('/api/internal', (await import('./routes/admin/actions.routes.js')).default);
 
 // Bull Board - Queue Monitoring UI (owner-only)
 const { serverAdapter, bullBoardAuthMiddleware, bullBoardHealthCheck } =
