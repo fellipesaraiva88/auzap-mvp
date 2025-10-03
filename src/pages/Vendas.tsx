@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
@@ -5,15 +6,54 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, ShoppingCart, TrendingUp, Bot, Package, Loader2 } from "lucide-react";
 import { useBookings } from "@/hooks/useBookings";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { RevenueChart } from "@/components/RevenueChart";
+import { DateRangeFilter } from "@/components/DateRangeFilter";
 
 export default function Vendas() {
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined,
+  });
+
   // Usar bookings com status 'completed' como proxy para vendas
   const { bookings, isLoading } = useBookings({ status: 'completed' });
 
-  const totalRevenue = bookings.reduce((sum, booking) => sum + (booking.price || 0), 0);
-  const aiSales = bookings.filter((b) => b.notes?.includes('IA') || b.created_by_ai).length;
-  const avgTicket = bookings.length > 0 ? totalRevenue / bookings.length : 0;
+  // Filtrar por data
+  const filteredBookings = useMemo(() => {
+    if (!dateRange.from || !dateRange.to) return bookings;
+    return bookings.filter((b) => {
+      const bookingDate = new Date(b.created_at || b.createdAt);
+      return isWithinInterval(bookingDate, {
+        start: startOfDay(dateRange.from!),
+        end: endOfDay(dateRange.to!),
+      });
+    });
+  }, [bookings, dateRange]);
+
+  // Preparar dados para o gráfico
+  const chartData = useMemo(() => {
+    const groupedByDate: Record<string, { revenue: number; count: number }> = {};
+
+    filteredBookings.forEach((booking) => {
+      const date = format(new Date(booking.created_at || booking.createdAt), "dd/MM");
+      if (!groupedByDate[date]) {
+        groupedByDate[date] = { revenue: 0, count: 0 };
+      }
+      groupedByDate[date].revenue += booking.price || 0;
+      groupedByDate[date].count += 1;
+    });
+
+    return Object.entries(groupedByDate).map(([date, data]) => ({
+      date,
+      revenue: data.revenue,
+      count: data.count,
+    }));
+  }, [filteredBookings]);
+
+  const totalRevenue = filteredBookings.reduce((sum, booking) => sum + (booking.price || 0), 0);
+  const aiSales = filteredBookings.filter((b) => b.notes?.includes('IA') || b.created_by_ai).length;
+  const avgTicket = filteredBookings.length > 0 ? totalRevenue / filteredBookings.length : 0;
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -21,10 +61,7 @@ export default function Vendas() {
         title="Vendas"
         subtitle="Acompanhe suas vendas e produtos"
         actions={
-          <Button>
-            <ShoppingCart className="w-4 h-4" />
-            Nova Venda
-          </Button>
+          <DateRangeFilter onRangeChange={setDateRange} />
         }
       />
 
@@ -39,8 +76,8 @@ export default function Vendas() {
         <StatCard
           icon={ShoppingCart}
           title="Total de Vendas"
-          value={isLoading ? "-" : bookings.length}
-          subtitle="Serviços finalizados"
+          value={isLoading ? "-" : filteredBookings.length}
+          subtitle={dateRange.from && dateRange.to ? "Período selecionado" : "Serviços finalizados"}
         />
         <StatCard
           icon={Bot}
@@ -56,6 +93,13 @@ export default function Vendas() {
         />
       </div>
 
+      {/* Gráfico de Receita */}
+      {chartData.length > 0 && (
+        <div className="mb-6">
+          <RevenueChart data={chartData} type="bar" />
+        </div>
+      )}
+
       <div className="grid grid-cols-12 gap-6">
         {/* Vendas Recentes */}
         <Card className="col-span-8 glass-card">
@@ -67,7 +111,7 @@ export default function Vendas() {
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 text-ocean-blue animate-spin" />
               </div>
-            ) : bookings.length === 0 ? (
+            ) : filteredBookings.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <ShoppingCart className="w-16 h-16 text-muted-foreground mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Nenhuma venda registrada</h3>
@@ -77,7 +121,7 @@ export default function Vendas() {
               </div>
             ) : (
               <div className="space-y-4">
-                {bookings.map((booking) => {
+                {filteredBookings.map((booking) => {
                   const createdAt = booking.created_at ? new Date(booking.created_at) : new Date();
                   const isAI = booking.notes?.includes("IA") || booking.created_by_ai;
 
@@ -136,7 +180,7 @@ export default function Vendas() {
               <>
                 <div className="space-y-4">
                   {['bath', 'grooming', 'hotel'].map((serviceType) => {
-                    const serviceBookings = bookings.filter(b => b.service_type === serviceType);
+                    const serviceBookings = filteredBookings.filter(b => b.service_type === serviceType);
                     const serviceRevenue = serviceBookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
                     if (serviceBookings.length === 0) return null;
@@ -160,7 +204,7 @@ export default function Vendas() {
                   })}
                 </div>
 
-                {bookings.length === 0 && (
+                {filteredBookings.length === 0 && (
                   <div className="text-center py-6 text-muted-foreground">
                     <p className="text-sm">Nenhum serviço vendido ainda</p>
                   </div>

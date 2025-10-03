@@ -15,11 +15,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Users, UserPlus, Dog, Cat, Bot, Loader2 } from "lucide-react";
+import { Users, UserPlus, Dog, Cat, Bot, Loader2, Download } from "lucide-react";
 import { useContacts } from "@/hooks/useContacts";
 import { usePets } from "@/hooks/usePets";
 import { contactsService } from "@/services/contacts.service";
 import { useToast } from "@/hooks/use-toast";
+import { EditClientModal } from "@/components/EditClientModal";
+import { exportToCSV } from "@/utils/exportCSV";
 
 // Componente interno para buscar pets de um cliente
 function ClientPets({ contactId }: { contactId: string }) {
@@ -62,11 +64,13 @@ function ClientPets({ contactId }: { contactId: string }) {
 
 export default function Clientes() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "new">("all");
   const { contacts, total, isLoading, refetch } = useContacts(searchQuery);
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [newContact, setNewContact] = useState({
@@ -121,20 +125,62 @@ export default function Clientes() {
     return createdDate > thirtyDaysAgo;
   }).length;
 
+  // Aplicar filtros
+  const filteredContacts = contacts.filter((c) => {
+    if (statusFilter === "new") {
+      const createdDate = new Date(c.created_at || c.createdAt);
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      return createdDate > thirtyDaysAgo;
+    }
+    if (statusFilter === "active") {
+      return c.is_active !== false;
+    }
+    return true;
+  });
+
+  const handleExportCSV = () => {
+    try {
+      const exportData = filteredContacts.map((c) => ({
+        Nome: c.full_name || c.name,
+        Telefone: c.phone_number || c.phone,
+        Email: c.email || "",
+        Cadastrado: new Date(c.created_at || c.createdAt).toLocaleDateString("pt-BR"),
+        Status: c.is_active !== false ? "Ativo" : "Inativo",
+      }));
+      exportToCSV(exportData, "clientes-auzap");
+      toast({
+        title: "✅ Exportado com sucesso!",
+        description: `${exportData.length} clientes exportados`,
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao exportar",
+        description: "Não foi possível gerar o arquivo",
+      });
+    }
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <PageHeader
         title="Clientes & Pets"
         subtitle="Gerencie clientes e seus pets"
         actions={
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="btn-gradient text-white">
-                <UserPlus className="w-4 h-4" />
-                Novo Cliente
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExportCSV} disabled={isLoading || filteredContacts.length === 0}>
+              <Download className="w-4 h-4 mr-2" />
+              Exportar CSV
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="btn-gradient text-white">
+                  <UserPlus className="w-4 h-4" />
+                  Novo Cliente
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
               <DialogHeader>
                 <DialogTitle>Adicionar Novo Cliente</DialogTitle>
                 <DialogDescription>
@@ -199,6 +245,7 @@ export default function Clientes() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         }
       />
 
@@ -242,13 +289,25 @@ export default function Clientes() {
               />
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm">
+              <Button
+                variant={statusFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter("all")}
+              >
                 Todos
               </Button>
-              <Button variant="outline" size="sm">
+              <Button
+                variant={statusFilter === "active" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter("active")}
+              >
                 Ativos
               </Button>
-              <Button variant="outline" size="sm">
+              <Button
+                variant={statusFilter === "new" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter("new")}
+              >
                 Novos
               </Button>
             </div>
@@ -273,7 +332,7 @@ export default function Clientes() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {contacts.map((client) => {
+          {filteredContacts.map((client) => {
             const isNew = new Date(client.created_at || client.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
             return (
@@ -364,11 +423,8 @@ export default function Clientes() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    // TODO: Implementar edição
-                    toast({
-                      title: "Em desenvolvimento",
-                      description: "Função de editar em breve!",
-                    });
+                    setIsDetailsOpen(false);
+                    setIsEditOpen(true);
                   }}
                   className="flex-1"
                 >
@@ -386,6 +442,17 @@ export default function Clientes() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal Editar Cliente */}
+      <EditClientModal
+        client={selectedClient}
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        onSuccess={() => {
+          refetch();
+          setSelectedClient(null);
+        }}
+      />
     </div>
   );
 }

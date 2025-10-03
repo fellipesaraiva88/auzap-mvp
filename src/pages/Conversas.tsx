@@ -6,16 +6,29 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { MessageSquare, Bot, User, AlertCircle, Phone, Dog, Cat, Send, Sparkles, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { MessageSquare, Bot, User, AlertCircle, Phone, Dog, Cat, Send, Sparkles, Clock, CheckCircle2, Loader2, Filter } from "lucide-react";
 import { useConversations, useConversation, useConversationMessages, useConversationAIActions } from "@/hooks/useConversations";
 import { useConversationsSocketUpdates } from "@/hooks/useSocket";
 import { format } from "date-fns";
+import { ConversationFilters } from "@/components/ConversationFilters";
+import { BulkActionsBar } from "@/components/BulkActionsBar";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Conversas() {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
   const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>();
   const [messageInput, setMessageInput] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedConversations, setSelectedConversations] = useState<Set<string>>(new Set());
+  const [advancedFilters, setAdvancedFilters] = useState<{
+    startDate?: Date;
+    endDate?: Date;
+    serviceType?: string;
+  }>({});
 
   // Enable real-time Socket.io updates
   useConversationsSocketUpdates();
@@ -66,18 +79,57 @@ export default function Conversas() {
     setMessageInput("");
   };
 
+  const toggleConversationSelection = (id: string) => {
+    const newSelected = new Set(selectedConversations);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedConversations(newSelected);
+  };
+
+  const handleBulkAction = (action: "resolved" | "pending" | "archive") => {
+    toast({
+      title: `✅ ${selectedConversations.size} conversas atualizadas`,
+      description: `Marcadas como ${action === "resolved" ? "resolvidas" : action === "pending" ? "pendentes" : "arquivadas"}`,
+    });
+    setSelectedConversations(new Set());
+  };
+
+  const filteredMessages = messages.filter((m) =>
+    messageSearchQuery ? m.content.toLowerCase().includes(messageSearchQuery.toLowerCase()) : true
+  );
+
   return (
     <div className="p-6 max-w-[1800px] mx-auto paw-pattern">
       <PageHeader
         title="Central de Conversas"
         subtitle="Gerencie todas as conversas com clientes em tempo real"
         actions={
-          <Button className="btn-gradient text-white shadow-lg hover:shadow-xl">
-            <MessageSquare className="w-4 h-4" />
-            Nova Conversa
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
+              <Filter className="w-4 h-4 mr-2" />
+              {showFilters ? "Ocultar" : "Filtros"}
+            </Button>
+            <Button className="btn-gradient text-white shadow-lg hover:shadow-xl">
+              <MessageSquare className="w-4 h-4" />
+              Nova Conversa
+            </Button>
+          </div>
         }
       />
+
+      {/* Filtros Avançados */}
+      {showFilters && (
+        <div className="mb-6">
+          <Card className="card-premium">
+            <CardContent className="p-4">
+              <ConversationFilters onFilterChange={setAdvancedFilters} />
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="grid grid-cols-12 gap-6 h-[calc(100vh-200px)]">
         {/* Filtros e Lista de Conversas */}
@@ -156,14 +208,23 @@ export default function Conversas() {
                     {filteredConversations.map((conv, idx) => (
                       <div
                         key={conv.id}
-                        onClick={() => setSelectedConversationId(conv.id)}
                         style={{ animationDelay: `${idx * 0.1}s` }}
-                        className={`p-4 rounded-xl cursor-pointer smooth-transition hover-lift group ${
+                        className={`p-4 rounded-xl smooth-transition hover-lift group ${
                           selectedConversationId === conv.id
                             ? "bg-gradient-to-br from-ocean-blue/20 to-sky-blue/10 border-2 border-ocean-blue/40 shadow-lg"
                             : "hover:bg-muted/50 border-2 border-transparent"
                         }`}
                       >
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            checked={selectedConversations.has(conv.id)}
+                            onCheckedChange={() => toggleConversationSelection(conv.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <div
+                            className="flex-1 cursor-pointer"
+                            onClick={() => setSelectedConversationId(conv.id)}
+                          >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-ocean-blue to-sky-blue flex items-center justify-center text-white font-semibold shadow-lg">
@@ -188,9 +249,11 @@ export default function Conversas() {
                             )}
                           </div>
                         </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2 ml-12">
+                        <p className="text-xs text-muted-foreground line-clamp-2">
                           {conv.last_message || "Sem mensagens"}
                         </p>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -250,8 +313,17 @@ export default function Conversas() {
                   <p className="text-muted-foreground">Selecione uma conversa para visualizar</p>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  {messages.map((message, idx) => {
+                <>
+                  {/* Pesquisa em Mensagens */}
+                  <div className="mb-4">
+                    <SearchInput
+                      placeholder="Buscar nas mensagens..."
+                      value={messageSearchQuery}
+                      onChange={setMessageSearchQuery}
+                    />
+                  </div>
+                  <div className="space-y-6">
+                    {filteredMessages.map((message, idx) => {
                     const isAI = message.sender === "ai";
                     const isAgent = message.sender === "agent";
                     const isUser = message.sender === "user";
@@ -286,7 +358,8 @@ export default function Conversas() {
                       </div>
                     );
                   })}
-                </div>
+                  </div>
+                </>
               )}
             </ScrollArea>
 
@@ -422,6 +495,15 @@ export default function Conversas() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Bulk Actions Bar */}
+      <BulkActionsBar
+        selectedCount={selectedConversations.size}
+        onMarkResolved={() => handleBulkAction("resolved")}
+        onMarkPending={() => handleBulkAction("pending")}
+        onArchive={() => handleBulkAction("archive")}
+        onClear={() => setSelectedConversations(new Set())}
+      />
     </div>
   );
 }
