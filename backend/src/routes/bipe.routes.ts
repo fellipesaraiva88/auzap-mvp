@@ -1,9 +1,9 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { BipeService } from '../services/bipe/bipe.service.js';
+import { petHealthService } from '../services/bipe/pet-health.service.js';
 import { logger } from '../config/logger.js';
 import { readLimiter, criticalLimiter } from '../middleware/rate-limiter.js';
-import { TenantRequest, tenantMiddleware, validateResource } from '../middleware/tenant.middleware.js';
+import { TenantRequest, tenantMiddleware } from '../middleware/tenant.middleware.js';
 
 const router = Router();
 

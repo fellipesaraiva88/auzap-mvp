@@ -813,7 +813,7 @@ Informações que você pode coletar:
         planType: args.planType,
         durationWeeks: Math.ceil(args.totalSessions / 4),
         methodology: args.planType === 'basico' ? 'positivo' : 'misto',
-        locationType: 'domicilio'
+        locationType: 'casa_tutor'
       });
 
       return {
@@ -845,10 +845,9 @@ Informações que você pode coletar:
           id,
           plan_type,
           status,
-          start_date,
-          end_date,
-          total_sessions,
-          completed_sessions
+          duration_weeks,
+          session_frequency,
+          created_at
         `)
         .eq('organization_id', organizationId)
         .eq('contact_id', contactId)
@@ -869,9 +868,9 @@ Informações que você pode coletar:
           id: p.id,
           tipo: p.plan_type,
           status: p.status,
-          inicio: p.start_date,
-          fim: p.end_date,
-          sessoes: `${p.completed_sessions}/${p.total_sessions}`
+          duracao: `${p.duration_weeks} semanas`,
+          frequencia: p.session_frequency,
+          criado: new Date(p.created_at).toLocaleDateString('pt-BR')
         })),
         message: `Encontrados ${plans.length} plano(s) de adestramento.`
       };

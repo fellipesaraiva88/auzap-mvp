@@ -1,11 +1,11 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { KnowledgeBaseService } from '../services/knowledge-base/knowledge-base.service.js';
+import { knowledgeBaseService, type CreateKnowledgeBaseData, type UpdateKnowledgeBaseData, type ListEntriesFilters } from '../services/knowledge-base/knowledge-base.service.js';
 import { logger } from '../config/logger.js';
 import { TenantRequest, tenantMiddleware, adminOrOwner, validateResource } from '../middleware/tenant.middleware.js';
+import { readLimiter, standardLimiter } from '../middleware/rate-limiter.js';
 
 const router = Router();
-const knowledgeService = new KnowledgeBaseService();
 
 // Apply tenant middleware FIRST
 router.use(tenantMiddleware);
@@ -14,14 +14,12 @@ router.use(tenantMiddleware);
  * Validation Schemas
  */
 const createEntrySchema = z.object({
-  category: z.enum(['servicos', 'precos', 'horarios', 'politicas', 'emergencias', 'geral']).optional(),
+  category: z.enum(['servicos', 'precos', 'horarios', 'politicas', 'emergencias', 'geral']),
   question: z.string().min(10, 'Pergunta deve ter no mínimo 10 caracteres').max(500),
   answer: z.string().min(20, 'Resposta deve ter no mínimo 20 caracteres').max(2000),
   tags: z.array(z.string()).optional(),
   aiEnabled: z.boolean().optional().default(true),
-  priority: z.number().int().min(1).max(10).optional().default(5),
-  source: z.enum(['bipe', 'manual', 'import']).optional().default('manual'),
-  learnedFromBipeId: z.string().uuid().optional()
+  priority: z.number().int().min(1).max(10).optional().default(5)
 });
 
 const updateEntrySchema = z.object({
@@ -30,7 +28,8 @@ const updateEntrySchema = z.object({
   category: z.enum(['servicos', 'precos', 'horarios', 'politicas', 'emergencias', 'geral']).optional(),
   tags: z.array(z.string()).optional(),
   aiEnabled: z.boolean().optional(),
-  priority: z.number().int().min(1).max(10).optional()
+  priority: z.number().int().min(1).max(10).optional(),
+  isActive: z.boolean().optional()
 });
 
 const searchSchema = z.object({
@@ -38,32 +37,9 @@ const searchSchema = z.object({
   limit: z.number().int().positive().max(50).optional().default(10)
 });
 
-const listQuerySchema = z.object({
-  category: z.enum(['servicos', 'precos', 'horarios', 'politicas', 'emergencias', 'geral']).optional(),
-  tags: z.string().optional(), // comma-separated
-  search: z.string().optional(),
-  active: z.enum(['true', 'false']).optional(),
-  source: z.enum(['bipe', 'manual', 'import']).optional(),
-  sortBy: z.enum(['recent', 'usage', 'alphabetical']).optional().default('recent'),
-  limit: z.number().int().positive().max(100).optional().default(50),
-  offset: z.number().int().nonnegative().optional().default(0)
-});
-
 const suggestSchema = z.object({
   question: z.string().min(5, 'Pergunta deve ter no mínimo 5 caracteres')
 });
-
-/**
- * Rate limiting configuration
- * Alta frequência pois AI usa muito
- */
-import { readLimiter, writeLimiter } from '../middleware/rate-limiter.js';
-
-// GET routes: 200 req/min (alta frequência)
-const knowledgeReadLimiter = readLimiter; // 120 req/min padrão
-
-// POST/PUT/DELETE routes: 60 req/min (mais permissivo que critical)
-const knowledgeWriteLimiter = writeLimiter; // 30 req/min padrão, mas vamos criar custom
 
 /**
  * POST /api/knowledge-base
@@ -72,19 +48,25 @@ const knowledgeWriteLimiter = writeLimiter; // 30 req/min padrão, mas vamos cri
 router.post(
   '/',
   adminOrOwner,
-  knowledgeWriteLimiter,
+  standardLimiter,
   async (req: TenantRequest, res: Response): Promise<void> => {
     try {
       const organizationId = req.organizationId!;
+      const userId = req.userId;
       const validatedData = createEntrySchema.parse(req.body);
 
-      const entry = await KnowledgeBaseService.addEntry({
-        organizationId,
+      const data: CreateKnowledgeBaseData = {
+        organization_id: organizationId,
+        category: validatedData.category,
         question: validatedData.question,
         answer: validatedData.answer,
-        source: validatedData.source,
-        learnedFromBipeId: validatedData.learnedFromBipeId
-      });
+        tags: validatedData.tags,
+        priority: validatedData.priority,
+        ai_enabled: validatedData.aiEnabled,
+        created_by: userId
+      };
+
+      const entry = await knowledgeBaseService.createEntry(data);
 
       logger.info({ entryId: entry.id, organizationId }, 'Knowledge base entry created');
       res.status(201).json({ entry });
@@ -101,54 +83,33 @@ router.post(
 
 /**
  * GET /api/knowledge-base
- * Listar entradas (query: category?, tags?, search?, active?, source?, sortBy?, limit?, offset?)
+ * Listar entradas (query: category?, tags?, search?, active?, limit?, offset?)
  */
 router.get(
   '/',
-  knowledgeReadLimiter,
+  readLimiter,
   async (req: TenantRequest, res: Response): Promise<void> => {
     try {
       const organizationId = req.organizationId!;
 
-      // Parse query params with defaults
-      const queryParams = {
-        ...req.query,
+      const filters: ListEntriesFilters = {
+        category: req.query.category as any,
+        tags: req.query.tags ? (req.query.tags as string).split(',') : undefined,
+        search: req.query.search as string,
+        active: req.query.active === 'true' ? true : req.query.active === 'false' ? false : undefined,
         limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
-        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
-        sortBy: req.query.sortBy || 'recent'
+        offset: req.query.offset ? parseInt(req.query.offset as string) : 0
       };
 
-      const validatedQuery = listQuerySchema.parse(queryParams);
-
-      const result = await KnowledgeBaseService.listEntries(organizationId, {
-        source: validatedQuery.source,
-        limit: validatedQuery.limit,
-        offset: validatedQuery.offset,
-        sortBy: validatedQuery.sortBy as 'recent' | 'usage' | 'alphabetical'
-      });
-
-      // Se houver busca, filtrar adicionalmente
-      let filteredEntries = result.entries;
-      if (validatedQuery.search) {
-        const searchLower = validatedQuery.search.toLowerCase();
-        filteredEntries = filteredEntries.filter(entry =>
-          entry.question.toLowerCase().includes(searchLower) ||
-          entry.answer.toLowerCase().includes(searchLower)
-        );
-      }
+      const entries = await knowledgeBaseService.listEntries(organizationId, filters);
 
       res.json({
-        entries: filteredEntries,
-        total: result.total,
-        limit: result.limit,
-        offset: result.offset,
-        hasMore: result.offset + result.limit < result.total
+        entries,
+        count: entries.length,
+        limit: filters.limit,
+        offset: filters.offset
       });
     } catch (error: any) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: error.errors });
-        return;
-      }
       logger.error({ error, organizationId: req.organizationId }, 'List knowledge entries error');
       res.status(500).json({ error: error.message });
     }
@@ -158,11 +119,11 @@ router.get(
 /**
  * GET /api/knowledge-base/search
  * Buscar conhecimento (query: q, limit?)
- * Full-text search usando PostgreSQL
+ * Full-text search usando algoritmo semântico
  */
 router.get(
   '/search',
-  knowledgeReadLimiter,
+  readLimiter,
   async (req: TenantRequest, res: Response): Promise<void> => {
     try {
       const organizationId = req.organizationId!;
@@ -171,18 +132,16 @@ router.get(
         limit: req.query.limit ? parseInt(req.query.limit as string) : 10
       });
 
-      const results = await KnowledgeBaseService.searchKnowledge(
+      const results = await knowledgeBaseService.searchKnowledge(
         organizationId,
-        validatedQuery.q
+        validatedQuery.q,
+        validatedQuery.limit
       );
 
-      // Limitar resultados
-      const limitedResults = results.slice(0, validatedQuery.limit);
-
       res.json({
-        results: limitedResults,
+        results,
         query: validatedQuery.q,
-        count: limitedResults.length
+        count: results.length
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -198,62 +157,36 @@ router.get(
 /**
  * POST /api/knowledge-base/suggest
  * Sugerir resposta para pergunta (body: {question})
- * Busca melhor match no KB
+ * Usa IA para sugerir melhor resposta
  */
 router.post(
   '/suggest',
-  knowledgeReadLimiter,
+  readLimiter,
   async (req: TenantRequest, res: Response): Promise<void> => {
     try {
       const organizationId = req.organizationId!;
       const validatedData = suggestSchema.parse(req.body);
 
-      // Primeiro tenta exact match
-      const exactMatch = await KnowledgeBaseService.findExactMatch(
+      const suggestion = await knowledgeBaseService.suggestAnswer(
         organizationId,
         validatedData.question
       );
 
-      if (exactMatch) {
-        // Incrementar contador de uso
-        await KnowledgeBaseService.incrementUsage(exactMatch.id);
-
+      if (!suggestion) {
         res.json({
-          suggested: true,
-          entry: exactMatch,
-          confidence: 'high',
-          matchType: 'exact'
+          suggested: false,
+          message: 'Nenhuma resposta encontrada na base de conhecimento',
+          confidence: 0
         });
         return;
       }
 
-      // Se não achar exact, busca semântica
-      const searchResults = await KnowledgeBaseService.searchKnowledge(
-        organizationId,
-        validatedData.question
-      );
-
-      if (searchResults.length > 0) {
-        const bestMatch = searchResults[0];
-
-        // Incrementar contador de uso
-        await KnowledgeBaseService.incrementUsage(bestMatch.id);
-
-        res.json({
-          suggested: true,
-          entry: bestMatch,
-          confidence: 'medium',
-          matchType: 'semantic',
-          alternativeMatches: searchResults.slice(1, 3) // Mais 2 alternativas
-        });
-        return;
-      }
-
-      // Nenhum match encontrado
       res.json({
-        suggested: false,
-        message: 'Nenhuma resposta encontrada na base de conhecimento',
-        confidence: 'none'
+        suggested: true,
+        answer: suggestion.answer,
+        confidence: suggestion.confidence,
+        sourceEntries: suggestion.source_entries,
+        generatedBy: suggestion.generated_by
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -272,20 +205,20 @@ router.post(
  */
 router.get(
   '/popular',
-  knowledgeReadLimiter,
+  readLimiter,
   async (req: TenantRequest, res: Response): Promise<void> => {
     try {
       const organizationId = req.organizationId!;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
 
-      const result = await KnowledgeBaseService.listEntries(organizationId, {
-        sortBy: 'usage',
-        limit: Math.min(limit, 50) // Max 50
-      });
+      const popular = await knowledgeBaseService.getPopularEntries(
+        organizationId,
+        Math.min(limit, 50)
+      );
 
       res.json({
-        popular: result.entries,
-        count: result.entries.length
+        popular,
+        count: popular.length
       });
     } catch (error: any) {
       logger.error({ error, organizationId: req.organizationId }, 'Get popular entries error');
@@ -300,11 +233,11 @@ router.get(
  */
 router.get(
   '/stats',
-  knowledgeReadLimiter,
+  readLimiter,
   async (req: TenantRequest, res: Response): Promise<void> => {
     try {
       const organizationId = req.organizationId!;
-      const stats = await KnowledgeBaseService.getStats(organizationId);
+      const stats = await knowledgeBaseService.getStats(organizationId);
 
       res.json({ stats });
     } catch (error: any) {
@@ -320,7 +253,7 @@ router.get(
  */
 router.get(
   '/category/:category',
-  knowledgeReadLimiter,
+  readLimiter,
   async (req: TenantRequest, res: Response): Promise<void> => {
     try {
       const organizationId = req.organizationId!;
@@ -336,18 +269,15 @@ router.get(
         return;
       }
 
-      const result = await KnowledgeBaseService.listEntries(organizationId, {
-        limit: 100
-      });
-
-      // Filtrar por categoria (nota: atualmente o KB não tem campo category na tabela)
-      // Isso seria adicionado na migration futura
-      const filteredEntries = result.entries; // TODO: filtrar quando campo category existir
+      const entries = await knowledgeBaseService.getEntriesByCategory(
+        organizationId,
+        category as any
+      );
 
       res.json({
         category,
-        entries: filteredEntries,
-        count: filteredEntries.length
+        entries,
+        count: entries.length
       });
     } catch (error: any) {
       logger.error({ error, organizationId: req.organizationId }, 'Get entries by category error');
@@ -363,16 +293,12 @@ router.get(
 router.get(
   '/:id',
   validateResource('id', 'knowledge_base'),
-  knowledgeReadLimiter,
+  readLimiter,
   async (req: TenantRequest, res: Response): Promise<void> => {
     try {
-      const organizationId = req.organizationId!;
       const { id } = req.params;
 
-      // Como validateResource já garantiu que o recurso existe e pertence à org,
-      // podemos buscar diretamente
-      const result = await KnowledgeBaseService.listEntries(organizationId, { limit: 1 });
-      const entry = result.entries.find(e => e.id === id);
+      const entry = await knowledgeBaseService.getEntry(id);
 
       if (!entry) {
         res.status(404).json({ error: 'Knowledge base entry not found' });
@@ -395,20 +321,32 @@ router.put(
   '/:id',
   adminOrOwner,
   validateResource('id', 'knowledge_base'),
-  knowledgeWriteLimiter,
+  standardLimiter,
   async (req: TenantRequest, res: Response): Promise<void> => {
     try {
-      const organizationId = req.organizationId!;
       const { id } = req.params;
+      const userId = req.userId;
       const validatedData = updateEntrySchema.parse(req.body);
 
-      const entry = await KnowledgeBaseService.updateEntry(
-        id,
-        organizationId,
-        validatedData
-      );
+      const updates: UpdateKnowledgeBaseData = {
+        question: validatedData.question,
+        answer: validatedData.answer,
+        category: validatedData.category,
+        tags: validatedData.tags,
+        ai_enabled: validatedData.aiEnabled,
+        priority: validatedData.priority,
+        is_active: validatedData.isActive,
+        updated_by: userId
+      };
 
-      logger.info({ entryId: id, organizationId }, 'Knowledge base entry updated');
+      const entry = await knowledgeBaseService.updateEntry(id, updates);
+
+      if (!entry) {
+        res.status(404).json({ error: 'Knowledge base entry not found' });
+        return;
+      }
+
+      logger.info({ entryId: id }, 'Knowledge base entry updated');
       res.json({ entry });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -424,20 +362,25 @@ router.put(
 /**
  * DELETE /api/knowledge-base/:id
  * Deletar entrada (apenas owner/admin, com validação de organização)
+ * Soft delete - apenas marca como inativa
  */
 router.delete(
   '/:id',
   adminOrOwner,
   validateResource('id', 'knowledge_base'),
-  knowledgeWriteLimiter,
+  standardLimiter,
   async (req: TenantRequest, res: Response): Promise<void> => {
     try {
-      const organizationId = req.organizationId!;
       const { id } = req.params;
 
-      await KnowledgeBaseService.deleteEntry(id, organizationId);
+      const success = await knowledgeBaseService.deleteEntry(id);
 
-      logger.info({ entryId: id, organizationId }, 'Knowledge base entry deleted');
+      if (!success) {
+        res.status(404).json({ error: 'Knowledge base entry not found' });
+        return;
+      }
+
+      logger.info({ entryId: id }, 'Knowledge base entry deleted');
       res.status(204).send();
     } catch (error: any) {
       logger.error({ error, entryId: req.params.id }, 'Delete knowledge entry error');
