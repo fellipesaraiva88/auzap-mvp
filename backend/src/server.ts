@@ -16,7 +16,11 @@ app.set('trust proxy', 1);
 // Socket.io setup
 export const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: [
+      process.env.FRONTEND_URL || 'http://localhost:5173',
+      'https://ia.auzap.com.br',
+      'https://auzap-frontend-d84c.onrender.com'
+    ],
     credentials: true
   }
 });
@@ -55,7 +59,12 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:5173']
+      connectSrc: [
+        "'self'",
+        process.env.FRONTEND_URL || 'http://localhost:5173',
+        'https://ia.auzap.com.br',
+        'https://auzap-frontend-d84c.onrender.com'
+      ]
     }
   },
   hsts: {
@@ -72,6 +81,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use((req: Request, res: Response, next: NextFunction): void => {
   const allowedOrigins = [
     process.env.FRONTEND_URL,
+    'https://ia.auzap.com.br',
+    'https://auzap-frontend-d84c.onrender.com',
     'http://localhost:8080',
     'http://localhost:8081',
     'http://localhost:8082',
@@ -194,6 +205,7 @@ app.use('/api/esquecidos', (await import('./routes/esquecidos.routes.js')).defau
 app.use('/api/training', (await import('./routes/training.routes.js')).default);
 app.use('/api/daycare', (await import('./routes/daycare.routes.js')).default);
 app.use('/api/bipe', (await import('./routes/bipe.routes.js')).default);
+app.use('/api/knowledge-base', (await import('./routes/knowledge-base.routes.js')).default);
 
 // Admin Panel Routes (internal users only)
 app.use('/api/internal/auth', (await import('./routes/admin/auth.routes.js')).default);

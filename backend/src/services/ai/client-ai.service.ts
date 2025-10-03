@@ -128,6 +128,7 @@ Informações que você pode coletar:
    */
   private getFunctions(): any[] {
     return [
+      // === Core Pet & Service Functions ===
       {
         name: 'cadastrar_pet',
         description: 'Cadastra um novo pet para o cliente',
@@ -183,6 +184,121 @@ Informações que você pode coletar:
           required: ['tipo_servico', 'data']
         }
       },
+
+      // === Training Functions (NEW) ===
+      {
+        name: 'criar_plano_adestramento',
+        description: 'Criar novo plano de adestramento para um pet',
+        parameters: {
+          type: 'object',
+          properties: {
+            petId: { type: 'string', description: 'ID do pet' },
+            planType: {
+              type: 'string',
+              enum: ['basico', 'intermediario', 'avancado', 'personalizado'],
+              description: 'Tipo do plano de adestramento'
+            },
+            goals: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Objetivos do adestramento'
+            },
+            totalSessions: { type: 'number', description: 'Total de sessões' }
+          },
+          required: ['petId', 'planType', 'goals', 'totalSessions']
+        }
+      },
+      {
+        name: 'listar_planos_adestramento',
+        description: 'Listar planos de adestramento de um contato ou pet',
+        parameters: {
+          type: 'object',
+          properties: {
+            petId: { type: 'string', description: 'ID do pet (opcional)' }
+          }
+        }
+      },
+
+      // === Daycare/Hotel Functions (NEW) ===
+      {
+        name: 'criar_reserva_hospedagem',
+        description: 'Criar reserva de daycare ou hospedagem para pet',
+        parameters: {
+          type: 'object',
+          properties: {
+            petId: { type: 'string', description: 'ID do pet' },
+            stayType: {
+              type: 'string',
+              enum: ['daycare_diario', 'hospedagem_pernoite', 'hospedagem_estendida'],
+              description: 'Tipo de estadia'
+            },
+            checkInDate: { type: 'string', format: 'date', description: 'Data de entrada (YYYY-MM-DD)' },
+            checkOutDate: { type: 'string', format: 'date', description: 'Data de saída (YYYY-MM-DD)' },
+            specialRequests: { type: 'string', description: 'Pedidos especiais (opcional)' }
+          },
+          required: ['petId', 'stayType', 'checkInDate', 'checkOutDate']
+        }
+      },
+      {
+        name: 'listar_reservas_hospedagem',
+        description: 'Listar reservas de hospedagem/daycare',
+        parameters: {
+          type: 'object',
+          properties: {
+            petId: { type: 'string', description: 'ID do pet (opcional)' },
+            status: {
+              type: 'string',
+              enum: ['reservado', 'em_andamento', 'concluido'],
+              description: 'Status da reserva (opcional)'
+            }
+          }
+        }
+      },
+
+      // === BIPE Protocol Functions (NEW) ===
+      {
+        name: 'consultar_bipe_pet',
+        description: 'Consultar protocolo BIPE (saúde integral) de um pet',
+        parameters: {
+          type: 'object',
+          properties: {
+            petId: { type: 'string', description: 'ID do pet' }
+          },
+          required: ['petId']
+        }
+      },
+      {
+        name: 'adicionar_alerta_saude',
+        description: 'Adicionar alerta de saúde urgente ao protocolo BIPE',
+        parameters: {
+          type: 'object',
+          properties: {
+            petId: { type: 'string', description: 'ID do pet' },
+            type: {
+              type: 'string',
+              enum: ['vacina_atrasada', 'vermifugo_atrasado', 'comportamento_critico', 'saude_urgente'],
+              description: 'Tipo de alerta'
+            },
+            description: { type: 'string', description: 'Descrição do alerta' }
+          },
+          required: ['petId', 'type', 'description']
+        }
+      },
+
+      // === Knowledge Base Function (NEW) ===
+      {
+        name: 'consultar_base_conhecimento',
+        description: 'Buscar resposta na base de conhecimento da organização',
+        parameters: {
+          type: 'object',
+          properties: {
+            question: { type: 'string', description: 'Pergunta do cliente' }
+          },
+          required: ['question']
+        }
+      },
+
+      // === System Functions ===
       {
         name: 'escalar_para_humano',
         description: 'Escalona a conversa para um atendente humano',
@@ -192,109 +308,6 @@ Informações que você pode coletar:
             motivo: { type: 'string', description: 'Motivo da escalação' }
           },
           required: ['motivo']
-        }
-      },
-      {
-        name: 'create_training_plan',
-        description: 'Criar plano de adestramento após avaliação completa (6 pontos obrigatórios)',
-        parameters: {
-          type: 'object',
-          properties: {
-            petId: { type: 'string', description: 'ID do pet' },
-            initialAssessment: {
-              type: 'object',
-              properties: {
-                rotina: { type: 'string', description: 'Rotina diária do pet' },
-                problemas: { type: 'array', items: { type: 'string' }, description: 'Problemas comportamentais' },
-                relacao_familia: { type: 'string', description: 'Relação com a família' },
-                historico_saude: { type: 'string', description: 'Histórico de saúde relevante' },
-                observacao_pratica: { type: 'string', description: 'Observação prática do comportamento' },
-                objetivos: { type: 'array', items: { type: 'string' }, description: 'Objetivos do adestramento' }
-              },
-              required: ['rotina', 'problemas', 'relacao_familia', 'historico_saude', 'observacao_pratica', 'objetivos']
-            },
-            planType: { type: 'string', enum: ['1x_semana', '2x_semana', '3x_semana'], description: 'Frequência semanal' },
-            durationWeeks: { type: 'number', description: 'Duração em semanas' }
-          },
-          required: ['petId', 'initialAssessment', 'planType', 'durationWeeks']
-        }
-      },
-      {
-        name: 'create_daycare_stay',
-        description: 'Registrar estadia em creche/hotel após validar documentação',
-        parameters: {
-          type: 'object',
-          properties: {
-            petId: { type: 'string', description: 'ID do pet' },
-            healthAssessment: {
-              type: 'object',
-              properties: {
-                vacinas: { type: 'boolean', description: 'Vacinas em dia' },
-                vermifugo: { type: 'boolean', description: 'Vermifugação em dia' },
-                exames: { type: 'array', items: { type: 'string' }, description: 'Exames realizados' },
-                restricoes_alimentares: { type: 'array', items: { type: 'string' }, description: 'Restrições' }
-              },
-              required: ['vacinas', 'vermifugo']
-            },
-            behaviorAssessment: {
-              type: 'object',
-              properties: {
-                socializacao: { type: 'string', description: 'Nível de socialização (alta/média/baixa)' },
-                ansiedade: { type: 'string', description: 'Nível de ansiedade (alta/média/baixa)' },
-                energia: { type: 'string', description: 'Nível de energia (alta/média/baixa)' }
-              },
-              required: ['socializacao', 'ansiedade', 'energia']
-            },
-            stayType: { type: 'string', enum: ['daycare', 'hotel'], description: 'Tipo de estadia' },
-            checkInDate: { type: 'string', description: 'Data de entrada (YYYY-MM-DD)' },
-            checkOutDate: { type: 'string', description: 'Data de saída (YYYY-MM-DD)' }
-          },
-          required: ['petId', 'healthAssessment', 'behaviorAssessment', 'stayType', 'checkInDate']
-        }
-      },
-      {
-        name: 'search_knowledge_base',
-        description: 'Buscar resposta no banco de conhecimento ANTES de acionar BIPE (use sempre primeiro)',
-        parameters: {
-          type: 'object',
-          properties: {
-            query: { type: 'string', description: 'Pergunta do cliente para buscar no KB' }
-          },
-          required: ['query']
-        }
-      },
-      {
-        name: 'trigger_bipe_unknown',
-        description: 'Acionar BIPE quando não souber responder (use SOMENTE após search_knowledge_base retornar vazio)',
-        parameters: {
-          type: 'object',
-          properties: {
-            question: { type: 'string', description: 'Pergunta que não conseguiu responder' }
-          },
-          required: ['question']
-        }
-      },
-      {
-        name: 'suggest_upsell',
-        description: 'Sugerir serviços complementares após confirmar creche/hotel',
-        parameters: {
-          type: 'object',
-          properties: {
-            stayId: { type: 'string', description: 'ID da estadia confirmada' }
-          },
-          required: ['stayId']
-        }
-      },
-      {
-        name: 'check_availability_training',
-        description: 'Verificar disponibilidade de adestrador para determinada data',
-        parameters: {
-          type: 'object',
-          properties: {
-            date: { type: 'string', description: 'Data desejada (YYYY-MM-DD)' },
-            planType: { type: 'string', enum: ['1x_semana', '2x_semana', '3x_semana'], description: 'Tipo de plano' }
-          },
-          required: ['date', 'planType']
         }
       }
     ];
@@ -311,6 +324,7 @@ Informações que você pode coletar:
     const args = JSON.parse(functionCall.arguments);
 
     switch (functionCall.name) {
+      // === Core Pet & Service Functions ===
       case 'cadastrar_pet':
         return await this.cadastrarPet(organizationId, contactId, args);
 
@@ -320,26 +334,34 @@ Informações que você pode coletar:
       case 'consultar_horarios':
         return await this.consultarHorarios(organizationId, args);
 
+      // === Training Functions ===
+      case 'criar_plano_adestramento':
+        return await this.criarPlanoAdestramento(organizationId, contactId, args);
+
+      case 'listar_planos_adestramento':
+        return await this.listarPlanosAdestramento(organizationId, contactId, args.petId);
+
+      // === Daycare/Hotel Functions ===
+      case 'criar_reserva_hospedagem':
+        return await this.criarReservaHospedagem(organizationId, contactId, args);
+
+      case 'listar_reservas_hospedagem':
+        return await this.listarReservasHospedagem(organizationId, contactId, args);
+
+      // === BIPE Protocol Functions ===
+      case 'consultar_bipe_pet':
+        return await this.consultarBipePet(organizationId, args.petId);
+
+      case 'adicionar_alerta_saude':
+        return await this.adicionarAlertaSaude(organizationId, args);
+
+      // === Knowledge Base Function ===
+      case 'consultar_base_conhecimento':
+        return await this.consultarBaseConhecimento(organizationId, args.question);
+
+      // === System Functions ===
       case 'escalar_para_humano':
         return await this.escalarParaHumano(contactId, args.motivo);
-
-      case 'create_training_plan':
-        return await this.createTrainingPlan(organizationId, contactId, args);
-
-      case 'create_daycare_stay':
-        return await this.createDaycareStay(organizationId, contactId, args);
-
-      case 'search_knowledge_base':
-        return await this.searchKnowledgeBase(organizationId, args.query);
-
-      case 'trigger_bipe_unknown':
-        return await this.triggerBipeUnknown(organizationId, contactId, args.question);
-
-      case 'suggest_upsell':
-        return await this.suggestUpsell(args.stayId);
-
-      case 'check_availability_training':
-        return await this.checkAvailabilityTraining(organizationId, args.date, args.planType);
 
       default:
         return { error: 'Função não encontrada' };
