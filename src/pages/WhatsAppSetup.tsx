@@ -2,25 +2,37 @@ import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Progress } from '@/components/ui/progress';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { WhatsAppInstanceCard } from '@/components/WhatsAppInstanceCard';
 import { PhoneInput } from '@/components/PhoneInput';
 import { useWhatsAppInstances, useInitializeWhatsApp } from '@/hooks/useWhatsApp';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Loader2, MessageSquare, QrCode, Smartphone, Check, ArrowLeft } from 'lucide-react';
+import {
+  Smartphone,
+  Loader2,
+  MessageSquare,
+  Check,
+  ArrowRight,
+  Copy,
+  CheckCircle2,
+  Sparkles,
+  AlertCircle
+} from 'lucide-react';
 import { isValidPhoneNumber, formatPhoneNumberIntl } from 'react-phone-number-input';
 import { ModalDinheiroEsquecido } from '@/components/esquecidos/ModalDinheiroEsquecido';
 import { ProgressoDaIA } from '@/components/esquecidos/ProgressoDaIA';
 import { useClientesEsquecidos } from '@/hooks/useClientesEsquecidos';
+
+type WizardStep = 'phone' | 'code' | 'success';
 
 export default function WhatsAppSetup() {
   const { toast } = useToast();
@@ -32,41 +44,62 @@ export default function WhatsAppSetup() {
     progresso,
     vasculhandoAgora,
     resultadoVasculhada,
-    estatisticas
   } = useClientesEsquecidos();
 
   const [modalEsquecidosOpen, setModalEsquecidosOpen] = useState(false);
 
+  // Wizard State
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState<WizardStep>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [authMethod, setAuthMethod] = useState<'pairing_code' | 'qr_code'>('qr_code');
-  const [qrCodeData, setQrCodeData] = useState<string | null>(null);
-  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [pairingCode, setPairingCode] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [countdown, setCountdown] = useState(60);
 
   const instances = data?.instances || [];
+  const hasInstance = instances.length > 0;
 
   // Abrir modal automaticamente quando vasculhada terminar
   useEffect(() => {
     if (resultadoVasculhada && resultadoVasculhada.total_clientes_esquecidos > 0) {
-      // Aguardar 2s para dar tempo de processar
       setTimeout(() => {
         setModalEsquecidosOpen(true);
       }, 2000);
     }
   }, [resultadoVasculhada]);
 
-  const handleNext = () => {
-    // Validar telefone se for pairing code
-    if (authMethod === 'pairing_code' && !phoneNumber.trim()) {
+  // Timer do código (60s)
+  useEffect(() => {
+    if (wizardStep === 'code' && countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [wizardStep, countdown]);
+
+  // Reset wizard ao fechar
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setTimeout(() => {
+      setWizardStep('phone');
+      setPhoneNumber('');
+      setPairingCode('');
+      setCopied(false);
+      setCountdown(60);
+    }, 300);
+  };
+
+  const handleGenerateCode = async () => {
+    // Validações
+    if (!phoneNumber.trim()) {
       toast({
         variant: 'destructive',
         title: 'Número obrigatório',
-        description: 'Digite seu número WhatsApp para receber o código',
+        description: 'Digite seu número WhatsApp para continuar',
       });
       return;
     }
 
-    if (authMethod === 'pairing_code' && !isValidPhoneNumber(phoneNumber)) {
+    if (!isValidPhoneNumber(phoneNumber)) {
       toast({
         variant: 'destructive',
         title: 'Número inválido',
@@ -75,48 +108,23 @@ export default function WhatsAppSetup() {
       return;
     }
 
-    // Mostrar confirmação se for pairing code
-    if (authMethod === 'pairing_code') {
-      setShowConfirmation(true);
-    } else {
-      // QR Code vai direto
-      handleCreateInstance();
-    }
-  };
-
-  const handleCreateInstance = async () => {
     try {
       const instanceId = `instance_${Date.now()}`;
       const result = await initializeWhatsApp.mutateAsync({
         instanceId,
-        phoneNumber: phoneNumber.trim() ? phoneNumber.replace(/\D/g, '') : undefined,
-        preferredAuthMethod: authMethod,
+        phoneNumber: phoneNumber.replace(/\D/g, ''),
+        preferredAuthMethod: 'pairing_code',
       });
 
       if (result.success && result.pairingCode) {
-        toast({
-          title: '✅ Código gerado!',
-          description: `Digite no WhatsApp: ${result.pairingCode}`,
-          duration: 15000,
-        });
-        setPhoneNumber('');
-        setQrCodeData(null);
-        setShowConfirmation(false);
-        setDialogOpen(false);
-        refetch();
-      } else if (result.qrCode) {
-        setQrCodeData(result.qrCode);
-        toast({
-          title: '✅ Aponte a câmera',
-          description: 'QR Code gerado! Escaneie no WhatsApp',
-          duration: 5000,
-        });
+        setPairingCode(result.pairingCode);
+        setWizardStep('code');
+        setCountdown(60);
       } else {
-        // Bug fix: feedback quando resposta inesperada
         toast({
           variant: 'destructive',
-          title: 'Algo deu errado',
-          description: result.error || 'Tente novamente ou use outro método',
+          title: 'Erro ao gerar código',
+          description: result.error || 'Tente novamente em alguns segundos',
         });
       }
     } catch (error: any) {
@@ -126,6 +134,24 @@ export default function WhatsAppSetup() {
         description: error.response?.data?.error || error.message || 'Tente novamente',
       });
     }
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(pairingCode);
+    setCopied(true);
+    toast({
+      title: '✅ Código copiado!',
+      description: 'Cole no WhatsApp para conectar',
+    });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCheckConnection = () => {
+    refetch();
+    setWizardStep('success');
+    setTimeout(() => {
+      handleCloseDialog();
+    }, 2000);
   };
 
   if (isLoading) {
@@ -144,206 +170,15 @@ export default function WhatsAppSetup() {
         title="Conecte seu WhatsApp"
         subtitle="IA atendendo clientes 24/7 no seu WhatsApp"
         actions={
-          <Dialog open={dialogOpen} onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) {
-              setShowConfirmation(false);
-              setQrCodeData(null);
-            }
-          }}>
-            <DialogTrigger asChild>
-              <Button className="btn-gradient text-white">
-                <Plus className="w-4 h-4 mr-2" />
-                Conectar WhatsApp
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>
-                  {showConfirmation ? 'Confirme seu número' : qrCodeData ? '✅ Aponte a câmera' : 'Como você quer conectar?'}
-                </DialogTitle>
-                <DialogDescription>
-                  {showConfirmation
-                    ? 'Verifique se está correto antes de continuar'
-                    : qrCodeData
-                    ? 'Escaneie este código no WhatsApp'
-                    : 'Escolha o jeito mais fácil para você'
-                  }
-                </DialogDescription>
-              </DialogHeader>
-
-              {showConfirmation ? (
-                /* Tela de Confirmação */
-                <div className="space-y-6 py-4">
-                  <div className="text-center space-y-3">
-                    <p className="text-sm text-muted-foreground">É esse seu WhatsApp?</p>
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <p className="text-2xl font-mono font-semibold text-blue-900">
-                        {formatPhoneNumberIntl(phoneNumber)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => setShowConfirmation(false)}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      <ArrowLeft className="w-4 h-4 mr-2" />
-                      Não, corrigir
-                    </Button>
-                    <Button
-                      onClick={handleCreateInstance}
-                      disabled={initializeWhatsApp.isPending}
-                      className="flex-1 btn-gradient text-white"
-                    >
-                      {initializeWhatsApp.isPending ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Conectando...
-                        </>
-                      ) : (
-                        <>
-                          <Check className="w-4 h-4 mr-2" />
-                          Sim, conectar
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              ) : qrCodeData ? (
-                /* Exibir QR Code */
-                <div className="space-y-4">
-                  <div className="p-4 bg-white rounded-lg border-2 border-ocean-blue/20">
-                    <p className="text-sm text-center mb-3 font-medium text-gray-700">
-                      📱 Escaneie este QR Code no WhatsApp
-                    </p>
-                    <img src={qrCodeData} alt="QR Code WhatsApp" className="w-full max-w-xs mx-auto" />
-                    <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                      <p className="text-xs text-blue-800 font-medium mb-1">Como conectar:</p>
-                      <ol className="text-xs text-blue-700 space-y-1 list-decimal list-inside">
-                        <li>Abra WhatsApp no celular</li>
-                        <li>Toque em Mais opções (⋮) → Aparelhos conectados</li>
-                        <li>Toque em Conectar um aparelho</li>
-                        <li>Aponte para esta tela</li>
-                      </ol>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => {
-                        setQrCodeData(null);
-                        setDialogOpen(false);
-                        setPhoneNumber('');
-                        refetch();
-                      }}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Fechar
-                    </Button>
-                    <Button
-                      onClick={handleCreateInstance}
-                      disabled={initializeWhatsApp.isPending}
-                      className="flex-1 btn-gradient text-white"
-                    >
-                      {initializeWhatsApp.isPending ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Gerando...
-                        </>
-                      ) : (
-                        <>
-                          <QrCode className="w-4 h-4 mr-2" />
-                          Gerar Novo QR
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                /* Formulário de criação */
-                <div className="space-y-4 mt-4">
-                  {/* Seletor de método */}
-                  <div className="space-y-3">
-                    <RadioGroup value={authMethod} onValueChange={(value) => setAuthMethod(value as 'pairing_code' | 'qr_code')}>
-                      <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
-                        <RadioGroupItem value="qr_code" id="qr" />
-                        <Label htmlFor="qr" className="flex-1 cursor-pointer">
-                          <div className="flex items-center gap-2">
-                            <QrCode className="w-4 h-4 text-green-600" />
-                            <div>
-                              <p className="font-medium">QR Code</p>
-                              <p className="text-xs text-muted-foreground">Escaneie com a câmera • ✨ Mais fácil</p>
-                            </div>
-                          </div>
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
-                        <RadioGroupItem value="pairing_code" id="pairing" />
-                        <Label htmlFor="pairing" className="flex-1 cursor-pointer">
-                          <div className="flex items-center gap-2">
-                            <Smartphone className="w-4 h-4 text-ocean-blue" />
-                            <div>
-                              <p className="font-medium">Código de 8 Dígitos</p>
-                              <p className="text-xs text-muted-foreground">Digite no WhatsApp • ✨ Mais rápido</p>
-                            </div>
-                          </div>
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  {/* Input de telefone (condicional) */}
-                  {authMethod === 'pairing_code' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Seu número WhatsApp</Label>
-                      <PhoneInput
-                        value={phoneNumber}
-                        onChange={setPhoneNumber}
-                        disabled={initializeWhatsApp.isPending}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Incluindo código do país e DDD
-                      </p>
-                    </div>
-                  )}
-
-                  {authMethod === 'qr_code' && (
-                    <div className="p-3 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-blue-800">
-                        💡 <strong>Rapidinho:</strong> Vamos gerar um QR Code. Deixe seu WhatsApp aberto para escanear.
-                      </p>
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={handleNext}
-                    disabled={initializeWhatsApp.isPending}
-                    className="w-full btn-gradient text-white"
-                  >
-                    {initializeWhatsApp.isPending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Conectando...
-                      </>
-                    ) : authMethod === 'pairing_code' ? (
-                      <>
-                        Continuar
-                        <Smartphone className="w-4 h-4 ml-2" />
-                      </>
-                    ) : (
-                      <>
-                        Gerar QR Code
-                        <QrCode className="w-4 h-4 ml-2" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
+          !hasInstance && (
+            <Button
+              onClick={() => setDialogOpen(true)}
+              className="btn-gradient text-white group"
+            >
+              <Sparkles className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
+              Conectar WhatsApp
+            </Button>
+          )
         }
       />
 
@@ -354,22 +189,32 @@ export default function WhatsAppSetup() {
         </div>
       )}
 
-      {instances.length === 0 ? (
-        <Card className="glass-card">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <MessageSquare className="w-16 h-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Pronto para começar?</h3>
-            <p className="text-muted-foreground text-center mb-6 max-w-md">
-              Conecte seu WhatsApp e deixe a IA trabalhar por você 24/7
+      {/* Empty State ou Instância Conectada */}
+      {!hasInstance ? (
+        <Card className="glass-card border-2 border-dashed border-ocean-blue/30">
+          <CardContent className="flex flex-col items-center justify-center py-20">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-ocean-blue to-sunset-orange/80 flex items-center justify-center mb-6 animate-pulse">
+              <MessageSquare className="w-10 h-10 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-ocean-blue to-sunset-orange bg-clip-text text-transparent">
+              Pronto para automatizar?
+            </h3>
+            <p className="text-muted-foreground text-center mb-8 max-w-md">
+              Conecte seu WhatsApp em <strong>3 passos simples</strong> e deixe a IA trabalhar por você 24/7
             </p>
-            <Button onClick={() => setDialogOpen(true)} className="btn-gradient text-white">
-              <Plus className="w-4 h-4 mr-2" />
-              Conectar Meu WhatsApp
+            <Button
+              onClick={() => setDialogOpen(true)}
+              size="lg"
+              className="btn-gradient text-white text-lg px-8 group"
+            >
+              <Sparkles className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
+              Começar Agora
+              <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           {instances.map((instance) => (
             <WhatsAppInstanceCard
               key={instance.instanceId}
@@ -379,6 +224,178 @@ export default function WhatsAppSetup() {
           ))}
         </div>
       )}
+
+      {/* Wizard Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={handleCloseDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-2xl flex items-center gap-2">
+              {wizardStep === 'phone' && (
+                <>
+                  <Smartphone className="w-6 h-6 text-ocean-blue" />
+                  Qual seu WhatsApp?
+                </>
+              )}
+              {wizardStep === 'code' && (
+                <>
+                  <CheckCircle2 className="w-6 h-6 text-green-600" />
+                  Código Gerado!
+                </>
+              )}
+              {wizardStep === 'success' && (
+                <>
+                  <Sparkles className="w-6 h-6 text-sunset-orange" />
+                  Tudo Pronto!
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {wizardStep === 'phone' && 'Digite o número do WhatsApp que será automatizado'}
+              {wizardStep === 'code' && 'Copie o código e cole no WhatsApp'}
+              {wizardStep === 'success' && 'Sua IA já está funcionando!'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-6">
+            {/* PASSO 1: Telefone */}
+            {wizardStep === 'phone' && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="space-y-3">
+                  <Label htmlFor="phone" className="text-base font-medium">
+                    Número do WhatsApp
+                  </Label>
+                  <PhoneInput
+                    value={phoneNumber}
+                    onChange={setPhoneNumber}
+                    disabled={initializeWhatsApp.isPending}
+                  />
+                  <p className="text-sm text-muted-foreground flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                    Incluindo código do país (+55) e DDD
+                  </p>
+                </div>
+
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800 font-medium mb-2">📱 Como funciona:</p>
+                  <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                    <li>Geramos um código de 8 dígitos</li>
+                    <li>Você cola no seu WhatsApp</li>
+                    <li>Pronto! IA começa a atender automaticamente</li>
+                  </ol>
+                </div>
+
+                <Button
+                  onClick={handleGenerateCode}
+                  disabled={initializeWhatsApp.isPending || !phoneNumber}
+                  className="w-full btn-gradient text-white text-lg h-12 group"
+                >
+                  {initializeWhatsApp.isPending ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Gerando código...
+                    </>
+                  ) : (
+                    <>
+                      Gerar Código
+                      <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {/* PASSO 2: Código */}
+            {wizardStep === 'code' && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {/* Código Gigante */}
+                <div className="relative">
+                  <div className="p-8 bg-gradient-to-br from-ocean-blue to-sunset-orange rounded-2xl text-center">
+                    <p className="text-white/90 text-sm font-medium mb-3">
+                      Seu código de pareamento:
+                    </p>
+                    <div className="text-6xl font-bold text-white tracking-[0.2em] font-mono mb-4">
+                      {pairingCode}
+                    </div>
+                    <Button
+                      onClick={handleCopyCode}
+                      variant="secondary"
+                      className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-4 h-4 mr-2" />
+                          Copiado!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 mr-2" />
+                          Copiar Código
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Timer Visual */}
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                      <span>Código expira em:</span>
+                      <span className="font-mono font-bold">{countdown}s</span>
+                    </div>
+                    <Progress value={(countdown / 60) * 100} className="h-2" />
+                  </div>
+                </div>
+
+                {/* Instruções */}
+                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  <p className="text-sm text-green-800 font-medium mb-3">
+                    ✅ Agora no WhatsApp:
+                  </p>
+                  <ol className="text-sm text-green-700 space-y-2 list-decimal list-inside">
+                    <li>Abra o WhatsApp no celular</li>
+                    <li>Toque em <strong>⋮ (Mais opções)</strong> → <strong>Aparelhos conectados</strong></li>
+                    <li>Toque em <strong>Conectar um aparelho</strong></li>
+                    <li>Escolha <strong>"Conectar com código"</strong></li>
+                    <li>Cole o código: <span className="font-mono font-bold">{pairingCode}</span></li>
+                  </ol>
+                </div>
+
+                <Button
+                  onClick={handleCheckConnection}
+                  className="w-full btn-gradient text-white text-lg h-12"
+                >
+                  <CheckCircle2 className="w-5 h-5 mr-2" />
+                  Já conectei!
+                </Button>
+
+                <Button
+                  onClick={() => setWizardStep('phone')}
+                  variant="ghost"
+                  className="w-full"
+                >
+                  Gerar novo código
+                </Button>
+              </div>
+            )}
+
+            {/* PASSO 3: Sucesso */}
+            {wizardStep === 'success' && (
+              <div className="space-y-6 text-center animate-in fade-in zoom-in duration-500">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center mx-auto animate-bounce">
+                  <Check className="w-12 h-12 text-white" strokeWidth={3} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-green-600 mb-2">
+                    🎉 WhatsApp Conectado!
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Sua IA já está atendendo clientes automaticamente
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal Dinheiro Esquecido */}
       <ModalDinheiroEsquecido
@@ -390,30 +407,54 @@ export default function WhatsAppSetup() {
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="glass-card">
           <CardContent className="p-6">
-            <h4 className="font-semibold mb-2 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-ocean-blue" />
+            <h4 className="font-semibold mb-3 flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-ocean-blue" />
               Como Funciona?
             </h4>
             <ul className="text-sm text-muted-foreground space-y-2">
-              <li>1. Crie uma nova instância</li>
-              <li>2. Conecte usando QR Code ou código de pareamento</li>
-              <li>3. A IA começa a atender automaticamente</li>
-              <li>4. Acompanhe todas as conversas em tempo real</li>
+              <li className="flex items-start gap-2">
+                <span className="text-ocean-blue font-bold">1.</span>
+                Conecte seu WhatsApp em 60 segundos
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-ocean-blue font-bold">2.</span>
+                A IA aprende sobre seu negócio automaticamente
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-ocean-blue font-bold">3.</span>
+                Começa a atender clientes 24/7 na hora
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-ocean-blue font-bold">4.</span>
+                Acompanhe todas as conversas em tempo real
+              </li>
             </ul>
           </CardContent>
         </Card>
 
         <Card className="glass-card">
           <CardContent className="p-6">
-            <h4 className="font-semibold mb-2 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-green-600" />
-              Métodos de Conexão
+            <h4 className="font-semibold mb-3 flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              Seguro e Confiável
             </h4>
             <ul className="text-sm text-muted-foreground space-y-2">
-              <li>• <strong>QR Code:</strong> Escaneie no WhatsApp → Aparelhos Conectados</li>
-              <li>• <strong>Pareamento:</strong> Digite o código no WhatsApp → Aparelhos Conectados</li>
-              <li>• Mantenha o WhatsApp instalado no celular</li>
-              <li>• A conexão é mantida automaticamente</li>
+              <li className="flex items-start gap-2">
+                <Check className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
+                Apenas <strong>1 WhatsApp</strong> pode ser conectado
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
+                Conexão mantida <strong>automaticamente</strong>
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
+                Sem acesso às suas conversas pessoais
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
+                Você pode desconectar <strong>a qualquer momento</strong>
+              </li>
             </ul>
           </CardContent>
         </Card>

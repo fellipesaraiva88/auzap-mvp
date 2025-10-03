@@ -1,12 +1,153 @@
 # CLAUDE.md
 
-# AuZap - Claude Code Configuration
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Project:** WhatsApp Automation SaaS for Petshops/Clinics
+# AuZap - WhatsApp Automation SaaS Platform
 
-**Stack:** Node.js + TypeScript + React + Supabase + Baileys + OpenAI
+**Project Type:** Multi-tenant SaaS for Petshops/Veterinary Clinics
+**Architecture:** Monorepo with Dual-Stack (Frontend + Backend)
+**Core Stack:** TypeScript everywhere - React (Vite) + Node.js (Express) + Supabase + Baileys + OpenAI GPT-4
+**Status:** Production-Ready MVP with Aurora Enhanced (Oct 2025)
 
-**Status:** Aurora Enhanced (Oct 2025) - Client AI with 6+ functions, Aurora CS with full shop context, New vertical services
+---
+
+## 🚀 Quick Start Commands
+
+### Development Setup
+```bash
+# Clone and install
+git clone <repo>
+cd autonomous-paw-actuator-main
+npm install                    # Frontend dependencies
+cd backend && npm install      # Backend dependencies
+
+# Environment setup (copy .env.example and configure)
+cp .env.example .env          # Frontend env
+cd backend && cp .env.example .env  # Backend env
+
+# Start development
+npm run dev                   # Frontend (http://localhost:5173)
+cd backend && npm run dev     # Backend (http://localhost:3001)
+```
+
+### Essential Commands Reference
+
+#### Frontend Commands (Root Directory)
+```bash
+npm run dev                   # Start Vite dev server (port 5173)
+npm run build                 # Production build to dist/
+npm run build:dev             # Development build
+npm run lint                  # ESLint (max 100 warnings allowed)
+npm run type-check            # TypeScript validation
+npm run validate              # Run type-check + lint
+npm run preview               # Preview production build locally
+```
+
+#### Backend Commands (backend/ directory)
+```bash
+npm run dev                   # Start with hot reload (tsx watch)
+npm run build                 # Compile TypeScript to dist/
+npm run start                 # Run production server
+
+# Queue/Worker Management
+npm run workers:start         # Start ALL workers
+npm run workers:message       # Message processor only
+npm run workers:campaign      # Campaign worker only
+npm run workers:automation    # Automation worker only
+npm run queues:monitor        # Bull Board UI (port 3002)
+npm run queues:clean          # Clean completed/old jobs
+npm run queues:retry-failed   # Retry all failed jobs
+npm run queues:test           # Run smoke tests
+
+# Queue Testing Scripts
+npm run queues:test-message   # Test message flow
+npm run queues:test-automation # Test automation flow
+npm run queues:test-campaign  # Test campaign flow
+
+# Database Operations
+npm run migration:create      # Create new migration file
+npm run migration:run         # Apply pending migrations
+npm run seed                  # Seed demo data
+npm run simulate:event        # Simulate WhatsApp events
+```
+
+---
+
+## 🏗️ Architecture Deep Dive
+
+### System Architecture Overview
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        FRONTEND (React/Vite)                 │
+│  Pages → Components → Hooks → Services → Supabase Client    │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ HTTPS/WebSocket
+┌──────────────────────▼──────────────────────────────────────┐
+│                     BACKEND (Node.js/Express)               │
+│  Routes → Middleware → Services → Workers → Queues          │
+└──────────┬────────────────────┬─────────────────────────────┘
+           │                    │
+    ┌──────▼──────┐      ┌─────▼──────┐      ┌──────────────┐
+    │   Supabase  │      │    Redis    │      │   WhatsApp   │
+    │  PostgreSQL │      │   (BullMQ)  │      │   (Baileys)  │
+    └─────────────┘      └────────────┘      └──────────────┘
+```
+
+### Message Processing Flow
+```
+WhatsApp Message Received
+         ↓
+    Baileys Event
+         ↓
+    BullMQ Queue
+         ↓
+   Message Worker
+         ↓
+  Owner Detection
+    ↙        ↘
+Aurora AI   Client AI
+    ↓           ↓
+Function    Function
+Calling     Calling
+    ↓           ↓
+ Response   Response
+    ↘        ↙
+  WhatsApp Reply
+```
+
+### Directory Structure Breakdown
+
+```
+autonomous-paw-actuator-main/
+├── src/                      # Frontend source (React)
+│   ├── components/           # React components (60+ files)
+│   ├── pages/                # Route pages (20+ screens)
+│   ├── hooks/                # Custom React hooks
+│   ├── services/             # API service layer
+│   ├── lib/                  # Utilities (socket, api, supabase)
+│   └── integrations/         # Supabase types
+│
+├── backend/                  # Backend source (Node.js)
+│   ├── src/
+│   │   ├── config/          # Clients (supabase, redis, openai)
+│   │   ├── middleware/      # Auth, tenant, rate-limiting
+│   │   ├── routes/          # Express endpoints
+│   │   ├── services/        # Business logic (15+ services)
+│   │   ├── queue/           # BullMQ setup
+│   │   │   ├── workers/    # Message, campaign, automation
+│   │   │   ├── jobs/       # Scheduled jobs
+│   │   │   └── scripts/    # Testing & maintenance
+│   │   ├── types/           # TypeScript definitions
+│   │   └── server.ts        # Express + Socket.IO entry
+│   │
+│   ├── sessions/            # WhatsApp auth persistence
+│   └── scripts/             # Admin scripts
+│
+├── supabase/
+│   └── migrations/          # SQL migrations (17 files)
+│
+└── public/                  # Static assets
+```
 
 ---
 
@@ -41,30 +182,48 @@ WhatsApp Message → Baileys → BullMQ Queue
             (Analytics/Ops)    (Booking/Support)
 ```
 
-### Tech Stack
+## 📦 Complete Tech Stack Reference
 
-**Backend:**
+### Backend Stack (backend/)
+```json
+{
+  "runtime": "Node.js 20+ with ESM modules",
+  "framework": "Express 4.21+",
+  "typescript": "5.8.3 (strict mode)",
+  "whatsapp": "@whiskeysockets/baileys 6.7.9",
+  "ai": "OpenAI 4.73.1 (GPT-4 with functions)",
+  "queue": "BullMQ 5.59 + IORedis 5.8",
+  "database": "@supabase/supabase-js 2.58",
+  "realtime": "Socket.IO 4.8.1",
+  "auth": "JWT + bcrypt",
+  "logging": "Pino 9.6 + pino-pretty",
+  "dev": "tsx 4.19 (hot reload)"
+}
+```
 
-- Runtime: Node.js 20 + TypeScript
-- Framework: Express.js
-- WhatsApp: @whiskeysockets/baileys (native, pairing code)
-- AI: OpenAI GPT-4 + Function Calling
-- Queue: BullMQ + Redis (Upstash)
-- DB: Supabase (PostgreSQL + RLS multi-tenant)
-- Real-time: [Socket.io](http://Socket.io)
+### Frontend Stack (src/)
+```json
+{
+  "framework": "React 18.3 + Vite 5.4",
+  "ui": "shadcn/ui + Radix UI primitives",
+  "styling": "Tailwind CSS 3.4",
+  "routing": "React Router DOM 6.30",
+  "state": "@tanstack/react-query 5.83",
+  "forms": "react-hook-form 7.61 + zod",
+  "charts": "Recharts 2.15",
+  "calendar": "react-big-calendar 1.19",
+  "websocket": "socket.io-client 4.8",
+  "notifications": "Sonner 1.7"
+}
+```
 
-**Frontend:**
-
-- Framework: React 18 + Vite (transitioning to Next.js 14)
-- UI: shadcn/ui + Tailwind CSS
-- State: TanStack Query
-- Auth: Supabase Auth (JWT)
-
-**Infrastructure:**
-
-- Deploy: Render (Web Service + Worker + Static)
-- Storage: Supabase Storage
-- Monitoring: Render native + Winston JSON logs
+### Infrastructure
+- **Hosting**: Render (Web Service + Background Workers)
+- **Database**: Supabase (PostgreSQL 15 with RLS)
+- **Queue/Cache**: Upstash Redis (Serverless)
+- **File Storage**: Supabase Storage
+- **Monitoring**: Render Logs + Winston JSON
+- **CI/CD**: GitHub Actions + Husky pre-commit
 
 ### Database Schema (19 tables)
 
@@ -184,35 +343,120 @@ Examples:
 
 ---
 
-## 🗂️ Project Structure
+## 🗂️ Service Layer Architecture
 
-### Backend (`backend/`)
+### Backend Services Map (`backend/src/services/`)
 
+```typescript
+// Core WhatsApp Services
+baileys/
+├── baileys.service.ts         // Multi-tenant WhatsApp management
+│   - initializeInstance()     // Pairing code connection
+│   - sendMessage()            // Send text/media/audio
+│   - getInstanceHealth()      // Connection status
+│   └── setSocketEmitter()     // Real-time events
+
+// AI Services
+ai/
+├── client-ai.service.ts       // Customer-facing AI
+│   - processMessage()         // Main AI handler
+│   - handleFunctionCall()     // Execute AI functions
+│   └── 12+ function implementations
+
+aurora/
+├── aurora.service.ts          // Owner AI with full context
+│   - processOwnerMessage()    // Owner command handler
+│   - getShopContext()         // Aggregate 6+ data sources
+│   └── handleHandoff()        // Transfer to Client AI
+├── aurora-proactive.service.ts // Proactive messaging
+└── aurora-welcome.service.ts   // Onboarding flow
+
+// Business Domain Services
+contacts/contacts.service.ts   // Contact management
+pets/pets.service.ts           // Pet profiles
+bookings/bookings.service.ts   // Appointment system
+training/training.service.ts   // Training plans (NEW)
+daycare/daycare.service.ts     // Hotel/daycare (NEW)
+bipe/bipe.service.ts          // BIPE protocol (NEW)
+knowledge-base/               // FAQ system (NEW)
+
+// Support Services
+context/context-builder.service.ts  // Dynamic context
+esquecidos/vasculhador.service.ts  // Forgotten clients
+whatsapp/session-manager.ts        // Auth persistence
+admin-auth.service.ts              // Admin authentication
 ```
-src/
-├── config/          # Supabase, OpenAI, Redis clients
-├── services/        # Business logic (baileys, ai, aurora, contacts, pets, bookings, training, daycare, bipe, knowledge-base)
-├── middleware/      # Auth, tenant, rate limiting
-├── workers/         # BullMQ processors (message-processor, aurora-proactive, followups)
-├── routes/          # Express endpoints
-│   ├── training.routes.ts    # Training plans CRUD (NEW Oct 2025)
-│   ├── daycare.routes.ts     # Daycare/Hotel CRUD (NEW Oct 2025)
-│   └── bipe.routes.ts        # BIPE Protocol CRUD (NEW Oct 2025)
-└── server.ts        # Express app + Socket.io
+
+### Route Structure (`backend/src/routes/`)
+
+```typescript
+// Public Routes
+auth.routes.ts                 // Login/register endpoints
+whatsapp.routes.ts            // WhatsApp connection APIs
+
+// Protected Routes (require auth)
+aurora.routes.ts              // Aurora AI endpoints
+conversations.routes.ts       // Message history
+contacts.routes.ts           // Contact CRUD
+pets.routes.ts              // Pet management
+bookings.routes.ts          // Booking operations
+training.routes.ts          // Training plans (NEW)
+daycare.routes.ts          // Daycare/hotel (NEW)
+bipe.routes.ts            // BIPE protocol (NEW)
+
+// Admin Routes (require admin auth)
+admin/
+├── analytics.routes.ts    // Business metrics
+├── clients.routes.ts     // Client management
+├── dashboard.routes.ts   // Admin dashboard
+├── logs.routes.ts       // System logs
+└── monitoring.routes.ts // Health checks
 ```
 
-**Key Files:**
+### Queue Workers (`backend/src/queue/workers/`)
 
-- `baileys.service.ts` - WhatsApp connection, message sending, session management
-- `ai.service.ts` - Client AI (booking, pet registration, FAQs, training, daycare, BIPE)
-- `aurora.service.ts` - Owner AI (analytics, automation, insights, full shop context)
-- `message-processor.ts` - Routes messages to correct AI based on sender with handoff support
+```typescript
+message.worker.ts           // Priority 1: Real-time messages
+├── Process incoming WhatsApp messages
+├── Route to Aurora or Client AI
+└── Handle function calling
 
-**New Services (Oct 2025):**
-- `training.service.ts` - Gestão de planos de adestramento
-- `daycare.service.ts` - Gestão de hospedagem/daycare
-- `bipe.service.ts` - Protocolo BIPE para saúde pet
-- `knowledge-base.service.ts` - Base de conhecimento compartilhada
+campaign.worker.ts         // Priority 2: Bulk campaigns
+├── Process campaign batches
+├── Track delivery status
+└── Handle scheduling
+
+automation.worker.ts      // Priority 3: Automations
+├── Execute automation rules
+├── Process triggers
+└── Send automated messages
+
+vasculhada.worker.ts     // Priority 4: Client recovery
+├── Identify forgotten clients
+├── Generate recovery messages
+└── Track engagement
+```
+
+### Middleware Stack (`backend/src/middleware/`)
+
+```typescript
+tenant.middleware.ts      // Multi-tenant isolation
+├── Extract organizationId from JWT
+├── Attach to request context
+└── Filter all queries by org
+
+aurora-auth.middleware.ts // Owner authentication
+├── Verify owner phone number
+└── Grant Aurora access
+
+admin-auth.middleware.ts // Admin panel auth
+├── Verify admin role
+└── Check permissions
+
+rate-limiter.ts        // API rate limiting
+├── Per-endpoint limits
+└── Organization-based quotas
+```
 
 ### Frontend (`frontend/`)
 
@@ -359,23 +603,54 @@ git push origin v1.2.0
 - ✅ Automatic rollback on failure
 - ✅ Security scanning (secrets, vulnerabilities)
 
-### Environment Variables
+## 🔑 Environment Configuration
 
-**Required for Backend:**
-
+### Backend Environment Variables (`backend/.env`)
 ```bash
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-OPENAI_API_KEY=
-REDIS_URL=         # Upstash Redis
-NODE_ENV=production
+# Database (Supabase)
+SUPABASE_URL=https://[project-id].supabase.co
+SUPABASE_ANON_KEY=eyJ...                    # Public key
+SUPABASE_SERVICE_KEY=eyJ...                 # Admin key (RLS bypass)
+
+# AI Configuration
+OPENAI_API_KEY=sk-...                       # GPT-4 access
+OPENAI_MODEL=gpt-4-turbo-preview           # Model selection
+
+# Queue System (Redis)
+REDIS_URL=redis://default:password@host:port
+REDIS_HOST=redis-host.upstash.io
+REDIS_PORT=6379
+REDIS_PASSWORD=your-password
+
+# Server Configuration
+PORT=3001                                   # Backend port
+NODE_ENV=development|production
+CORS_ORIGIN=http://localhost:5173          # Frontend URL
+
+# WhatsApp Settings
+BAILEYS_LOG_LEVEL=error|warn|info|debug
+SESSION_PATH=/app/sessions                 # Render disk path
+
+# Optional Services
+SENTRY_DSN=https://...                     # Error tracking
+WEBHOOK_SECRET=whsec_...                   # Webhook validation
 ```
 
-**Required for Frontend:**
-
+### Frontend Environment Variables (`.env`)
 ```bash
-VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
+# API Configuration
+VITE_API_URL=http://localhost:3001         # Backend URL
+VITE_SOCKET_URL=http://localhost:3001      # WebSocket URL
+
+# Supabase Client
+VITE_SUPABASE_URL=https://[project].supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=eyJ...       # Anon key only
+
+# Feature Flags (optional)
+VITE_ENABLE_AURORA=true
+VITE_ENABLE_TRAINING=true
+VITE_ENABLE_DAYCARE=true
+VITE_ENABLE_BIPE=true
 ```
 
 ---
@@ -507,4 +782,238 @@ VITE_SUPABASE_ANON_KEY=
 
 ---
 
-*This CLAUDE.md is the single source of truth for Claude Code working on AuZap. Updated October 2025.*
+## 🔧 Critical Code Patterns
+
+### Multi-Tenant Data Access Pattern
+```typescript
+// ALWAYS use TenantAwareSupabase for data access
+import { TenantAwareSupabase } from '../config/supabase';
+
+async function getContactsByOrg(organizationId: string) {
+  const supabase = new TenantAwareSupabase(organizationId);
+
+  // Automatically filtered by organization_id
+  const { data, error } = await supabase
+    .from('contacts')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  return data;
+}
+```
+
+### Queue Job Pattern
+```typescript
+// Adding jobs to queue with retry logic
+await messageQueue.add(
+  'process-message',
+  {
+    organizationId,
+    instanceId,
+    from: message.key.remoteJid,
+    content: message.message.conversation
+  },
+  {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 2000
+    },
+    removeOnComplete: true,
+    removeOnFail: false
+  }
+);
+```
+
+### AI Function Calling Pattern
+```typescript
+// Define function for OpenAI
+const tools = [{
+  type: 'function',
+  function: {
+    name: 'criar_agendamento',
+    description: 'Criar novo agendamento',
+    parameters: {
+      type: 'object',
+      properties: {
+        petId: { type: 'string' },
+        serviceId: { type: 'string' },
+        scheduledAt: { type: 'string' }
+      },
+      required: ['petId', 'serviceId', 'scheduledAt']
+    }
+  }
+}];
+
+// Handle function call
+if (response.tool_calls) {
+  for (const tool of response.tool_calls) {
+    const result = await handleFunctionCall(
+      tool.function.name,
+      JSON.parse(tool.function.arguments)
+    );
+  }
+}
+```
+
+### WebSocket Event Pattern
+```typescript
+// Emit real-time updates
+io.to(`org:${organizationId}`).emit('message:received', {
+  conversationId,
+  message: {
+    id: messageId,
+    content,
+    from,
+    timestamp: new Date().toISOString()
+  }
+});
+```
+
+## 🐛 Common Issues & Solutions
+
+### WhatsApp Connection Issues
+```bash
+# Check connection status
+curl http://localhost:3001/api/v1/whatsapp/health
+
+# Clear session and reconnect
+rm -rf backend/sessions/[org_id]_[instance_id]
+# Restart backend to trigger new pairing code
+```
+
+### Queue Processing Stuck
+```bash
+# Monitor queue status
+cd backend && npm run queues:monitor
+# Access Bull Board at http://localhost:3002
+
+# Clean stuck jobs
+npm run queues:clean
+
+# Retry failed jobs
+npm run queues:retry-failed
+```
+
+### Database Migration Issues
+```sql
+-- Check current migration status
+SELECT * FROM supabase_migrations ORDER BY version DESC;
+
+-- Manually mark migration as complete if needed
+INSERT INTO supabase_migrations (version, name, executed_at)
+VALUES ('20251003', 'migration_name', NOW());
+```
+
+### Multi-Tenant Data Leak
+```typescript
+// WRONG - No organization filter
+const { data } = await supabase.from('contacts').select('*');
+
+// CORRECT - Always filter by organization
+const { data } = await supabase
+  .from('contacts')
+  .select('*')
+  .eq('organization_id', organizationId);
+```
+
+## 📊 Performance Optimization Checklist
+
+### Database Indexes (Required)
+```sql
+-- Multi-tenant queries
+CREATE INDEX idx_[table]_org_created
+  ON [table](organization_id, created_at DESC);
+
+-- Frequent lookups
+CREATE INDEX idx_messages_conversation
+  ON messages(conversation_id, created_at DESC);
+
+-- WhatsApp number lookup
+CREATE INDEX idx_contacts_phone
+  ON contacts(phone_number) WHERE deleted_at IS NULL;
+```
+
+### Query Optimization
+- Always use `LIMIT` for list queries
+- Use `select()` with specific columns, not `*`
+- Implement cursor-based pagination for large datasets
+- Cache frequent queries with Redis
+
+### Frontend Performance
+- Lazy load routes with React.lazy()
+- Use React Query for server state caching
+- Implement virtual scrolling for long lists
+- Optimize bundle size with dynamic imports
+
+## 🚦 Testing Strategy
+
+### Unit Tests (Services)
+```bash
+cd backend
+npm test                     # Run all tests
+npm test -- --watch         # Watch mode
+npm test -- services/aurora # Test specific service
+```
+
+### Integration Tests (API)
+```bash
+# Test API endpoints
+cd backend
+npm run test:integration
+
+# Test queue processing
+npm run queues:test
+```
+
+### E2E Tests (User Flows)
+```bash
+# Playwright tests (when implemented)
+npx playwright test
+npx playwright test --ui    # Interactive mode
+```
+
+## 📝 Git Workflow
+
+### Branch Strategy
+- `main` - Production-ready code
+- `develop` - Integration branch
+- `feature/*` - New features
+- `fix/*` - Bug fixes
+- `hotfix/*` - Emergency fixes
+
+### Commit Convention
+```bash
+feat(scope): Add new feature
+fix(scope): Fix bug
+docs(scope): Update documentation
+style(scope): Format code
+refactor(scope): Refactor code
+test(scope): Add tests
+chore(scope): Update dependencies
+```
+
+### Pre-commit Checks
+- ESLint validation (max 100 warnings)
+- TypeScript type checking
+- Prettier formatting
+- Unit test execution
+
+---
+
+## 🎓 Key Architectural Decisions
+
+1. **Baileys over Official API**: Native WhatsApp protocol for cost efficiency
+2. **BullMQ over Direct Processing**: Resilient async message handling
+3. **Supabase over Custom Backend**: Rapid development with built-in auth/storage
+4. **Multi-tenant RLS**: Security at database level, not application
+5. **Dual AI System**: Separate contexts for owners vs customers
+6. **Function Calling over Text Parsing**: Structured AI actions
+7. **Pairing Code over QR**: Better UX for WhatsApp connection
+8. **Redis Queue over Database Queue**: Performance for high-volume messaging
+9. **Socket.IO + Supabase Realtime**: Dual real-time strategy
+10. **TypeScript Everywhere**: Type safety across full stack
+
+---
+
+*This CLAUDE.md is the single source of truth for Claude Code working on AuZap. Updated October 2025 with comprehensive architecture details.*
