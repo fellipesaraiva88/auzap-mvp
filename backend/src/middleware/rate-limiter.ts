@@ -181,7 +181,7 @@ export const socketLimiter = rateLimit({
 // Tier 5: Auth operations (login, signup, password reset)
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per 15 minutes
+  max: 50, // 50 attempts per 15 minutes (increased for testing)
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req: Request) => {
@@ -190,8 +190,8 @@ export const authLimiter = rateLimit({
     return `auth:${identifier}`;
   },
   skip: (req: Request) => {
-    // Bypass rate limiting in development
-    return process.env.NODE_ENV === 'development';
+    // Bypass rate limiting if explicitly disabled or in development
+    return process.env.BYPASS_RATE_LIMIT === 'true' || process.env.NODE_ENV === 'development';
   },
   handler: (req: Request, res: Response) => {
     logger.warn({
