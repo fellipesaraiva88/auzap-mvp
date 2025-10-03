@@ -92,7 +92,12 @@ export class CampaignWorker {
           const message = this.renderTemplate(template, variables || {}, recipient);
 
           // Enviar mensagem
-          await baileysService.sendTextMessage(instanceId, recipient, message);
+          await baileysService.sendTextMessage({
+            instanceId,
+            to: recipient,
+            text: message,
+            organizationId
+          });
 
           successCount++;
 

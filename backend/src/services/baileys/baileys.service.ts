@@ -7,7 +7,7 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import QRCode from 'qrcode';
 import { logger } from '../../config/logger.js';
-import { messageQueue } from '../../config/redis.js';
+import { messageQueue } from '../../queue/queue-manager.js';
 import { sessionManager } from '../whatsapp/session-manager.js';
 import { connectionHandler } from '../whatsapp/connection-handler.js';
 import type {

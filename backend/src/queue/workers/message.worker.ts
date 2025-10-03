@@ -124,7 +124,12 @@ export class MessageWorker {
     );
 
     // Enviar resposta
-    await baileysService.sendTextMessage(instanceId, phoneNumber, response);
+    await baileysService.sendTextMessage({
+      instanceId,
+      to: phoneNumber,
+      text: response,
+      organizationId
+    });
 
     // Salvar mensagem no banco
     await this.saveMessage(organizationId, instanceId, phoneNumber, content, response, true);
@@ -167,7 +172,12 @@ export class MessageWorker {
     );
 
     // Enviar resposta
-    await baileysService.sendTextMessage(instanceId, jid, response);
+    await baileysService.sendTextMessage({
+      instanceId,
+      to: jid,
+      text: response,
+      organizationId
+    });
 
     // Salvar mensagens
     await this.saveMessage(organizationId, instanceId, phoneNumber, content, response, false, conversation.id);
