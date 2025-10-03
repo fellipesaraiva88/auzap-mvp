@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,101 +13,64 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { WhatsAppInstanceCard } from '@/components/WhatsAppInstanceCard';
-import { whatsappService, type WhatsAppInstance } from '@/services/whatsapp.service';
-import { addSocketListener, removeSocketListener } from '@/lib/socket';
+import { useWhatsAppInstances, useInitializeWhatsApp } from '@/hooks/useWhatsApp';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Loader2, MessageSquare } from 'lucide-react';
 
 export default function WhatsAppSetup() {
   const { toast } = useToast();
-  const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
+  const { data, isLoading, refetch } = useWhatsAppInstances();
+  const initializeWhatsApp = useInitializeWhatsApp();
+
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [newInstanceName, setNewInstanceName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
 
-  const loadInstances = async () => {
-    try {
-      const data = await whatsappService.listInstances();
-      setInstances(data);
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao carregar instâncias',
-        description: 'Tente recarregar a página',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadInstances();
-
-    // Socket.io listeners para eventos WhatsApp
-    addSocketListener('whatsapp:connected', ({ instanceId, phoneNumber }) => {
-      toast({
-        title: '✅ WhatsApp Conectado!',
-        description: `Número: ${phoneNumber}`,
-      });
-      loadInstances();
-    });
-
-    addSocketListener('whatsapp:disconnected', ({ instanceId }) => {
-      toast({
-        title: '⚠️ WhatsApp Desconectado',
-        description: 'A instância foi desconectada',
-      });
-      loadInstances();
-    });
-
-    addSocketListener('whatsapp:qr', ({ instanceId, qrCode }) => {
-      loadInstances(); // Recarregar para mostrar QR code
-    });
-
-    return () => {
-      removeSocketListener('whatsapp:connected');
-      removeSocketListener('whatsapp:disconnected');
-      removeSocketListener('whatsapp:qr');
-    };
-  }, []);
+  const instances = data?.instances || [];
 
   const handleCreateInstance = async () => {
-    if (!newInstanceName.trim()) {
+    if (!phoneNumber.trim()) {
       toast({
         variant: 'destructive',
-        title: 'Nome obrigatório',
-        description: 'Digite um nome para a instância',
+        title: 'Telefone obrigatório',
+        description: 'Digite o número do WhatsApp com DDD (ex: 5511999887766)',
       });
       return;
     }
 
-    setCreating(true);
     try {
-      await whatsappService.createInstance({
-        name: newInstanceName,
+      const instanceId = `instance_${Date.now()}`;
+      const result = await initializeWhatsApp.mutateAsync({
+        instanceId,
+        phoneNumber: phoneNumber.replace(/\D/g, ''),
+        preferredAuthMethod: 'pairing_code',
       });
 
-      toast({
-        title: 'Instância criada!',
-        description: 'Agora você pode conectar ao WhatsApp',
-      });
+      if (result.success && result.pairingCode) {
+        toast({
+          title: '✅ Instância criada!',
+          description: `Código de pareamento: ${result.pairingCode}`,
+          duration: 10000,
+        });
+      } else if (result.qrCode) {
+        toast({
+          title: 'QR Code gerado!',
+          description: 'Escaneie o QR Code no WhatsApp',
+        });
+      }
 
-      setNewInstanceName('');
+      setPhoneNumber('');
       setDialogOpen(false);
-      loadInstances();
+      refetch();
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Erro ao criar instância',
         description: error.response?.data?.error || 'Tente novamente',
       });
-    } finally {
-      setCreating(false);
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <div className="flex items-center justify-center h-64">
@@ -132,34 +95,37 @@ export default function WhatsAppSetup() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Criar Nova Instância</DialogTitle>
+                <DialogTitle>Criar Nova Instância WhatsApp</DialogTitle>
                 <DialogDescription>
-                  Crie uma nova instância do WhatsApp para conectar um número
+                  Digite o número do WhatsApp com DDD para gerar o código de pareamento
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nome da Instância</Label>
+                  <Label htmlFor="phone">Número WhatsApp (com DDD)</Label>
                   <Input
-                    id="name"
-                    placeholder="Ex: Atendimento Principal"
-                    value={newInstanceName}
-                    onChange={(e) => setNewInstanceName(e.target.value)}
-                    disabled={creating}
+                    id="phone"
+                    placeholder="Ex: 5511999887766"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    disabled={initializeWhatsApp.isPending}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Digite apenas números, incluindo código do país e DDD
+                  </p>
                 </div>
                 <Button
                   onClick={handleCreateInstance}
-                  disabled={creating}
+                  disabled={initializeWhatsApp.isPending}
                   className="w-full btn-gradient text-white"
                 >
-                  {creating ? (
+                  {initializeWhatsApp.isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Criando...
                     </>
                   ) : (
-                    'Criar Instância'
+                    'Gerar Código de Pareamento'
                   )}
                 </Button>
               </div>
@@ -187,9 +153,9 @@ export default function WhatsAppSetup() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {instances.map((instance) => (
             <WhatsAppInstanceCard
-              key={instance.id}
+              key={instance.instanceId}
               instance={instance}
-              onUpdate={loadInstances}
+              onUpdate={refetch}
             />
           ))}
         </div>
