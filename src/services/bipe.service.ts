@@ -1,4 +1,4 @@
-import { apiClient } from './api';
+import { apiClient } from '../lib/api';
 
 export const bipeService = {
   async listPending() {

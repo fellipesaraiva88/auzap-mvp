@@ -10,7 +10,7 @@ async function createAdmin() {
 
     // Verificar se já existe
     const { data: existing } = await supabaseAdmin
-      .from('users')
+      .from('internal_users')
       .select('id')
       .eq('email', email)
       .single();
@@ -18,10 +18,11 @@ async function createAdmin() {
     if (existing) {
       // Atualizar senha
       const { error } = await supabaseAdmin
-        .from('users')
-        .update({ 
+        .from('internal_users')
+        .update({
           password_hash: hashedPassword,
-          role: 'super_admin'
+          role: 'super_admin',
+          is_active: true
         })
         .eq('email', email);
 
@@ -30,12 +31,13 @@ async function createAdmin() {
     } else {
       // Criar novo
       const { error } = await supabaseAdmin
-        .from('users')
+        .from('internal_users')
         .insert({
+          name: 'Admin',
           email,
           password_hash: hashedPassword,
           role: 'super_admin',
-          name: 'Admin AuZap'
+          is_active: true
         });
 
       if (error) throw error;
@@ -45,7 +47,7 @@ async function createAdmin() {
     console.log('\nCredenciais:');
     console.log('Email:', email);
     console.log('Senha:', password);
-    
+
     process.exit(0);
   } catch (error) {
     console.error('❌ Erro:', error);

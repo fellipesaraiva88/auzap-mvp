@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ import {
   ChevronDown,
   Activity,
   Zap,
+  BarChart3,
 } from "lucide-react";
 import { useContacts } from "@/hooks/useContacts";
 import { usePets } from "@/hooks/usePets";
@@ -55,8 +56,16 @@ import { ClientCard } from "@/components/kanban/ClientCard";
 import { KanbanColumn } from "@/components/kanban/KanbanColumn";
 import { CreateClientPetModal } from "@/components/modals/CreateClientPetModal";
 import { ClientFilters } from "@/components/kanban/ClientFilters";
+import { ClientAnalytics } from "@/components/kanban/ClientAnalytics";
 import { exportToCSV } from "@/utils/exportCSV";
+import { exportClients, ExportFormat } from "@/utils/exportUtils";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Tipos de visualização Kanban
 type KanbanView = "status" | "interaction" | "pets" | "value" | "region";
@@ -100,13 +109,39 @@ export default function ClientesKanban() {
   const { toast } = useToast();
 
   // Estados
-  const [currentView, setCurrentView] = useState<KanbanView>("status");
+  const [currentView, setCurrentView] = useState<KanbanView>(() => {
+    // Carregar preferência salva do localStorage
+    const saved = localStorage.getItem("kanban-view-preference");
+    return (saved as KanbanView) || "status";
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+  const [viewMode, setViewMode] = useState<"kanban" | "list">(() => {
+    // Carregar preferência de modo de visualização
+    const saved = localStorage.getItem("view-mode-preference");
+    return (saved as "kanban" | "list") || "kanban";
+  });
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [columnData, setColumnData] = useState<Record<string, any[]>>({});
+  const [showAnalytics, setShowAnalytics] = useState(() => {
+    // Carregar preferência de analytics
+    const saved = localStorage.getItem("show-analytics-preference");
+    return saved === "true";
+  });
+
+  // Salvar preferências no localStorage quando mudarem
+  useEffect(() => {
+    localStorage.setItem("kanban-view-preference", currentView);
+  }, [currentView]);
+
+  useEffect(() => {
+    localStorage.setItem("view-mode-preference", viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem("show-analytics-preference", String(showAnalytics));
+  }, [showAnalytics]);
 
   // Sensores do DnD Kit
   const sensors = useSensors(
@@ -249,19 +284,18 @@ export default function ClientesKanban() {
   useHotkeys("ctrl+k", () => setViewMode(viewMode === "kanban" ? "list" : "kanban"));
 
   // Handler de exportação
-  const handleExport = () => {
-    const exportData = filteredContacts.map((c) => ({
-      Nome: c.full_name || c.name,
-      Telefone: c.phone_number || c.phone,
-      Email: c.email || "",
-      Cadastrado: new Date(c.created_at || c.createdAt).toLocaleDateString("pt-BR"),
-      Status: c.is_active !== false ? "Ativo" : "Inativo",
-    }));
-    exportToCSV(exportData, `clientes-kanban-${currentView}`);
-    toast({
-      title: "✅ Exportado com sucesso!",
-      description: `${exportData.length} clientes exportados`,
-    });
+  const handleExport = async (format: ExportFormat) => {
+    try {
+      await exportClients(filteredContacts, format, {
+        filename: `clientes-kanban-${currentView}`
+      });
+    } catch (error) {
+      toast({
+        title: "❌ Erro na exportação",
+        description: "Não foi possível exportar os dados",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -274,13 +308,41 @@ export default function ClientesKanban() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              className={showAnalytics ? "bg-primary text-primary-foreground" : ""}
+            >
+              <BarChart3 className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setViewMode(viewMode === "kanban" ? "list" : "kanban")}
             >
               {viewMode === "kanban" ? <List className="w-4 h-4" /> : <Grid3x3 className="w-4 h-4" />}
             </Button>
-            <Button variant="outline" size="sm" onClick={handleExport}>
-              <Download className="w-4 h-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport("csv")}>
+                  📊 Exportar CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("excel")}>
+                  📈 Exportar Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("json")}>
+                  🔧 Exportar JSON
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("pdf")}>
+                  📄 Exportar PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               className="btn-gradient text-white"
               onClick={() => setIsCreateModalOpen(true)}
@@ -339,6 +401,19 @@ export default function ClientesKanban() {
           onFiltersChange={setActiveFilters}
         />
       </div>
+
+      {/* Analytics Dashboard */}
+      {showAnalytics && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.3 }}
+          className="mb-6"
+        >
+          <ClientAnalytics clients={filteredContacts} />
+        </motion.div>
+      )}
 
       {/* Estatísticas Rápidas */}
       <div className="grid grid-cols-4 gap-4 mb-6">

@@ -129,7 +129,7 @@ export default defineConfig(({ mode }) => ({
         clientsClaim: true
       },
       devOptions: {
-        enabled: true,
+        enabled: false, // Desabilitado para evitar erro de sw.js missing
         type: 'module'
       }
     })

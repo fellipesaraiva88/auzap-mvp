@@ -74,7 +74,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 300,
+    "collapsed": true
   },
   "right": {
     "id": "b09fa0c39bbaf777",
@@ -164,6 +165,16 @@
   },
   "active": "435ce28ca065eda0",
   "lastOpenFiles": [
+    "4_TRANSFORMACIONAL/nova-era.md",
+    "3_ARQUITETURAL/emergencia.md",
+    "2_ESTRATEGICO/dual-ai.md",
+    "1_OPERACIONAL/responder.md",
+    "1_OPERACIONAL/whatsapp.md",
+    "_hub.md",
+    "4_TRANSFORMACIONAL",
+    "3_ARQUITETURAL",
+    "2_ESTRATEGICO",
+    "1_OPERACIONAL",
     "2-ARQUITETURA-SISTEMICA/Sistema-Completo.md",
     "1-VISAO-E-FILOSOFIA/Cognitive-Level-4-5.md",
     "1-VISAO-E-FILOSOFIA/Dual-AI-Philosophy.md",
