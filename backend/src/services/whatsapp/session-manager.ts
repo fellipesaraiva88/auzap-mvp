@@ -4,7 +4,7 @@ import * as fsSync from 'fs';
 import { useMultiFileAuthState } from '@whiskeysockets/baileys';
 import { logger } from '../../config/logger.js';
 import { redisCache } from '../../config/redis.js';
-import { sessionBackupService } from './session-backup.service.js';
+// import { sessionBackupService } from './session-backup.service.js'; // DISABLED - tabela não existe
 import type { SessionData } from '../../types/whatsapp.types.js';
 
 /**
@@ -155,8 +155,8 @@ export class SessionManager {
 
         logger.info({ organizationId, instanceId, sessionDir }, '🎉 Auth state initialized successfully');
 
-        // Tentar fazer backup no Supabase (não crítico, não bloqueia)
-        await sessionBackupService.backupSession(organizationId, instanceId, sessionDir).catch(() => {});
+        // Tentar fazer backup no Supabase (não crítico, não bloqueia) - DISABLED
+        // await sessionBackupService.backupSession(organizationId, instanceId, sessionDir).catch(() => {});
 
         return authState;
 
@@ -187,7 +187,9 @@ export class SessionManager {
       instanceId
     }, '🔄 All filesystem attempts failed, trying to restore from Supabase backup...');
 
-    const restored = await sessionBackupService.restoreSession(organizationId, instanceId, sessionDir);
+    // DISABLED - tabela não existe
+    // const restored = await sessionBackupService.restoreSession(organizationId, instanceId, sessionDir);
+    const restored = false;
 
     if (restored) {
       try {
