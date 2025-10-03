@@ -21,6 +21,45 @@ import { usePets } from "@/hooks/usePets";
 import { contactsService } from "@/services/contacts.service";
 import { useToast } from "@/hooks/use-toast";
 
+// Componente interno para buscar pets de um cliente
+function ClientPets({ contactId }: { contactId: string }) {
+  const { pets, isLoading } = usePets(contactId);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-4">
+        <Loader2 className="w-6 h-6 text-ocean-blue animate-spin" />
+      </div>
+    );
+  }
+
+  if (!pets || pets.length === 0) {
+    return <p className="text-sm text-muted-foreground">Nenhum pet cadastrado</p>;
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {pets.map((pet: any) => (
+        <div key={pet.id} className="p-3 rounded-lg border border-border">
+          <div className="flex items-center gap-2 mb-2">
+            {pet.species === "dog" ? (
+              <Dog className="w-4 h-4 text-ocean-blue" />
+            ) : (
+              <Cat className="w-4 h-4 text-ocean-blue" />
+            )}
+            <span className="font-medium">{pet.name}</span>
+          </div>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p>Raça: {pet.breed || "Não informado"}</p>
+            <p>Idade: {pet.age || pet.age_years || 0} anos</p>
+            {pet.weight_kg && <p>Peso: {pet.weight_kg} kg</p>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Clientes() {
   const [searchQuery, setSearchQuery] = useState("");
   const { contacts, total, isLoading, refetch } = useContacts(searchQuery);
@@ -73,15 +112,10 @@ export default function Clientes() {
     }
   };
 
-  // Para cada contato, buscar seus pets
-  const contactsWithPets = contacts.map(contact => {
-    const { pets } = usePets(contact.id);
-    return { ...contact, pets: pets || [] };
-  });
-
-  const totalPets = contactsWithPets.reduce((sum, client) => sum + client.pets.length, 0);
-  const newClients = contactsWithPets.filter((c) => {
-    const createdDate = new Date(c.createdAt);
+  // Calcular estatísticas básicas
+  const totalPets = 0; // TODO: Implementar contagem global de pets
+  const newClients = contacts.filter((c) => {
+    const createdDate = new Date(c.created_at || c.createdAt);
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     return createdDate > thirtyDaysAgo;
@@ -227,7 +261,7 @@ export default function Clientes() {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 text-ocean-blue animate-spin" />
         </div>
-      ) : contactsWithPets.length === 0 ? (
+      ) : contacts.length === 0 ? (
         <Card className="glass-card">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Users className="w-16 h-16 text-muted-foreground mb-4" />
@@ -239,16 +273,16 @@ export default function Clientes() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {contactsWithPets.map((client) => {
-            const isNew = new Date(client.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          {contacts.map((client) => {
+            const isNew = new Date(client.created_at || client.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
             return (
               <Card key={client.id} className="glass-card hover-scale">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h3 className="font-semibold text-lg">{client.name}</h3>
-                      <p className="text-sm text-muted-foreground">{client.phone}</p>
+                      <h3 className="font-semibold text-lg">{client.full_name || client.name}</h3>
+                      <p className="text-sm text-muted-foreground">{client.phone_number || client.phone}</p>
                       {client.email && (
                         <p className="text-sm text-muted-foreground">{client.email}</p>
                       )}
@@ -256,34 +290,6 @@ export default function Clientes() {
                     <Badge variant={isNew ? "default" : "secondary"}>
                       {isNew ? "Novo" : "Ativo"}
                     </Badge>
-                  </div>
-
-                  <div className="border-t border-border pt-4">
-                    <p className="text-sm font-medium text-muted-foreground mb-2">
-                      🐾 Pets ({client.pets.length})
-                    </p>
-                    {client.pets.length > 0 ? (
-                      <div className="space-y-2">
-                        {client.pets.map((pet) => (
-                          <div
-                            key={pet.id}
-                            className="flex items-center gap-2 text-sm"
-                          >
-                            {pet.species === "dog" ? (
-                              <Dog className="w-4 h-4 text-ocean-blue" />
-                            ) : (
-                              <Cat className="w-4 h-4 text-ocean-blue" />
-                            )}
-                            <span className="font-medium">{pet.name}</span>
-                            <span className="text-muted-foreground">
-                              • {pet.breed} • {pet.age} anos
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Nenhum pet cadastrado</p>
-                    )}
                   </div>
 
                   <div className="mt-4 pt-4 border-t border-border">
@@ -349,30 +355,8 @@ export default function Clientes() {
 
               {/* Pets do Cliente */}
               <div className="border-t pt-4">
-                <h4 className="font-semibold mb-3">Pets ({selectedClient.pets?.length || 0})</h4>
-                {selectedClient.pets && selectedClient.pets.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {selectedClient.pets.map((pet: any) => (
-                      <div key={pet.id} className="p-3 rounded-lg border border-border">
-                        <div className="flex items-center gap-2 mb-2">
-                          {pet.species === "dog" ? (
-                            <Dog className="w-4 h-4 text-ocean-blue" />
-                          ) : (
-                            <Cat className="w-4 h-4 text-ocean-blue" />
-                          )}
-                          <span className="font-medium">{pet.name}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground space-y-1">
-                          <p>Raça: {pet.breed || "Não informado"}</p>
-                          <p>Idade: {pet.age || pet.age_years || 0} anos</p>
-                          {pet.weight_kg && <p>Peso: {pet.weight_kg} kg</p>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Nenhum pet cadastrado</p>
-                )}
+                <h4 className="font-semibold mb-3">Pets</h4>
+                <ClientPets contactId={selectedClient.id} />
               </div>
 
               {/* Ações */}
