@@ -430,4 +430,140 @@ router.post('/health-check', async (req: TenantRequest, res: Response): Promise<
   }
 });
 
+/**
+ * POST /api/whatsapp/sync-contacts
+ * Sincroniza contatos do WhatsApp conectado para o sistema
+ */
+router.post('/sync-contacts', async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const organizationId = req.organizationId!;
+    const instanceId = req.body.instanceId;
+
+    if (!instanceId) {
+      res.status(400).json({ error: 'instanceId is required' });
+      return;
+    }
+
+    logger.info({ organizationId, instanceId }, '🔄 Iniciando sincronização de contatos WhatsApp...');
+
+    // Verificar se instância está conectada
+    const isConnected = baileysService.isConnected(instanceId, organizationId);
+    if (!isConnected) {
+      res.status(400).json({
+        success: false,
+        error: 'WhatsApp instance is not connected'
+      });
+      return;
+    }
+
+    // Importar supabase
+    const { supabaseAdmin } = await import('../config/supabase.js');
+
+    let contactsCreated = 0;
+    let conversationsCreated = 0;
+
+    // Obter instância ativa
+    const instances = baileysService['instances'] as Map<string, any>;
+    const instance = instances.get(instanceId);
+
+    if (!instance || !instance.socket) {
+      res.status(500).json({
+        success: false,
+        error: 'Could not access WhatsApp instance'
+      });
+      return;
+    }
+
+    const sock = instance.socket;
+
+    // Buscar todos os chats
+    logger.info('📱 Buscando chats do WhatsApp...');
+
+    // Baileys armazena chats em memória
+    const chatsStore = (sock as any).store?.chats || {};
+    const chatsList = Object.values(chatsStore);
+
+    logger.info({ chatsCount: chatsList.length }, `Encontrados ${chatsList.length} chats`);
+
+    // Processar cada chat
+    for (const chat of chatsList as any[]) {
+      try {
+        const chatId = chat.id;
+
+        // Pular broadcasts e newsletters
+        if (chatId.includes('@newsletter') || chatId.includes('@broadcast')) {
+          continue;
+        }
+
+        const chatName = chat.name || chat.notify || chatId.split('@')[0];
+        const isGroup = chatId.endsWith('@g.us');
+        const phoneNumber = isGroup ? null : chatId.split('@')[0];
+
+        // Criar ou atualizar conversa
+        const { data: existingConv } = await supabaseAdmin
+          .from('conversations')
+          .select('id')
+          .eq('organization_id', organizationId)
+          .eq('whatsapp_chat_id', chatId)
+          .maybeSingle();
+
+        if (!existingConv) {
+          await supabaseAdmin
+            .from('conversations')
+            .insert({
+              organization_id: organizationId,
+              whatsapp_chat_id: chatId,
+              contact_name: chatName,
+              status: 'active',
+              last_message_at: new Date().toISOString()
+            });
+
+          conversationsCreated++;
+          logger.info({ chatId, chatName }, `✅ Conversa criada: ${chatName}`);
+        }
+
+        // Para conversas individuais, criar contato
+        if (!isGroup && phoneNumber) {
+          const { data: existingContact } = await supabaseAdmin
+            .from('contacts')
+            .select('id')
+            .eq('organization_id', organizationId)
+            .eq('phone_number', phoneNumber)
+            .maybeSingle();
+
+          if (!existingContact) {
+            await supabaseAdmin
+              .from('contacts')
+              .insert({
+                organization_id: organizationId,
+                name: chatName,
+                phone_number: phoneNumber,
+                whatsapp_number: phoneNumber
+              });
+
+            contactsCreated++;
+            logger.info({ phoneNumber, chatName }, `✅ Contato criado: ${chatName}`);
+          }
+        }
+      } catch (error) {
+        logger.error({ error, chat }, 'Erro ao processar chat');
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Contacts synced successfully',
+      stats: {
+        chatsProcessed: chatsList.length,
+        conversationsCreated,
+        contactsCreated
+      }
+    });
+
+  } catch (error: any) {
+    logger.error({ error }, 'Error syncing contacts');
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
