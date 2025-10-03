@@ -256,12 +256,11 @@ router.put('/protocol/:petId/behavioral', async (req: TenantRequest, res: Respon
     }
 
     // Update behavioral data
-    const protocol = await petHealthService.updateBehavioral(petId, organizationId, {
-      behavioralScore: data.behavioralScore,
-      behavioralNotes: data.behavioralNotes,
-      assessedBy: data.assessedBy,
-      assessmentDate: data.assessmentDate
-    });
+    const protocol = await petHealthService.updateBehavioralScore(
+      petId,
+      data.behavioralScore,
+      data.behavioralNotes
+    );
 
     logger.info({ organizationId, petId }, 'BIPE behavioral data updated');
     res.json({ protocol });
@@ -312,7 +311,7 @@ router.put('/protocol/:petId/individual', async (req: TenantRequest, res: Respon
     }
 
     // Update individual needs
-    const protocol = await petHealthService.updateIndividualNeeds(petId, organizationId, data);
+    const protocol = await petHealthService.updateIndividualNeeds(petId, data);
 
     logger.info({ organizationId, petId }, 'BIPE individual needs updated');
     res.json({ protocol });
@@ -363,7 +362,7 @@ router.put('/protocol/:petId/preventive', async (req: TenantRequest, res: Respon
     }
 
     // Update preventive care
-    const protocol = await petHealthService.updatePreventiveCare(petId, organizationId, data);
+    const protocol = await petHealthService.updatePreventiveCare(petId, data);
 
     logger.info({ organizationId, petId }, 'BIPE preventive care updated');
     res.json({ protocol });
@@ -414,13 +413,12 @@ router.post('/protocol/:petId/alert', async (req: TenantRequest, res: Response):
     }
 
     // Add alert
-    const alert = await petHealthService.addEmergentAlert(petId, organizationId, {
+    const alert = await petHealthService.addEmergentAlert(petId, {
       type: data.type,
       severity: data.severity,
+      title: data.title || 'Alert',
       description: data.description,
-      dueDate: data.dueDate,
-      requiresAction: data.requiresAction,
-      actionDeadline: data.actionDeadline
+      actionRequired: data.actionRequired
     });
 
     logger.info({ organizationId, petId, alertId: alert.id }, 'BIPE emergent alert added');

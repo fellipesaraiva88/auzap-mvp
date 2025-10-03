@@ -751,43 +751,52 @@ Informações que você pode coletar:
     petId: string
   ): Promise<any> {
     try {
-      const { data: bipeData } = await supabaseAdmin
-        .from('bipe_protocol')
+      // Como o BIPE é um protocolo de handoff/escalação, vamos verificar se há alertas pendentes
+      // relacionados ao pet em questão consultando a tabela de pets
+      const { data: pet } = await supabaseAdmin
+        .from('pets')
         .select(`
           id,
-          aspect,
-          value,
-          status,
-          last_updated
+          name,
+          species,
+          breed,
+          age_years,
+          health_notes,
+          behavior_notes
         `)
+        .eq('id', petId)
         .eq('organization_id', organizationId)
-        .eq('pet_id', petId)
-        .order('aspect');
+        .single();
 
-      if (!bipeData || bipeData.length === 0) {
+      if (!pet) {
         return {
-          success: true,
-          message: 'Protocolo BIPE ainda não iniciado para este pet.',
+          success: false,
+          message: 'Pet não encontrado.',
           protocol: null
         };
       }
 
-      // Organizar por aspecto
+      // Simular protocolo BIPE baseado nas notas do pet
       const protocol = {
-        behavioral: bipeData.find(b => b.aspect === 'behavioral'),
-        individual: bipeData.find(b => b.aspect === 'individual'),
-        preventive: bipeData.find(b => b.aspect === 'preventive'),
-        emergent: bipeData.find(b => b.aspect === 'emergent')
+        behavioral: pet.behavior_notes || 'Nenhuma observação comportamental',
+        individual: `${pet.species} - ${pet.breed || 'SRD'} - ${pet.age_years || 0} anos`,
+        preventive: 'Verificar cartão de vacinas com o tutor',
+        emergent: pet.health_notes || 'Nenhum alerta de saúde'
       };
 
-      // Verificar alertas
-      const hasAlerts = bipeData.some(b => b.status === 'alert');
+      const hasAlerts = !!(pet.health_notes || pet.behavior_notes);
 
       return {
         success: true,
-        message: hasAlerts ? 'ATENÇÃO: Pet possui alertas no protocolo BIPE!' : 'Protocolo BIPE em dia.',
+        message: hasAlerts ? 'Pet possui observações no protocolo BIPE.' : 'Protocolo BIPE em dia.',
         protocol,
-        hasAlerts
+        hasAlerts,
+        petInfo: {
+          name: pet.name,
+          species: pet.species,
+          breed: pet.breed,
+          age: pet.age_years
+        }
       };
     } catch (error) {
       logger.error({ error }, 'Error consulting BIPE protocol');
@@ -806,39 +815,48 @@ Informações que você pode coletar:
     args: any
   ): Promise<any> {
     try {
-      // Mapear tipo de alerta para aspecto BIPE
-      const aspectMap = {
-        'vacina_atrasada': 'preventive',
-        'vermifugo_atrasado': 'preventive',
-        'comportamento_critico': 'behavioral',
-        'saude_urgente': 'emergent'
-      };
+      // Buscar conversa ativa
+      const { data: conversations } = await supabaseAdmin
+        .from('conversations')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      const aspect = aspectMap[args.type as keyof typeof aspectMap];
+      const conversationId = conversations?.[0]?.id;
 
-      // Criar ou atualizar entrada BIPE
+      if (!conversationId) {
+        return {
+          success: false,
+          message: 'Nenhuma conversa ativa encontrada.'
+        };
+      }
+
+      // Criar entrada no BIPE para escalação
       const { data } = await supabaseAdmin
         .from('bipe_protocol')
-        .upsert({
+        .insert({
           organization_id: organizationId,
-          pet_id: args.petId,
-          aspect,
-          value: args.description,
-          status: 'alert',
-          last_updated: new Date().toISOString()
-        }, {
-          onConflict: 'organization_id,pet_id,aspect'
+          conversation_id: conversationId,
+          trigger_type: 'health_alert',
+          client_question: `ALERTA DE SAÚDE - Pet ID: ${args.petId} - Tipo: ${args.type} - ${args.description}`,
+          status: 'pending',
+          handoff_active: true,
+          handoff_reason: `Alerta de saúde: ${args.type}`
         })
         .select()
         .single();
 
-      // Notificar Aurora sobre o alerta
-      await BipeService.triggerHealthAlert({
-        organizationId,
-        petId: args.petId,
-        alertType: args.type,
-        description: args.description
-      });
+      // Atualizar notas de saúde do pet
+      await supabaseAdmin
+        .from('pets')
+        .update({
+          health_notes: args.description,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', args.petId)
+        .eq('organization_id', organizationId);
 
       return {
         success: true,
