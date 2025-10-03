@@ -44,8 +44,8 @@ const listPlansQuerySchema = z.object({
   petId: z.string().uuid().optional(),
   status: z.enum(['em_avaliacao', 'plano_criado', 'em_andamento', 'concluido', 'cancelado']).optional(),
   planType: z.enum(['1x_semana', '2x_semana', '3x_semana']).optional(),
-  limit: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().positive().max(100)).optional(),
-  offset: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().nonnegative()).optional()
+  limit: z.coerce.number().int().positive().max(100).optional(),
+  offset: z.coerce.number().int().nonnegative().optional()
 });
 
 const createSessionSchema = z.object({
