@@ -1,7 +1,14 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { supabaseAdmin } from '../config/supabase.js';
+import { logger } from '../config/logger.js';
+import { TenantRequest, tenantMiddleware, validateResource } from '../middleware/tenant.middleware.js';
+import { standardLimiter } from '../middleware/rate-limiter.js';
 
 const router = Router();
+
+// Apply tenant middleware and rate limiting to all routes
+router.use(tenantMiddleware);
+router.use(standardLimiter);
 
 /**
  * GET /api/conversations
@@ -13,14 +20,9 @@ const router = Router();
  * - page: número da página (default: 1)
  * - limit: itens por página (default: 20)
  */
-router.get('/', async (req: Request, res: Response): Promise<void> => {
+router.get('/', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
-
-    if (!organizationId) {
-      res.status(400).json({ error: 'Organization ID required' });
-      return;
-    }
+    const organizationId = req.organizationId!;
 
     const {
       status,
@@ -87,7 +89,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     });
 
   } catch (error: any) {
-    console.error('Error listing conversations:', error);
+    logger.error('List conversations error', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -98,29 +100,11 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
  * Query params:
  * - limit: número de mensagens (default: 100)
  */
-router.get('/:id/messages', async (req: Request, res: Response): Promise<void> => {
+router.get('/:id/messages', validateResource('id', 'conversations'), async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
+    const organizationId = req.organizationId!;
     const { id } = req.params;
     const { limit = '100' } = req.query;
-
-    if (!organizationId) {
-      res.status(400).json({ error: 'Organization ID required' });
-      return;
-    }
-
-    // Verificar se a conversa pertence à organização
-    const { data: conversation, error: convError } = await supabaseAdmin
-      .from('conversations')
-      .select('id, organization_id')
-      .eq('id', id)
-      .eq('organization_id', organizationId)
-      .single();
-
-    if (convError || !conversation) {
-      res.status(404).json({ error: 'Conversation not found' });
-      return;
-    }
 
     // Buscar mensagens
     const { data: messages, error } = await supabaseAdmin
@@ -140,7 +124,7 @@ router.get('/:id/messages', async (req: Request, res: Response): Promise<void> =
     });
 
   } catch (error: any) {
-    console.error('Error fetching messages:', error);
+    logger.error('Get conversation messages error', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -150,20 +134,15 @@ router.get('/:id/messages', async (req: Request, res: Response): Promise<void> =
  * Retorna histórico de ações da IA nessa conversa
  * Inclui: cadastro de pet, agendamento, venda, escalação
  */
-router.get('/:id/ai-actions', async (req: Request, res: Response): Promise<void> => {
+router.get('/:id/ai-actions', validateResource('id', 'conversations'), async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const organizationId = req.headers['x-organization-id'] as string;
+    const organizationId = req.organizationId!;
     const { id } = req.params;
 
-    if (!organizationId) {
-      res.status(400).json({ error: 'Organization ID required' });
-      return;
-    }
-
-    // Verificar se a conversa pertence à organização
+    // Buscar informações da conversa
     const { data: conversation, error: convError } = await supabaseAdmin
       .from('conversations')
-      .select('id, organization_id, contact_id')
+      .select('id, contact_id')
       .eq('id', id)
       .eq('organization_id', organizationId)
       .single();
@@ -192,7 +171,7 @@ router.get('/:id/ai-actions', async (req: Request, res: Response): Promise<void>
     });
 
   } catch (error: any) {
-    console.error('Error fetching AI actions:', error);
+    logger.error('Get AI actions error', error);
     res.status(500).json({ error: error.message });
   }
 });
