@@ -1,0 +1,120 @@
+name: 🚀 Deploy Staging
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  run-validations:
+    name: ✅ Run All Validations
+    uses: ./.github/workflows/validate-frontend.yml
+    secrets: inherit
+
+  run-backend-validations:
+    name: ✅ Run Backend Validations
+    uses: ./.github/workflows/validate-backend.yml
+    secrets: inherit
+
+  run-security:
+    name: 🔒 Security Scan
+    uses: ./.github/workflows/security.yml
+    secrets: inherit
+
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [run-validations, run-backend-validations, run-security]
+    environment:
+      name: staging
+      url: https://auzap-frontend-staging.onrender.com
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Trigger Render Deploy (Frontend)
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID_FRONTEND: ${{ secrets.RENDER_SERVICE_ID_FRONTEND_STAGING }}
+        run: |
+          curl -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID_FRONTEND}/deploys" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache": "do_not_clear"}'
+
+      - name: 🏗️ Trigger Render Deploy (Backend)
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID_BACKEND: ${{ secrets.RENDER_SERVICE_ID_BACKEND_STAGING }}
+        run: |
+          curl -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID_BACKEND}/deploys" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache": "do_not_clear"}'
+
+      - name: ⏳ Wait for deployment
+        run: sleep 120
+
+      - name: 🏥 Health Check - Backend
+        run: |
+          for i in {1..10}; do
+            if curl -f https://auzap-backend-staging.onrender.com/health; then
+              echo "✅ Backend health check passed"
+              exit 0
+            fi
+            echo "⏳ Waiting for backend... ($i/10)"
+            sleep 30
+          done
+          echo "❌ Backend health check failed"
+          exit 1
+
+      - name: 🏥 Health Check - Frontend
+        run: |
+          for i in {1..5}; do
+            if curl -f https://auzap-frontend-staging.onrender.com; then
+              echo "✅ Frontend health check passed"
+              exit 0
+            fi
+            echo "⏳ Waiting for frontend... ($i/5)"
+            sleep 15
+          done
+          echo "❌ Frontend health check failed"
+          exit 1
+
+      - name: 🧪 Smoke Tests - API
+        run: |
+          # Test health endpoint
+          curl -f https://auzap-backend-staging.onrender.com/health || exit 1
+
+          # Test Redis health
+          curl -f https://auzap-backend-staging.onrender.com/health/redis || exit 1
+
+          # Test Supabase health
+          curl -f https://auzap-backend-staging.onrender.com/health/supabase || exit 1
+
+          echo "✅ All smoke tests passed"
+
+      - name: 📊 Deployment Summary
+        if: always()
+        run: |
+          echo "🚀 Staging Deployment Summary"
+          echo "Frontend: https://auzap-frontend-staging.onrender.com"
+          echo "Backend: https://auzap-backend-staging.onrender.com"
+          echo "Status: ${{ job.status }}"
+
+  notify-deployment:
+    name: 📢 Notify Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: always()
+
+    steps:
+      - name: 📢 Deployment Status
+        run: |
+          if [ "${{ needs.deploy-staging.result }}" == "success" ]; then
+            echo "✅ Staging deployment successful!"
+          else
+            echo "❌ Staging deployment failed!"
+            exit 1
+          fi

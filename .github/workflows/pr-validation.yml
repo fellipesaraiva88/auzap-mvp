@@ -1,0 +1,222 @@
+name: 🔍 Pull Request Validation
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  pr-info:
+    name: 📋 PR Information
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📋 PR Details
+        run: |
+          echo "PR #${{ github.event.pull_request.number }}"
+          echo "Title: ${{ github.event.pull_request.title }}"
+          echo "Author: ${{ github.event.pull_request.user.login }}"
+          echo "Base: ${{ github.event.pull_request.base.ref }}"
+          echo "Head: ${{ github.event.pull_request.head.ref }}"
+
+  validate-frontend:
+    name: ✅ Frontend Validation
+    uses: ./.github/workflows/validate-frontend.yml
+    secrets: inherit
+
+  validate-backend:
+    name: ✅ Backend Validation
+    uses: ./.github/workflows/validate-backend.yml
+    secrets: inherit
+
+  security-scan:
+    name: 🔒 Security Scan
+    uses: ./.github/workflows/security.yml
+    secrets: inherit
+
+  e2e-critical:
+    name: 🎭 Critical E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📚 Install dependencies
+        run: npm ci
+
+      - name: 📥 Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: 🏗️ Build frontend
+        run: npm run build
+        env:
+          VITE_API_URL: https://auzap-backend-8xyx.onrender.com
+          VITE_SUPABASE_URL: https://cdndnwglcieylfgzbwts.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+
+      - name: 🚀 Start preview server
+        run: npm run preview &
+        env:
+          VITE_API_URL: https://auzap-backend-8xyx.onrender.com
+          VITE_SUPABASE_URL: https://cdndnwglcieylfgzbwts.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+
+      - name: ⏳ Wait for server
+        run: npx wait-on http://localhost:4173 --timeout 60000
+
+      - name: 🎭 Run Critical E2E Tests
+        run: npx playwright test --project=chromium --grep @critical
+        env:
+          BASE_URL: http://localhost:4173
+          CI: true
+
+      - name: 📤 Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-e2e-results
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  code-quality:
+    name: 📊 Code Quality Metrics
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📚 Install dependencies
+        run: |
+          npm ci
+          cd backend && npm ci
+
+      - name: 📊 Analyze Frontend Bundle Size
+        run: |
+          npm run build
+          du -sh dist/
+          echo "Frontend bundle size:" >> metrics.txt
+          du -h dist/ >> metrics.txt
+
+      - name: 📊 Count Lines of Code
+        run: |
+          echo "\nLines of Code:" >> metrics.txt
+          echo "Frontend:" >> metrics.txt
+          find src -name "*.ts" -o -name "*.tsx" | xargs wc -l | tail -n 1 >> metrics.txt
+          echo "Backend:" >> metrics.txt
+          find backend/src -name "*.ts" | xargs wc -l | tail -n 1 >> metrics.txt
+
+      - name: 📤 Upload metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-metrics
+          path: metrics.txt
+
+  pr-summary:
+    name: 📝 PR Summary Comment
+    runs-on: ubuntu-latest
+    needs: [validate-frontend, validate-backend, security-scan, e2e-critical, code-quality]
+    if: always()
+
+    steps:
+      - name: 📝 Create PR Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const results = {
+              frontend: '${{ needs.validate-frontend.result }}',
+              backend: '${{ needs.validate-backend.result }}',
+              security: '${{ needs.security-scan.result }}',
+              e2e: '${{ needs.e2e-critical.result }}',
+              quality: '${{ needs.code-quality.result }}'
+            };
+
+            const statusEmoji = (status) => {
+              switch(status) {
+                case 'success': return '✅';
+                case 'failure': return '❌';
+                case 'cancelled': return '⚠️';
+                default: return '⏸️';
+              }
+            };
+
+            const comment = `## 🔍 Pull Request Validation Results
+
+            | Check | Status |
+            |-------|--------|
+            | Frontend Validation | ${statusEmoji(results.frontend)} ${results.frontend} |
+            | Backend Validation | ${statusEmoji(results.backend)} ${results.backend} |
+            | Security Scan | ${statusEmoji(results.security)} ${results.security} |
+            | Critical E2E Tests | ${statusEmoji(results.e2e)} ${results.e2e} |
+            | Code Quality | ${statusEmoji(results.quality)} ${results.quality} |
+
+            ### 📊 Validation Details
+            - **Frontend**: TypeCheck + Lint + Build
+            - **Backend**: TypeCheck + Lint + Build + Tests + Queue Tests
+            - **Security**: Secret Scan + Dependency Audit + SAST
+            - **E2E**: Critical user flows on Chromium
+            - **Quality**: Bundle size + LOC metrics
+
+            ${Object.values(results).every(r => r === 'success')
+              ? '✅ **All checks passed!** This PR is ready for review.'
+              : '⚠️ **Some checks failed.** Please review the workflow logs.'}
+
+            ---
+            🤖 Generated by [Claude Code](https://claude.com/claude-code)
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  pr-status:
+    name: 🚦 PR Status Check
+    runs-on: ubuntu-latest
+    needs: [validate-frontend, validate-backend, security-scan, e2e-critical]
+    if: always()
+
+    steps:
+      - name: 🚦 Check All Validations
+        run: |
+          if [[ "${{ needs.validate-frontend.result }}" == "success" ]] && \
+             [[ "${{ needs.validate-backend.result }}" == "success" ]] && \
+             [[ "${{ needs.security-scan.result }}" == "success" ]] && \
+             [[ "${{ needs.e2e-critical.result }}" == "success" ]]; then
+            echo "✅ All PR validations passed!"
+            exit 0
+          else
+            echo "❌ Some PR validations failed!"
+            echo "Frontend: ${{ needs.validate-frontend.result }}"
+            echo "Backend: ${{ needs.validate-backend.result }}"
+            echo "Security: ${{ needs.security-scan.result }}"
+            echo "E2E: ${{ needs.e2e-critical.result }}"
+            exit 1
+          fi

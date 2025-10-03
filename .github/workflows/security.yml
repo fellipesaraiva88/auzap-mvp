@@ -1,0 +1,146 @@
+name: 🔒 Security Scanning
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run security scan daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  secret-scanning:
+    name: 🔍 Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for trufflehog
+
+      - name: 🕵️ TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
+
+  dependency-security:
+    name: 📦 Dependency Vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 🔒 Frontend NPM Audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: 🔒 Backend NPM Audit
+        working-directory: backend
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: 📊 Generate Dependency Report
+        run: |
+          echo "## Frontend Dependencies" > security-report.md
+          npm audit --json >> security-report.md || true
+          echo "\n## Backend Dependencies" >> security-report.md
+          cd backend && npm audit --json >> ../security-report.md || true
+
+      - name: 📤 Upload Security Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: security-report.md
+
+  sast-scan:
+    name: 🛡️ SAST Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔬 Semgrep Security Scan
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/typescript
+            p/nodejs
+            p/react
+            p/owasp-top-ten
+
+  license-compliance:
+    name: ⚖️ License Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 📚 Install dependencies
+        run: |
+          npm ci
+          cd backend && npm ci
+
+      - name: ⚖️ Check Frontend Licenses
+        run: npx license-checker --summary
+        continue-on-error: true
+
+      - name: ⚖️ Check Backend Licenses
+        working-directory: backend
+        run: npx license-checker --summary
+        continue-on-error: true
+
+  docker-security:
+    name: 🐳 Docker Image Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐳 Build test Docker image
+        run: |
+          if [ -f Dockerfile ]; then
+            docker build -t auzap-test:latest .
+          else
+            echo "No Dockerfile found, skipping Docker scan"
+          fi
+
+      - name: 🔍 Run Trivy vulnerability scanner
+        if: hashFiles('Dockerfile') != ''
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: auzap-test:latest
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: 📤 Upload Trivy results
+        if: hashFiles('Dockerfile') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  security-summary:
+    name: 📊 Security Summary
+    runs-on: ubuntu-latest
+    needs: [secret-scanning, dependency-security, sast-scan, license-compliance]
+    if: always()
+    steps:
+      - name: ✅ Security Checks Complete
+        run: |
+          echo "🔒 Security scanning completed!"
+          echo "Secret Scanning: ${{ needs.secret-scanning.result }}"
+          echo "Dependency Security: ${{ needs.dependency-security.result }}"
+          echo "SAST Scan: ${{ needs.sast-scan.result }}"
+          echo "License Compliance: ${{ needs.license-compliance.result }}"
