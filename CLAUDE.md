@@ -574,9 +574,9 @@ npx ts-node scripts/fix-internal-users.ts
 
 **Production:**
 
-- Frontend: LIVE at [auzap-frontend.onrender.com](http://auzap-frontend.onrender.com)
-- Backend: ⚠️ BUILD FAILED - Docker/render.yaml fixes pending
-- Issue tracked in: "🚨 Deploy Issue - Backend Build Failed"
+- Frontend: LIVE at [auzap-frontend-d84c.onrender.com](https://auzap-frontend-d84c.onrender.com)
+- Backend: LIVE at [auzap-backend-8xyx.onrender.com](https://auzap-backend-8xyx.onrender.com)
+- Status: ✅ Both services operational
 
 **Environments:**
 
@@ -638,13 +638,17 @@ WEBHOOK_SECRET=whsec_...                   # Webhook validation
 
 ### Frontend Environment Variables (`.env`)
 ```bash
-# API Configuration
+# API Configuration (Development)
 VITE_API_URL=http://localhost:3001         # Backend URL
 VITE_SOCKET_URL=http://localhost:3001      # WebSocket URL
 
+# API Configuration (Production)
+VITE_API_URL=https://auzap-backend-8xyx.onrender.com
+
 # Supabase Client
-VITE_SUPABASE_URL=https://[project].supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=eyJ...       # Anon key only
+VITE_SUPABASE_URL=https://cdndnwglcieylfgzbwts.supabase.co
+VITE_SUPABASE_PROJECT_ID=cdndnwglcieylfgzbwts
+VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkbmRud2dsY2lleWxmZ3pid3RzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNjU1NzMsImV4cCI6MjA3NDk0MTU3M30.BwvlhpRijTbdofpU06mH84-SjOWH9GFr9tzEpuN1DUM
 
 # Feature Flags (optional)
 VITE_ENABLE_AURORA=true
@@ -667,10 +671,11 @@ VITE_ENABLE_BIPE=true
 
 ### Current Focus
 
-1. 🚧 **Fix Internal Users** - Migration para corrigir senhas de usuários internos
-2. 🚧 **Backend Deployment** - Render build stability
-3. ⏳ **WhatsApp Testing** - Pairing code validation
-4. ⏳ **Knowledge Base UI** - Interface para gestão de KB
+1. ✅ **Backend Deployment** - Successfully deployed and operational
+2. ✅ **WhatsApp Integration** - Instance persistence working correctly
+3. ✅ **Dashboard Integration** - Real-time status updates implemented
+4. ⏳ **Playwright Test Suite** - Comprehensive E2E testing implementation
+5. ⏳ **Knowledge Base UI** - Interface para gestão de KB
 
 ### Next Up: Fase 3 (Proativo)
 
@@ -683,9 +688,13 @@ VITE_ENABLE_BIPE=true
 
 - ✅ Aurora context fully operational (6+ data sources)
 - ✅ Client AI handling 6+ service types
-- 🎯 Backend stable on Render
+- ✅ Backend stable and deployed on Render
+- ✅ Frontend stable and deployed on Render
+- ✅ WhatsApp integration working with database persistence
+- ✅ Dashboard real-time updates implemented
 - 🎯 First beta petshop fully onboarded
-- 🎯 All new verticals (training, daycare, BIPE) operational
+- 🎯 All new verticals (training, daycare, BIPE) tested in production
+- 🎯 Comprehensive Playwright test suite completed
 
 ---
 
@@ -701,8 +710,9 @@ VITE_ENABLE_BIPE=true
 
 **Quick Links:**
 
-- Health Check: [https://auzap-api.onrender.com/health](https://auzap-api.onrender.com/health)
-- Supabase Dashboard: [https://supabase.com/dashboard](https://supabase.com/dashboard)
+- Frontend: [https://auzap-frontend-d84c.onrender.com](https://auzap-frontend-d84c.onrender.com)
+- Backend Health Check: [https://auzap-backend-8xyx.onrender.com/health](https://auzap-backend-8xyx.onrender.com/health)
+- Supabase Dashboard: [https://supabase.com/dashboard/project/cdndnwglcieylfgzbwts](https://supabase.com/dashboard/project/cdndnwglcieylfgzbwts)
 - Render Dashboard: [https://dashboard.render.com](https://dashboard.render.com)
 - Upstash Console: [https://console.upstash.com](https://console.upstash.com)
 
@@ -774,11 +784,19 @@ VITE_ENABLE_BIPE=true
 - Enhanced message worker with AI handoff capability
 - Dashboard integration with real Supabase data
 
+### 🔄 Recent Fixes (Latest Commits)
+- ✅ **Dashboard WhatsApp Status** - Now uses backend API instead of direct Supabase
+- ✅ **WhatsApp Instance Persistence** - Properly persists to database on connection
+- ✅ **bcrypt → bcryptjs Migration** - Eliminated native binding compilation issues
+- ✅ **Admin User Scripts** - New management scripts for internal authentication
+- ✅ **Build Optimization** - Excluded test files from TypeScript compilation
+- ✅ **PWA Manifest** - Fixed icon paths to use absolute URLs
+
 ### 🔄 Next Steps
-- Complete backend deployment stabilization
-- WhatsApp pairing code validation
+- Complete WhatsApp pairing code validation
 - Knowledge Base UI development
 - Begin Fase 3 (Proativo) implementation
+- Implement comprehensive Playwright test suite
 
 ---
 
@@ -973,6 +991,53 @@ npx playwright test
 npx playwright test --ui    # Interactive mode
 ```
 
+### Feature Validation Workflow (MANDATORY)
+
+**IMPORTANT:** After implementing any feature, ALWAYS follow this workflow:
+
+1. **Playwright Validation:**
+   - Use MCP Playwright to navigate the entire user journey
+   - Validate all UI elements are working correctly
+   - Test edge cases and error states
+   - Capture screenshots of critical steps
+   - Verify data persistence in database
+
+2. **Git Workflow (AFTER validation):**
+   ```bash
+   # Only run these commands AFTER successful Playwright validation
+   git add .
+   git commit -m "feat(scope): description"
+   git push origin main
+   ```
+
+3. **Validation Must Pass Before Push:**
+   - ESLint validation (max 100 warnings)
+   - TypeScript type checking
+   - Playwright E2E tests completed successfully
+   - All critical user flows verified
+
+**Example Validation Flow:**
+```
+Feature: Add new booking system
+↓
+1. Use Playwright to:
+   - Navigate to https://auzap-frontend-d84c.onrender.com
+   - Login as test user
+   - Create a new booking
+   - Verify booking appears in list
+   - Check database persistence
+↓
+2. If ALL validations pass:
+   - git add .
+   - git commit -m "feat(bookings): Add new booking creation flow"
+   - git push origin main
+↓
+3. If ANY validation fails:
+   - Fix issues
+   - Re-run Playwright validation
+   - DO NOT push until all tests pass
+```
+
 ## 📝 Git Workflow
 
 ### Branch Strategy
@@ -1013,6 +1078,7 @@ chore(scope): Update dependencies
 8. **Redis Queue over Database Queue**: Performance for high-volume messaging
 9. **Socket.IO + Supabase Realtime**: Dual real-time strategy
 10. **TypeScript Everywhere**: Type safety across full stack
+11. **bcryptjs over bcrypt**: Pure JavaScript implementation eliminates native compilation issues in serverless environments
 
 ---
 
