@@ -391,21 +391,23 @@ export default function ClientesKanban() {
       </Card>
 
       {/* Busca e Filtros */}
-      <div className="flex gap-4 mb-6">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+      <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-4 md:mb-6">
+        <div className="flex-1 relative min-h-[44px]">
+          <Search className="absolute left-3 top-3 md:top-3 w-4 h-4 text-muted-foreground" />
           <Input
             id="search-input"
-            placeholder="Buscar clientes... (pressione / para focar)"
+            placeholder="Buscar clientes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-11 md:h-10 text-sm md:text-base"
           />
         </div>
-        <ClientFilters
-          activeFilters={activeFilters}
-          onFiltersChange={setActiveFilters}
-        />
+        <div className="flex-shrink-0">
+          <ClientFilters
+            activeFilters={activeFilters}
+            onFiltersChange={setActiveFilters}
+          />
+        </div>
       </div>
 
       {/* Analytics Dashboard */}
@@ -422,18 +424,18 @@ export default function ClientesKanban() {
       )}
 
       {/* Estatísticas Rápidas */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white"
+          className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-3 md:p-4 text-white"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-100 text-sm">Total Clientes</p>
-              <p className="text-2xl font-bold">{filteredContacts.length}</p>
+              <p className="text-blue-100 text-xs md:text-sm">Total Clientes</p>
+              <p className="text-xl md:text-2xl font-bold">{filteredContacts.length}</p>
             </div>
-            <Users className="w-8 h-8 text-blue-200" />
+            <Users className="w-6 h-6 md:w-8 md:h-8 text-blue-200 flex-shrink-0" />
           </div>
         </motion.div>
 
@@ -441,12 +443,12 @@ export default function ClientesKanban() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 text-white"
+          className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-3 md:p-4 text-white"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-green-100 text-sm">Novos (7 dias)</p>
-              <p className="text-2xl font-bold">
+              <p className="text-green-100 text-xs md:text-sm">Novos (7 dias)</p>
+              <p className="text-xl md:text-2xl font-bold">
                 {
                   filteredContacts.filter((c) => {
                     const days = Math.floor(
@@ -458,7 +460,7 @@ export default function ClientesKanban() {
                 }
               </p>
             </div>
-            <UserPlus className="w-8 h-8 text-green-200" />
+            <UserPlus className="w-6 h-6 md:w-8 md:h-8 text-green-200 flex-shrink-0" />
           </div>
         </motion.div>
 
@@ -466,12 +468,12 @@ export default function ClientesKanban() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-4 text-white"
+          className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-3 md:p-4 text-white"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-purple-100 text-sm">Taxa Atividade</p>
-              <p className="text-2xl font-bold">
+              <p className="text-purple-100 text-xs md:text-sm">Taxa Atividade</p>
+              <p className="text-xl md:text-2xl font-bold">
                 {Math.round(
                   (filteredContacts.filter((c) => c.is_active !== false).length /
                     filteredContacts.length) *
@@ -480,7 +482,7 @@ export default function ClientesKanban() {
                 %
               </p>
             </div>
-            <Zap className="w-8 h-8 text-purple-200" />
+            <Zap className="w-6 h-6 md:w-8 md:h-8 text-purple-200 flex-shrink-0" />
           </div>
         </motion.div>
 
@@ -488,14 +490,14 @@ export default function ClientesKanban() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-4 text-white"
+          className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-3 md:p-4 text-white"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-orange-100 text-sm">Engajamento</p>
-              <p className="text-2xl font-bold">87%</p>
+              <p className="text-orange-100 text-xs md:text-sm">Engajamento</p>
+              <p className="text-xl md:text-2xl font-bold">87%</p>
             </div>
-            <TrendingUp className="w-8 h-8 text-orange-200" />
+            <TrendingUp className="w-6 h-6 md:w-8 md:h-8 text-orange-200 flex-shrink-0" />
           </div>
         </motion.div>
       </div>
@@ -508,15 +510,29 @@ export default function ClientesKanban() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-4 gap-4">
-            {KANBAN_COLUMNS[currentView].map((column) => (
-              <KanbanColumn
-                key={column.id}
-                column={column}
-                items={organizedData[column.id] || []}
-                currentView={currentView}
-              />
-            ))}
+          {/* Mobile: Scroll horizontal | Desktop: Grid */}
+          <div className="md:grid md:grid-cols-4 md:gap-4">
+            <div className="flex md:hidden gap-3 overflow-x-auto pb-4 -mx-3 px-3">
+              {KANBAN_COLUMNS[currentView].map((column) => (
+                <div key={column.id} className="flex-shrink-0 w-[280px]">
+                  <KanbanColumn
+                    column={column}
+                    items={organizedData[column.id] || []}
+                    currentView={currentView}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="hidden md:contents">
+              {KANBAN_COLUMNS[currentView].map((column) => (
+                <KanbanColumn
+                  key={column.id}
+                  column={column}
+                  items={organizedData[column.id] || []}
+                  currentView={currentView}
+                />
+              ))}
+            </div>
           </div>
 
           <DragOverlay>
@@ -531,20 +547,20 @@ export default function ClientesKanban() {
           </DragOverlay>
         </DndContext>
       ) : (
-        // Lista tradicional (implementar depois)
-        <div className="grid grid-cols-1 gap-4">
+        // Lista tradicional
+        <div className="grid grid-cols-1 gap-3 md:gap-4">
           {filteredContacts.map((client) => (
-            <Card key={client.id} className="p-4">
+            <Card key={client.id} className="p-3 md:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold">{client.full_name || client.name}</h3>
-                  <p className="text-sm text-muted-foreground">{client.phone_number}</p>
+                <div className="flex-1 min-w-0 mr-3">
+                  <h3 className="font-semibold text-sm md:text-base truncate">{client.full_name || client.name}</h3>
+                  <p className="text-xs md:text-sm text-muted-foreground truncate">{client.phone_number}</p>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                <div className="flex gap-2 flex-shrink-0">
+                  <Button variant="outline" size="sm" className="h-9 w-9 p-0">
                     <Phone className="w-4 h-4" />
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="h-9 w-9 p-0">
                     <MessageSquare className="w-4 h-4" />
                   </Button>
                 </div>
