@@ -185,6 +185,11 @@ app.use('/api/automations', (await import('./routes/automations.routes.js')).def
 app.use('/api/conversations', (await import('./routes/conversations.routes.js')).default);
 app.use('/api/esquecidos', (await import('./routes/esquecidos.routes.js')).default);
 
+// BIPE & Advanced Services Routes
+app.use('/api/training', (await import('./routes/training.routes.js')).default);
+app.use('/api/daycare', (await import('./routes/daycare.routes.js')).default);
+app.use('/api/bipe', (await import('./routes/bipe.routes.js')).default);
+
 // Admin Panel Routes (internal users only)
 app.use('/api/internal/auth', (await import('./routes/admin/auth.routes.js')).default);
 app.use('/api/internal/clients', (await import('./routes/admin/clients.routes.js')).default);

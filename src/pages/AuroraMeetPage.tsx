@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles, Heart, TrendingUp, Users, Zap, CheckCircle2 } from 'lucide-react';
-import { api } from '@/lib/api';
+import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
 
 export default function AuroraMeetPage() {
