@@ -19,9 +19,10 @@ services:
     healthCheckPath: /health
 
     # Persistent disk for WhatsApp sessions (Baileys)
+    # Mount at /app/data (code creates /app/data/sessions subdir to avoid permission issues)
     disk:
       name: whatsapp-sessions
-      mountPath: /app/sessions
+      mountPath: /app/data
       sizeGB: 1
 
     # Environment variables
@@ -50,9 +51,9 @@ services:
       - key: OPENAI_API_KEY
         sync: false
 
-      # WhatsApp Sessions
+      # WhatsApp Sessions (persistent disk mounted at /app/data)
       - key: WHATSAPP_SESSION_PATH
-        value: /app/sessions
+        value: /app/data/sessions
 
       # Security
       - key: JWT_SECRET
@@ -85,9 +86,10 @@ services:
     autoDeploy: true
 
     # Persistent disk (shared with web service)
+    # Mount at /app/data (code creates /app/data/sessions subdir to avoid permission issues)
     disk:
       name: whatsapp-sessions
-      mountPath: /app/sessions
+      mountPath: /app/data
       sizeGB: 1
 
     # Environment variables (same as web service)
@@ -96,7 +98,7 @@ services:
         value: production
 
       - key: WHATSAPP_SESSION_PATH
-        value: /app/sessions
+        value: /app/data/sessions
 
       - key: SUPABASE_URL
         sync: false
