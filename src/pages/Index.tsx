@@ -12,9 +12,11 @@ import { useDashboardStats } from "@/hooks/useDashboard";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboardSocketUpdates } from "@/hooks/useSocket";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { data: stats, isLoading } = useDashboardStats();
   const { data: impactMetrics, isLoading: isLoadingMetrics } = useDashboardMetrics();
 
@@ -153,7 +155,10 @@ const Index = () => {
               <p className="text-xs text-muted-foreground ml-6">
                 IA escalou porque detectou que você é necessário
               </p>
-              <button className="ml-6 mt-2 text-xs font-medium text-ai-escalated hover:underline">
+              <button
+                onClick={() => navigate('/conversas?filter=escalated')}
+                className="ml-6 mt-2 text-xs font-medium text-ai-escalated hover:underline"
+              >
                 Ver conversas →
               </button>
             </div>
@@ -174,7 +179,10 @@ const Index = () => {
               <p className="text-xs text-muted-foreground ml-6">
                 Vacinas vencem em 7 dias, hora de avisar tutores
               </p>
-              <button className="ml-6 mt-2 text-xs font-medium text-ai-pending hover:underline">
+              <button
+                onClick={() => navigate('/clientes?filter=upcoming-vaccines')}
+                className="ml-6 mt-2 text-xs font-medium text-ai-pending hover:underline"
+              >
                 Ver pets →
               </button>
             </div>
@@ -195,7 +203,10 @@ const Index = () => {
               <p className="text-xs text-muted-foreground ml-6">
                 Check-outs de hotel programados
               </p>
-              <button className="ml-6 mt-2 text-xs font-medium text-ai-success hover:underline">
+              <button
+                onClick={() => navigate('/agenda?filter=today-checkouts')}
+                className="ml-6 mt-2 text-xs font-medium text-ai-success hover:underline"
+              >
                 Ver agenda →
               </button>
             </div>
@@ -216,7 +227,10 @@ const Index = () => {
               <p className="text-xs text-muted-foreground ml-6">
                 Aguardando confirmação
               </p>
-              <button className="ml-6 mt-2 text-xs font-medium text-primary hover:underline">
+              <button
+                onClick={() => navigate('/vendas?filter=pending-confirmation')}
+                className="ml-6 mt-2 text-xs font-medium text-primary hover:underline"
+              >
                 Ver vendas →
               </button>
             </div>
