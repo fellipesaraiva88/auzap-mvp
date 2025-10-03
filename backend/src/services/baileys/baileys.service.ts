@@ -133,8 +133,21 @@ export class BaileysService {
       // Pairing code (método principal)
       if (phoneNumber && preferredAuthMethod === 'pairing_code' && !sock.authState.creds.registered) {
         try {
-          const pairingCode = await sock.requestPairingCode(phoneNumber);
-          logger.info({ organizationId, instanceId, pairingCode }, 'Pairing code generated');
+          // Sanitizar número: apenas dígitos, sem + ou espaços
+          const sanitizedPhone = phoneNumber.replace(/\D/g, '');
+
+          logger.info({
+            organizationId,
+            instanceId,
+            originalPhone: phoneNumber,
+            sanitizedPhone
+          }, 'Requesting pairing code');
+
+          // Pequeno delay para garantir que socket está pronto
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          const pairingCode = await sock.requestPairingCode(sanitizedPhone);
+          logger.info({ organizationId, instanceId, pairingCode }, 'Pairing code generated successfully');
 
           await connectionHandler.handlePairingCode(organizationId, instanceId, pairingCode);
 
@@ -145,13 +158,25 @@ export class BaileysService {
             pairingCode
           };
         } catch (error) {
-          logger.error({ error, organizationId, instanceId }, 'Failed to generate pairing code');
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          const errorStack = error instanceof Error ? error.stack : undefined;
 
-          // Fallback para QR code se falhar
-          if (preferredAuthMethod === 'pairing_code') {
-            logger.warn({ organizationId, instanceId }, 'Falling back to QR code');
-            // QR será gerado no próximo connection.update
-          }
+          logger.error({
+            error: errorMessage,
+            stack: errorStack,
+            organizationId,
+            instanceId,
+            phoneNumber,
+            socketState: sock.authState?.creds?.registered
+          }, 'Failed to generate pairing code');
+
+          // Retornar erro explícito para usuário tentar QR code
+          return {
+            success: false,
+            instanceId,
+            status: 'failed',
+            error: `Failed to generate pairing code: ${errorMessage}. Try QR code instead.`
+          };
         }
       }
 
