@@ -18,10 +18,11 @@ export interface Followup {
   contact_id: string;
   scheduled_for: string;
   message: string;
+  followup_type?: 'appointment_reminder' | 'feedback' | 'general';
   status: 'pending' | 'sent' | 'cancelled' | 'failed';
   created_at: string;
   sent_at?: string;
-  contacts?: Contact;
+  contact?: Contact;
 }
 
 export interface FollowupsResponse {

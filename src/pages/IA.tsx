@@ -16,18 +16,22 @@ export default function IA() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: instancesData, isLoading: loadingInstances } = useWhatsAppInstances();
-  const { followups, isLoading: loadingFollowups } = useFollowups();
-  const { metrics, isLoading: loadingMetrics } = useDashboardMetrics();
+  const { data: followupsData, isLoading: loadingFollowups } = useFollowups();
+  const { data: metrics, isLoading: loadingMetrics } = useDashboardMetrics();
 
   const instances = instancesData?.instances || [];
   const primaryInstance = instances[0];
 
-  const pendingFollowups = followups?.filter((f) => f.status === "pending").length || 0;
-  const sentFollowups = followups?.filter((f) => f.status === "sent").length || 0;
+  const followups = followupsData?.followups || [];
+  const pendingFollowups = followups.filter((f) => f.status === "pending").length;
+  const sentFollowups = followups.filter((f) => f.status === "sent" &&
+    new Date(f.sent_at || f.created_at).toDateString() === new Date().toDateString()).length;
 
-  const aiConversations = metrics?.conversationsToday || 0;
-  const aiActions = metrics?.aiActionsToday || 0;
-  const timeSaved = metrics?.timeSavedToday || "0h 0min";
+  const aiConversations = metrics?.revenueInProgress?.conversations || 0;
+  const aiActions = 0; // TODO: Implementar contador de ações da IA
+  const timeSaved = metrics?.timesSaved
+    ? `${metrics.timesSaved.hours}h ${metrics.timesSaved.minutes}min`
+    : "0h 0min";
 
   const isLoading = loadingInstances || loadingFollowups || loadingMetrics;
 
@@ -223,7 +227,7 @@ export default function IA() {
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {followup.contact?.full_name || "Cliente"}
+                          {followup.contact?.name || "Cliente"}
                         </p>
                       </div>
                     ))}

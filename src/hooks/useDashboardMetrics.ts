@@ -34,10 +34,10 @@ async function calculateTimeSaved(organizationId: string): Promise<{ hours: numb
 
   // Buscar total de mensagens da IA hoje
   const { data: aiMessages, error } = await supabase
-    .from('conversation_messages')
+    .from('messages')
     .select('id, created_at')
     .eq('organization_id', organizationId)
-    .eq('is_from_ai', true)
+    .eq('sender_type', 'ai')
     .gte('created_at', today.toISOString());
 
   if (error) {
@@ -54,20 +54,19 @@ async function calculateTimeSaved(organizationId: string): Promise<{ hours: numb
 }
 
 async function calculateRevenueInProgress(organizationId: string): Promise<{ amount: number; conversations: number }> {
-  // Buscar conversas ativas com contexto de venda
+  // Buscar conversas ativas (potencial de venda)
   const { data: activeConversations, error } = await supabase
     .from('conversations')
     .select(`
       id,
-      ai_context,
+      status,
       contacts!inner(
         id,
         pets(id)
       )
     `)
     .eq('organization_id', organizationId)
-    .eq('status', 'active')
-    .not('ai_context', 'is', null);
+    .eq('status', 'active');
 
   if (error) {
     console.error('Error fetching active conversations:', error);
@@ -93,11 +92,11 @@ async function calculateGuaranteedRevenue(organizationId: string): Promise<{ amo
   // Buscar agendamentos confirmados da próxima semana
   const { data: bookings, error } = await supabase
     .from('bookings')
-    .select('id, service_type, estimated_value, status')
+    .select('id, service_type, price, status')
     .eq('organization_id', organizationId)
     .eq('status', 'confirmed')
-    .gte('scheduled_at', today.toISOString())
-    .lte('scheduled_at', weekEnd.toISOString());
+    .gte('check_in_date', today.toISOString())
+    .lte('check_in_date', weekEnd.toISOString());
 
   if (error) {
     console.error('Error fetching bookings:', error);
@@ -106,7 +105,7 @@ async function calculateGuaranteedRevenue(organizationId: string): Promise<{ amo
 
   // Somar valores confirmados
   const totalAmount = bookings?.reduce((sum, booking) => {
-    return sum + (booking.estimated_value || 0);
+    return sum + (booking.price || 0);
   }, 0) || 0;
 
   return {
@@ -127,8 +126,8 @@ async function calculateCapacityUsage(organizationId: string): Promise<{ percent
     .select('id')
     .eq('organization_id', organizationId)
     .in('status', ['confirmed', 'in_progress'])
-    .gte('scheduled_at', today.toISOString())
-    .lt('scheduled_at', tomorrow.toISOString());
+    .gte('check_in_date', today.toISOString())
+    .lt('check_in_date', tomorrow.toISOString());
 
   if (error) {
     console.error('Error fetching today bookings:', error);
