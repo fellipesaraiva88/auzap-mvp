@@ -1,7 +1,9 @@
 import { openai, AI_MODELS } from '../../config/openai.js';
 import { logger } from '../../config/logger.js';
+import { supabaseAdmin } from '../../config/supabase.js';
 import { bookingsService } from '../bookings/bookings.service.js';
 import { contactsService } from '../contacts/contacts.service.js';
+import { servicesService } from '../services/services.service.js';
 
 interface AuroraContext {
   organizationId: string;
@@ -9,34 +11,103 @@ interface AuroraContext {
   ownerName: string;
 }
 
+interface FullBusinessContext {
+  organization_name: string;
+  settings: {
+    business_hours: any;
+    services_config: any;
+  };
+  services: Array<{
+    nome: string;
+    categoria: string;
+    preco: number;
+    duracao?: number;
+  }>;
+  analytics: {
+    total_agendamentos: number;
+    receita_semana_cents: number;
+    ticket_medio_cents: number;
+    taxa_conclusao: string;
+    servico_mais_vendido: string;
+    completados: number;
+    cancelados: number;
+    no_shows: number;
+  };
+  pets_stats: {
+    total_pets: number;
+    especies: Record<string, number>;
+    racas_comuns: string[];
+  };
+}
+
 export class AuroraService {
-  private systemPrompt = `Você é Aurora, assistente virtual e parceira de negócios do dono de uma clínica veterinária/petshop.
+  private systemPrompt = `Você é Aurora, Customer Success Manager e parceira estratégica de negócios do dono desta clínica veterinária/petshop.
 
-Suas capacidades:
-1. Fornecer analytics e métricas do negócio
-2. Sugerir automações e campanhas de marketing
-3. Preencher agenda proativamente
-4. Identificar oportunidades de crescimento
-5. Enviar resumos diários e insights
-6. Alertar sobre clientes inativos
-7. Comemorar metas atingidas
+CONHECIMENTO COMPLETO DO NEGÓCIO:
+Você tem acesso total e profundo a TODOS os dados do negócio:
+✓ Catálogo completo de serviços (preços, categorias, duração)
+✓ Horários de funcionamento e configurações operacionais
+✓ Base completa de clientes e pets (espécies, raças, histórico)
+✓ Histórico completo de agendamentos e receita
+✓ Métricas financeiras (receita, ticket médio, crescimento, comparações)
+✓ Analytics em tempo real (cancelamentos, no-shows, taxa de conclusão)
 
-Estilo de comunicação:
-- Profissional mas próxima, como uma sócia de negócios
-- Proativa em sugerir melhorias
-- Data-driven: sempre baseie recomendações em números
-- Concisa mas completa
+SUAS CAPACIDADES COMO CUSTOMER SUCCESS:
 
-Você tem acesso a:
-- Dados de agendamentos
-- Informações de clientes e pets
-- Histórico de interações
-- Métricas de negócio
+1. RESPONDER PERGUNTAS ESPECÍFICAS sobre o negócio
+   Exemplos que você DEVE saber responder:
+   - "Quantos banhos fizemos em Yorkshires esta semana?"
+   - "Qual o serviço mais vendido este mês?"
+   - "Quanto custa uma consulta?"
+   - "Estamos abertos sábado de manhã?"
+   - "Quantos pets temos cadastrados?"
 
-Nunca:
-- Responda dúvidas de clientes finais (você é apenas para o dono)
-- Tome ações sem confirmação do dono
-- Compartilhe dados sensíveis sem contexto apropriado`;
+2. ANÁLISE FINANCEIRA PROATIVA
+   - Calcule e compare receita entre períodos
+   - Identifique crescimento ou queda
+   - Analise ticket médio e sugira otimizações
+   - Celebre marcos financeiros atingidos
+   Exemplo: "Sua receita cresceu 15% vs semana passada! Chegou a R$ 12.500!"
+
+3. IDENTIFICAÇÃO DE OPORTUNIDADES BASEADAS EM DADOS
+   - Alerte sobre agendas vazias com tempo para preencher
+   - Identifique clientes inativos para reativação
+   - Sugira campanhas específicas baseadas em raças/serviços comuns
+   - Detecte padrões de no-shows e sugira correções
+   Exemplo: "Vi que você tem agenda vazia sexta à tarde. Que tal campanha de última hora para os 30 Yorkshires cadastrados?"
+
+4. COMEMORAÇÃO DE METAS E ALERTAS DE PROBLEMAS
+   - Comemore quando bater metas de receita/agendamentos
+   - Alerte sobre aumentos de cancelamentos ou no-shows
+   - Identifique tendências positivas ou negativas
+   Exemplo: "🎉 Bateu meta de 50 agendamentos esta semana!"
+   Exemplo: "⚠️ 3 no-shows hoje - vamos ajustar os lembretes?"
+
+5. SUGESTÕES ESTRATÉGICAS E AUTOMAÇÕES
+   - Sugira campanhas de marketing específicas
+   - Identifique serviços subutilizados
+   - Proponha otimizações de agenda e preços
+   - Recomende ações baseadas em sazonalidade
+
+ESTILO DE COMUNICAÇÃO:
+- Conversacional mas profissional (como uma sócia próxima)
+- Data-driven: SEMPRE cite números específicos e reais
+- Proativa: sugira ações concretas baseadas em insights
+- Específica: use nomes de serviços, raças, valores exatos
+- Contextual: demonstre que você conhece o histórico do negócio
+
+SEMPRE QUE RESPONDER:
+✓ Cite números exatos (não arredonde demais)
+✓ Use nomes específicos de serviços e categorias
+✓ Mencione espécies/raças quando relevante
+✓ Compare com períodos anteriores quando apropriado
+✓ Sugira ação concreta ao identificar oportunidade
+
+NUNCA:
+✗ Responda dúvidas de clientes finais (você é EXCLUSIVA do dono)
+✗ Invente dados ou estatísticas
+✗ Execute ações sem confirmação do dono
+✗ Seja genérica - sempre seja específica e baseada em dados reais`;
 
   /**
    * Processa mensagem do dono
@@ -45,14 +116,14 @@ Nunca:
     try {
       logger.info({ organizationId: context.organizationId }, 'Processing owner message with Aurora');
 
-      // Buscar dados de contexto
-      const analytics = await this.getAnalytics(context.organizationId);
+      // Buscar contexto completo do negócio
+      const fullContext = await this.getFullBusinessContext(context.organizationId);
 
       // Construir mensagens
       const messages: any[] = [
         {
           role: 'system',
-          content: this.systemPrompt + '\n\n' + this.buildContextInfo(analytics, context.ownerName)
+          content: this.systemPrompt + '\n\n' + this.buildContextInfo(fullContext, context.ownerName)
         },
         { role: 'user', content: message }
       ];
@@ -198,6 +269,126 @@ Nunca:
 
   // Métodos privados
 
+  /**
+   * Busca contexto completo do negócio para Aurora
+   */
+  private async getFullBusinessContext(organizationId: string): Promise<FullBusinessContext> {
+    try {
+      // 1. Buscar organização e settings
+      const { data: org } = await supabaseAdmin
+        .from('organizations')
+        .select('name')
+        .eq('id', organizationId)
+        .single();
+
+      const { data: settings } = await supabaseAdmin
+        .from('organization_settings')
+        .select('business_hours, services_config')
+        .eq('organization_id', organizationId)
+        .single();
+
+      // 2. Buscar serviços
+      const services = await servicesService.listByOrganization(organizationId);
+      const serviceStats = await servicesService.getStats(organizationId);
+
+      // 3. Buscar analytics da semana
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+
+      const bookings = await bookingsService.listByOrganization(organizationId, {
+        startDate: weekAgo.toISOString()
+      });
+
+      const completedBookings = bookings.filter(b => b.status === 'completed');
+      const totalRevenue = await servicesService.getRevenue(
+        organizationId,
+        weekAgo,
+        new Date()
+      );
+
+      const revenueSum = totalRevenue.reduce((sum, r) => sum + r.total_revenue_cents, 0);
+      const ticketMedio = completedBookings.length > 0
+        ? Math.round(revenueSum / completedBookings.length)
+        : 0;
+
+      // 4. Buscar estatísticas de pets
+      const { data: pets } = await supabaseAdmin
+        .from('pets')
+        .select('species, breed')
+        .eq('organization_id', organizationId);
+
+      const especiesCount: Record<string, number> = {};
+      const racasCount: Record<string, number> = {};
+
+      pets?.forEach(pet => {
+        especiesCount[pet.species] = (especiesCount[pet.species] || 0) + 1;
+        if (pet.breed) {
+          racasCount[pet.breed] = (racasCount[pet.breed] || 0) + 1;
+        }
+      });
+
+      const racasComuns = Object.entries(racasCount)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([raca]) => raca);
+
+      // 5. Montar contexto completo
+      return {
+        organization_name: org?.name || 'Seu negócio',
+        settings: {
+          business_hours: settings?.business_hours || {},
+          services_config: settings?.services_config || {}
+        },
+        services: services.map(s => ({
+          nome: s.name,
+          categoria: s.category,
+          preco: s.price_cents,
+          duracao: s.duration_minutes || undefined
+        })),
+        analytics: {
+          total_agendamentos: bookings.length,
+          receita_semana_cents: revenueSum,
+          ticket_medio_cents: ticketMedio,
+          taxa_conclusao: bookings.length > 0
+            ? `${Math.round((completedBookings.length / bookings.length) * 100)}%`
+            : '0%',
+          servico_mais_vendido: serviceStats.top_services[0]?.name || 'N/A',
+          completados: completedBookings.length,
+          cancelados: bookings.filter(b => b.status === 'cancelled').length,
+          no_shows: bookings.filter(b => b.status === 'no_show').length
+        },
+        pets_stats: {
+          total_pets: pets?.length || 0,
+          especies: especiesCount,
+          racas_comuns: racasComuns
+        }
+      };
+    } catch (error) {
+      logger.error({ error, organizationId }, 'Error fetching full business context');
+      // Retornar contexto vazio em caso de erro
+      return {
+        organization_name: 'Seu negócio',
+        settings: { business_hours: {}, services_config: {} },
+        services: [],
+        analytics: {
+          total_agendamentos: 0,
+          receita_semana_cents: 0,
+          ticket_medio_cents: 0,
+          taxa_conclusao: '0%',
+          servico_mais_vendido: 'N/A',
+          completados: 0,
+          cancelados: 0,
+          no_shows: 0
+        },
+        pets_stats: {
+          total_pets: 0,
+          especies: {},
+          racas_comuns: []
+        }
+      };
+    }
+  }
+
   private getFunctions(): any[] {
     return [
       {
@@ -239,6 +430,56 @@ Nunca:
           },
           required: ['tipo']
         }
+      },
+      {
+        name: 'buscar_servicos',
+        description: 'Lista todos os serviços oferecidos pela loja ou filtra por categoria',
+        parameters: {
+          type: 'object',
+          properties: {
+            categoria: {
+              type: 'string',
+              enum: ['grooming', 'consultation', 'vaccination', 'surgery', 'all'],
+              description: 'Categoria de serviço (opcional, padrão: all)'
+            }
+          }
+        }
+      },
+      {
+        name: 'buscar_pets',
+        description: 'Busca informações sobre pets cadastrados, filtrados por espécie ou raça',
+        parameters: {
+          type: 'object',
+          properties: {
+            especie: {
+              type: 'string',
+              description: 'Espécie do pet (ex: cachorro, gato)'
+            },
+            raca: {
+              type: 'string',
+              description: 'Raça específica'
+            }
+          }
+        }
+      },
+      {
+        name: 'calcular_metricas_financeiras',
+        description: 'Calcula receita, ticket médio e crescimento do negócio',
+        parameters: {
+          type: 'object',
+          properties: {
+            periodo: {
+              type: 'string',
+              enum: ['hoje', 'semana', 'mes', 'ano'],
+              description: 'Período para cálculo'
+            },
+            comparar_com_anterior: {
+              type: 'boolean',
+              description: 'Comparar com período anterior (padrão: true)'
+            }
+          },
+          required: ['periodo']
+        }
       }
     ];
   }
@@ -269,6 +510,144 @@ Nunca:
           tipo: args.tipo,
           sugestao: 'Campanha criada! Deseja que eu a execute automaticamente?'
         };
+
+      case 'buscar_servicos': {
+        const categoria = args.categoria || 'all';
+        if (categoria === 'all') {
+          const services = await servicesService.listByOrganization(organizationId);
+          return {
+            total: services.length,
+            servicos: services.map(s => ({
+              nome: s.name,
+              categoria: s.category,
+              preco_reais: (s.price_cents / 100).toFixed(2),
+              duracao_min: s.duration_minutes || 'N/A'
+            }))
+          };
+        } else {
+          const services = await servicesService.getByCategory(organizationId, categoria);
+          return {
+            categoria,
+            total: services.length,
+            servicos: services.map(s => ({
+              nome: s.name,
+              preco_reais: (s.price_cents / 100).toFixed(2),
+              duracao_min: s.duration_minutes || 'N/A'
+            }))
+          };
+        }
+      }
+
+      case 'buscar_pets': {
+        let query = supabaseAdmin
+          .from('pets')
+          .select('name, species, breed, age_years')
+          .eq('organization_id', organizationId);
+
+        if (args.especie) {
+          query = query.ilike('species', args.especie);
+        }
+
+        if (args.raca) {
+          query = query.ilike('breed', `%${args.raca}%`);
+        }
+
+        const { data: pets } = await query.limit(20);
+
+        return {
+          total: pets?.length || 0,
+          filtros: {
+            especie: args.especie || 'todos',
+            raca: args.raca || 'todas'
+          },
+          pets: pets?.map(p => ({
+            nome: p.name,
+            especie: p.species,
+            raca: p.breed || 'SRD',
+            idade: p.age_years ? `${p.age_years} anos` : 'N/A'
+          })) || []
+        };
+      }
+
+      case 'calcular_metricas_financeiras': {
+        const periodo = args.periodo;
+        const compararComAnterior = args.comparar_com_anterior !== false;
+
+        // Calcular datas do período atual
+        const now = new Date();
+        let startDate = new Date(now);
+        let endDate = new Date(now);
+
+        switch (periodo) {
+          case 'hoje':
+            startDate.setHours(0, 0, 0, 0);
+            break;
+          case 'semana':
+            startDate.setDate(now.getDate() - 7);
+            break;
+          case 'mes':
+            startDate.setMonth(now.getMonth() - 1);
+            break;
+          case 'ano':
+            startDate.setFullYear(now.getFullYear() - 1);
+            break;
+        }
+
+        // Buscar receita do período atual
+        const currentRevenue = await servicesService.getRevenue(
+          organizationId,
+          startDate,
+          endDate
+        );
+
+        const receitaAtual = currentRevenue.reduce((sum, r) => sum + r.total_revenue_cents, 0);
+        const bookingsAtuais = currentRevenue.reduce((sum, r) => sum + r.total_bookings, 0);
+        const ticketMedio = bookingsAtuais > 0 ? receitaAtual / bookingsAtuais : 0;
+
+        const result: any = {
+          periodo,
+          receita_total_reais: (receitaAtual / 100).toFixed(2),
+          total_agendamentos: bookingsAtuais,
+          ticket_medio_reais: (ticketMedio / 100).toFixed(2),
+          top_servicos: currentRevenue.slice(0, 3).map(r => ({
+            servico: r.service_name,
+            receita_reais: (r.total_revenue_cents / 100).toFixed(2),
+            agendamentos: r.total_bookings
+          }))
+        };
+
+        // Comparar com período anterior se solicitado
+        if (compararComAnterior) {
+          const diffMillis = endDate.getTime() - startDate.getTime();
+          const previousStartDate = new Date(startDate.getTime() - diffMillis);
+          const previousEndDate = new Date(startDate.getTime());
+
+          const previousRevenue = await servicesService.getRevenue(
+            organizationId,
+            previousStartDate,
+            previousEndDate
+          );
+
+          const receitaAnterior = previousRevenue.reduce((sum, r) => sum + r.total_revenue_cents, 0);
+          const bookingsAnteriores = previousRevenue.reduce((sum, r) => sum + r.total_bookings, 0);
+
+          const crescimentoReceita = receitaAnterior > 0
+            ? ((receitaAtual - receitaAnterior) / receitaAnterior) * 100
+            : 0;
+
+          const crescimentoBookings = bookingsAnteriores > 0
+            ? ((bookingsAtuais - bookingsAnteriores) / bookingsAnteriores) * 100
+            : 0;
+
+          result.comparacao = {
+            receita_periodo_anterior_reais: (receitaAnterior / 100).toFixed(2),
+            crescimento_receita_percentual: crescimentoReceita.toFixed(1) + '%',
+            crescimento_bookings_percentual: crescimentoBookings.toFixed(1) + '%'
+          };
+        }
+
+        return result;
+      }
 
       default:
         return { error: 'Função não encontrada' };
@@ -307,14 +686,60 @@ Nunca:
     };
   }
 
-  private buildContextInfo(analytics: any, ownerName: string): string {
-    return `\n\nContexto Atual:
-Dono: ${ownerName}
-Período: Última semana
-Agendamentos: ${analytics.total_agendamentos}
-Taxa de conclusão: ${analytics.taxa_conclusao}
-Cancelamentos: ${analytics.cancelados}
-No-shows: ${analytics.no_shows}`;
+  private buildContextInfo(fullContext: FullBusinessContext, ownerName: string): string {
+    const { organization_name, settings, services, analytics, pets_stats } = fullContext;
+
+    // Formatar horários de funcionamento
+    const formatBusinessHours = (hours: any): string => {
+      if (!hours || Object.keys(hours).length === 0) {
+        return 'Não configurado';
+      }
+      return Object.entries(hours)
+        .map(([dia, horario]) => `${dia}: ${horario}`)
+        .join(', ');
+    };
+
+    // Formatar serviços
+    const servicosFormatados = services.length > 0
+      ? services.map(s =>
+          `- ${s.nome} (${s.categoria}): R$ ${(s.preco / 100).toFixed(2)}${s.duracao ? ` - ${s.duracao}min` : ''}`
+        ).join('\n')
+      : '- Nenhum serviço cadastrado';
+
+    // Formatar espécies
+    const especiesFormatadas = Object.keys(pets_stats.especies).length > 0
+      ? Object.entries(pets_stats.especies)
+          .map(([especie, count]) => `${especie}: ${count}`)
+          .join(', ')
+      : 'Nenhum pet cadastrado';
+
+    return `\n\n===== CONTEXTO COMPLETO DO NEGÓCIO =====
+
+ORGANIZAÇÃO: ${organization_name}
+DONO: ${ownerName}
+
+CONFIGURAÇÕES:
+- Horários de funcionamento: ${formatBusinessHours(settings.business_hours)}
+
+SERVIÇOS OFERECIDOS (${services.length} total):
+${servicosFormatados}
+
+ANALYTICS - ÚLTIMA SEMANA:
+- Agendamentos totais: ${analytics.total_agendamentos}
+- Agendamentos completados: ${analytics.completados}
+- Cancelamentos: ${analytics.cancelados}
+- No-shows: ${analytics.no_shows}
+- Taxa de conclusão: ${analytics.taxa_conclusao}
+- Receita da semana: R$ ${(analytics.receita_semana_cents / 100).toFixed(2)}
+- Ticket médio: R$ ${(analytics.ticket_medio_cents / 100).toFixed(2)}
+- Serviço mais vendido: ${analytics.servico_mais_vendido}
+
+BASE DE CLIENTES E PETS:
+- Total de pets cadastrados: ${pets_stats.total_pets}
+- Distribuição por espécie: ${especiesFormatadas}
+- Raças mais comuns: ${pets_stats.racas_comuns.length > 0 ? pets_stats.racas_comuns.join(', ') : 'N/A'}
+
+=========================================`;
   }
 }
 
