@@ -72,7 +72,7 @@ export class AdminAuthService {
       }
 
       // Verificar senha
-      const isValidPassword = await bcrypt.compare(password, user.password_hash);
+      const isValidPassword = await bcrypt.compare(password, (user as any).password_hash);
 
       if (!isValidPassword) {
         logger.warn({ email, userId: user.id }, 'Invalid password for internal user');
@@ -271,7 +271,7 @@ export class AdminAuthService {
     ipAddress?: string
   ): Promise<void> {
     try {
-      await supabaseAdmin.rpc('log_internal_action', {
+      await (supabaseAdmin as any).rpc('log_internal_action', {
         p_user_id: userId,
         p_action: action,
         p_resource_type: resourceType,
