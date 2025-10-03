@@ -302,6 +302,7 @@ app.use('/api/knowledge-base', (await import('./routes/knowledge-base.routes.js'
 // Admin Panel Routes (internal users only)
 app.use('/api/internal/auth', (await import('./routes/admin/auth.routes.js')).default);
 app.use('/api/internal/debug', (await import('./routes/admin/debug-auth.routes.js')).default); // DEBUG - REMOVER EM PRODUÇÃO
+app.use('/api/version', (await import('./routes/admin/version-check.routes.js')).default); // Version check
 app.use('/api/internal/dashboard', (await import('./routes/admin/dashboard.routes.js')).default);
 app.use('/api/internal/clients', (await import('./routes/admin/clients.routes.js')).default);
 app.use('/api/internal/monitoring', (await import('./routes/admin/monitoring.routes.js')).default);
