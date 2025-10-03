@@ -26,9 +26,8 @@ import { CalendarView } from "@/components/CalendarView";
 
 export default function Agenda() {
   const { toast } = useToast();
-  const [selectedDate] = useState(new Date());
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
-  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -42,26 +41,23 @@ export default function Agenda() {
     notes: "",
   });
 
-  const [rescheduleData, setRescheduleData] = useState({
-    scheduled_start: "",
-    scheduled_end: "",
-  });
-
-  // Buscar agendamentos do dia selecionado
-  const startDate = format(selectedDate, "yyyy-MM-dd");
-  const endDate = format(selectedDate, "yyyy-MM-dd");
-
-  const { bookings, isLoading, refetch } = useBookings({
-    startDate,
-    endDate,
-  });
+  // Buscar todos os bookings (sem filtro de data para mostrar no calendário)
+  const { bookings, isLoading, refetch } = useBookings({});
 
   const { contacts } = useContacts();
   const selectedContact = contacts.find(c => c.id === newBooking.contact_id);
   const { pets: contactPets } = usePets(selectedContact?.id);
 
-  const totalRevenue = bookings.reduce((sum, apt) => sum + (apt.price || 0), 0);
-  const confirmedBookings = bookings.filter(b => b.status === "confirmed").length;
+  // Filtrar bookings de hoje para stats
+  const today = format(new Date(), "yyyy-MM-dd");
+  const todayBookings = bookings.filter((b) => {
+    const bookingDate = format(new Date(b.scheduled_start || b.scheduledFor), "yyyy-MM-dd");
+    return bookingDate === today;
+  });
+
+  const totalRevenue = todayBookings.reduce((sum, apt) => sum + (apt.price || 0), 0);
+  const confirmedBookings = todayBookings.filter(b => b.status === "confirmed").length;
+  const aiBookings = todayBookings.filter(b => b.notes?.includes("IA") || b.created_by_ai).length;
 
   const handleCreateBooking = async () => {
     if (!newBooking.contact_id || !newBooking.scheduled_start || !newBooking.scheduled_end) {
@@ -103,27 +99,26 @@ export default function Agenda() {
     }
   };
 
-  const handleReschedule = async () => {
-    if (!rescheduleData.scheduled_start || !rescheduleData.scheduled_end) {
-      toast({
-        variant: "destructive",
-        title: "Campos obrigatórios",
-        description: "Preencha data e horário",
-      });
-      return;
-    }
+  // Handler para quando um evento é clicado
+  const handleSelectEvent = (event: any) => {
+    setSelectedBooking(event.resource);
+    setIsDetailsOpen(true);
+  };
 
+  // Handler para drag-and-drop de eventos
+  const handleEventDrop = async ({ event, start, end }: any) => {
     setIsRescheduling(true);
     try {
-      await bookingsService.update(selectedBooking.id, rescheduleData);
+      await bookingsService.update(event.id, {
+        scheduled_start: start.toISOString(),
+        scheduled_end: end.toISOString(),
+      });
 
       toast({
         title: "✅ Reagendado!",
         description: "Horário alterado com sucesso",
       });
 
-      setIsRescheduleOpen(false);
-      setSelectedBooking(null);
       refetch();
     } catch (error: any) {
       toast({
@@ -136,13 +131,33 @@ export default function Agenda() {
     }
   };
 
-  const openReschedule = (booking: any) => {
-    setSelectedBooking(booking);
-    setRescheduleData({
-      scheduled_start: booking.scheduled_start || "",
-      scheduled_end: booking.scheduled_end || "",
-    });
-    setIsRescheduleOpen(true);
+  const handleReschedule = async (newStart: string, newEnd: string) => {
+    if (!selectedBooking) return;
+
+    setIsRescheduling(true);
+    try {
+      await bookingsService.update(selectedBooking.id, {
+        scheduled_start: newStart,
+        scheduled_end: newEnd,
+      });
+
+      toast({
+        title: "✅ Reagendado!",
+        description: "Horário alterado com sucesso",
+      });
+
+      setIsDetailsOpen(false);
+      setSelectedBooking(null);
+      refetch();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao reagendar",
+        description: error.response?.data?.error || "Tente novamente",
+      });
+    } finally {
+      setIsRescheduling(false);
+    }
   };
 
   return (
