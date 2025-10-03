@@ -4,6 +4,7 @@ import { AIMetricCard } from '@/components/ai/AIMetricCard';
 import { AIActivityFeed } from '@/components/ai/AIActivityFeed';
 import { AIConfigTabs } from '@/components/ai/AIConfigTabs';
 import { AIHealthBadge } from '@/components/ai/AIHealthBadge';
+import { WhatsAppSyncCard } from '@/components/ai/WhatsAppSyncCard';
 import { useAIMetrics } from '@/hooks/useAIMetrics';
 import { useAIActivity } from '@/hooks/useAIActivity';
 import { useAIConfig } from '@/hooks/useAIConfig';
@@ -15,7 +16,7 @@ export default function IA() {
   const { metrics, isLoading: loadingMetrics } = useAIMetrics();
   const { activities, isLoading: loadingActivities } = useAIActivity();
   const { config, updateConfig } = useAIConfig();
-  const { data: instancesData } = useWhatsAppInstances();
+  const { data: instancesData, refetch: refetchInstances } = useWhatsAppInstances();
 
   const instances = instancesData?.instances || [];
   const primaryInstance = instances[0];
@@ -78,8 +79,15 @@ export default function IA() {
           <AIActivityFeed activities={activities} isLoading={loadingActivities} />
         </div>
 
-        {/* Status */}
+        {/* Status e Sincronização */}
         <div className="space-y-4">
+          {/* WhatsApp Sync Card */}
+          <WhatsAppSyncCard
+            instance={primaryInstance}
+            onUpdate={refetchInstances}
+          />
+
+          {/* Health Badge */}
           <AIHealthBadge
             status={primaryInstance?.status || 'disconnected'}
             lastUpdate={primaryInstance?.last_connected_at}

@@ -98,8 +98,8 @@ export function CalendarView({
         borderRadius: "6px",
         opacity: status === "cancelled" ? 0.6 : 1,
         color: "white",
-        fontSize: "0.875rem",
-        padding: "4px 8px",
+        fontSize: "0.75rem", // Reduzido para mobile (12px)
+        padding: "2px 6px", // Padding menor para mobile
         cursor: "pointer",
       },
     };
@@ -131,7 +131,7 @@ export function CalendarView({
   };
 
   return (
-    <div className="calendar-container" style={{ height: "600px" }}>
+    <div className="calendar-container h-[500px] md:h-[600px] lg:h-[650px]">
       <DnDCalendar
         localizer={localizer}
         events={events}
