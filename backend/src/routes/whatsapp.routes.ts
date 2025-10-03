@@ -42,10 +42,38 @@ router.post('/instances', async (req: TenantRequest, res: Response): Promise<voi
       preferredAuthMethod: preferredAuthMethod || 'pairing_code'
     };
 
-    logger.info({ organizationId, instanceId, phoneNumber }, 'Initializing WhatsApp instance');
+    logger.info({ organizationId, instanceId, phoneNumber, preferredAuthMethod }, 'Initializing WhatsApp instance');
 
     const result = await baileysService.initializeInstance(config);
 
+    // Validar resposta
+    if (!result.success) {
+      logger.error({ result }, 'Failed to initialize instance');
+      res.status(500).json(result);
+      return;
+    }
+
+    // Validar QR code quando método é qr_code
+    if (config.preferredAuthMethod === 'qr_code' && !result.qrCode) {
+      logger.error({ result }, 'QR code not generated');
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate QR code - try again'
+      });
+      return;
+    }
+
+    // Validar pairing code quando método é pairing_code
+    if (config.preferredAuthMethod === 'pairing_code' && phoneNumber && !result.pairingCode) {
+      logger.error({ result }, 'Pairing code not generated');
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate pairing code - try again or use QR code'
+      });
+      return;
+    }
+
+    logger.info({ result }, 'WhatsApp instance initialized successfully');
     res.json(result);
   } catch (error: any) {
     logger.error({ error }, 'Error initializing WhatsApp instance');

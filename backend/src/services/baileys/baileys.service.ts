@@ -155,6 +155,54 @@ export class BaileysService {
         }
       }
 
+      // QR Code - aguardar ser gerado
+      if (preferredAuthMethod === 'qr_code' && !sock.authState.creds.registered) {
+        logger.info({ organizationId, instanceId }, 'Waiting for QR code generation');
+
+        return new Promise((resolve) => {
+          const timeout = setTimeout(() => {
+            logger.error({ organizationId, instanceId }, 'QR code generation timeout');
+            resolve({
+              success: false,
+              instanceId,
+              status: 'failed',
+              error: 'QR code generation timeout (30s)'
+            });
+          }, 30000); // 30 segundos
+
+          const qrListener = async (update: any) => {
+            if (update.qr) {
+              clearTimeout(timeout);
+              try {
+                const qrCodeData = await QRCode.toDataURL(update.qr);
+                logger.info({ organizationId, instanceId }, 'QR code generated successfully');
+
+                await connectionHandler.handleQRCode(organizationId, instanceId, qrCodeData);
+
+                sock.ev.off('connection.update', qrListener);
+                resolve({
+                  success: true,
+                  instanceId,
+                  status: 'qr_pending',
+                  qrCode: qrCodeData
+                });
+              } catch (error) {
+                logger.error({ error, organizationId, instanceId }, 'Failed to generate QR data URL');
+                sock.ev.off('connection.update', qrListener);
+                resolve({
+                  success: false,
+                  instanceId,
+                  status: 'failed',
+                  error: 'Failed to generate QR code image'
+                });
+              }
+            }
+          };
+
+          sock.ev.on('connection.update', qrListener);
+        });
+      }
+
       return {
         success: true,
         instanceId,
