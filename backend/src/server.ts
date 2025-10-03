@@ -122,10 +122,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // CORS - Aceita múltiplas origens
 app.use((req: Request, res: Response, next: NextFunction): void => {
+  // Lista fixa de origens permitidas (não depende de env var)
   const allowedOrigins = [
-    process.env.FRONTEND_URL,
     'https://ia.auzap.com.br',
     'https://auzap-frontend-d84c.onrender.com',
+    process.env.FRONTEND_URL, // Adicional via env var
     'http://localhost:8080',
     'http://localhost:8081',
     'http://localhost:8082',
@@ -136,8 +137,8 @@ app.use((req: Request, res: Response, next: NextFunction): void => {
   const origin = req.headers.origin;
   if (origin && allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
-  } else if (!process.env.FRONTEND_URL) {
-    // Em desenvolvimento sem FRONTEND_URL definido, permite tudo
+  } else if (process.env.NODE_ENV === 'development') {
+    // Apenas em desenvolvimento, permite qualquer origem
     res.header('Access-Control-Allow-Origin', '*');
   }
 
