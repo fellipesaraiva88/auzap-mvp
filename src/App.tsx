@@ -22,6 +22,11 @@ const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+// Admin Panel
+const AdminLayout = lazy(() => import("./layouts/AdminLayout"));
+const LoginAdmin = lazy(() => import("./pages/admin/LoginAdmin"));
+const ClientsAdmin = lazy(() => import("./pages/admin/ClientsAdmin"));
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -35,6 +40,17 @@ const App = () => (
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+
+            {/* Admin Panel Routes (separate auth) */}
+            <Route path="/admin/login" element={<LoginAdmin />} />
+            <Route
+              path="/admin/*"
+              element={
+                <AdminLayout />
+              }
+            >
+              <Route path="clients" element={<ClientsAdmin />} />
+            </Route>
 
             {/* Protected Routes */}
             <Route
