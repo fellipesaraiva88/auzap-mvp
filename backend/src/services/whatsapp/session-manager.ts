@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs/promises';
+import * as fsSync from 'fs';
 import { useMultiFileAuthState } from '@whiskeysockets/baileys';
 import { logger } from '../../config/logger.js';
 import { redisCache } from '../../config/redis.js';
@@ -18,7 +19,41 @@ export class SessionManager {
 
   constructor(sessionPath?: string) {
     // Render persistent disk ou local
+    // Fallback para /tmp se /app/sessions não for gravável
     this.sessionPath = sessionPath || process.env.WHATSAPP_SESSION_PATH || '/app/sessions';
+
+    // Verificar se path é gravável, senão usar /tmp
+    this.verifySessionPath();
+  }
+
+  /**
+   * Verifica se sessionPath é gravável, senão usa /tmp (síncrono para uso no constructor)
+   */
+  private verifySessionPath() {
+    try {
+      fsSync.accessSync(this.sessionPath, fsSync.constants.W_OK);
+      logger.info({ sessionPath: this.sessionPath }, 'Session path is writable');
+    } catch (error) {
+      const fallbackPath = '/tmp/sessions';
+      logger.warn({
+        originalPath: this.sessionPath,
+        fallbackPath,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }, 'Session path not writable, using fallback /tmp/sessions');
+
+      this.sessionPath = fallbackPath;
+
+      // Criar /tmp/sessions se não existir
+      try {
+        fsSync.mkdirSync(fallbackPath, { recursive: true, mode: 0o777 });
+        logger.info({ fallbackPath }, 'Fallback session path created');
+      } catch (mkdirError) {
+        logger.error({
+          fallbackPath,
+          error: mkdirError instanceof Error ? mkdirError.message : 'Unknown error'
+        }, 'Failed to create fallback session path');
+      }
+    }
   }
 
   /**
@@ -42,9 +77,32 @@ export class SessionManager {
   async initAuthState(organizationId: string, instanceId: string) {
     try {
       const sessionDir = this.getSessionPath(organizationId, instanceId);
-      await fs.mkdir(sessionDir, { recursive: true });
 
-      logger.info({ organizationId, instanceId, sessionDir }, 'Initializing auth state');
+      // Log completo para debug
+      logger.info({
+        organizationId,
+        instanceId,
+        sessionPath: this.sessionPath,
+        sessionDir,
+        env: process.env.WHATSAPP_SESSION_PATH
+      }, 'Attempting to initialize auth state');
+
+      // Garantir que diretório base existe primeiro
+      try {
+        await fs.access(this.sessionPath);
+        logger.info({ sessionPath: this.sessionPath }, 'Base session path accessible');
+      } catch (error) {
+        logger.warn({
+          sessionPath: this.sessionPath,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, 'Base session path not accessible, attempting to create');
+
+        await fs.mkdir(this.sessionPath, { recursive: true, mode: 0o777 });
+      }
+
+      // Criar diretório da instância
+      await fs.mkdir(sessionDir, { recursive: true, mode: 0o777 });
+      logger.info({ sessionDir }, 'Session directory created successfully');
 
       const authState = await useMultiFileAuthState(sessionDir);
 
