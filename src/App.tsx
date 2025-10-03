@@ -18,6 +18,7 @@ const Vendas = lazy(() => import("./pages/Vendas"));
 const IA = lazy(() => import("./pages/IA"));
 const Ajustes = lazy(() => import("./pages/Ajustes"));
 const WhatsAppSetup = lazy(() => import("./pages/WhatsAppSetup"));
+const AuroraMeetPage = lazy(() => import("./pages/AuroraMeetPage"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -86,6 +87,7 @@ const App = () => (
                             <Route path="/ia" element={<IA />} />
                             <Route path="/ajustes" element={<Ajustes />} />
                             <Route path="/whatsapp" element={<WhatsAppSetup />} />
+                            <Route path="/aurora/meet" element={<AuroraMeetPage />} />
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </Suspense>
