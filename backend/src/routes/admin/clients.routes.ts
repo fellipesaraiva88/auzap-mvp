@@ -31,11 +31,7 @@ router.get('/', requireAdminRole(['super_admin', 'tech', 'cs', 'sales', 'viewer'
         email,
         phone,
         created_at,
-        is_active,
-        subscription_plan,
-        subscription_status,
-        quota_messages_monthly,
-        quota_instances
+        updated_at
       `)
       .order('created_at', { ascending: false });
 
@@ -66,10 +62,7 @@ router.get('/', requireAdminRole(['super_admin', 'tech', 'cs', 'sales', 'viewer'
           ...org,
           metrics: {
             instances_count: instancesCount || 0,
-            messages_today: messagesToday || 0,
-            quota_usage_pct: org.quota_messages_monthly
-              ? Math.round((messagesToday || 0) / org.quota_messages_monthly * 100)
-              : 0
+            messages_today: messagesToday || 0
           }
         };
       })
@@ -183,6 +176,8 @@ router.post('/:id/force-reconnect', requireAdminRole(['super_admin', 'tech']), a
  *
  * Permissions: super_admin, sales
  */
+// TODO: Reativar quando adicionar colunas subscription_plan, quota_messages_monthly, quota_instances
+/*
 router.patch('/:id/plan', requireAdminRole(['super_admin', 'sales']), async (req: AdminRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -220,5 +215,6 @@ router.patch('/:id/plan', requireAdminRole(['super_admin', 'sales']), async (req
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+*/
 
 export default router;
