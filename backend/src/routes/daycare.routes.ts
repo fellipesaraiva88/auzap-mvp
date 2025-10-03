@@ -23,10 +23,10 @@ router.post('/stays', tenantMiddleware, async (req: TenantRequest, res) => {
       ...req.body
     });
 
-    res.status(201).json(stay);
+    return res.status(201).json(stay);
   } catch (error) {
     logger.error({ error }, 'Error creating stay');
-    res.status(500).json({ error: 'Failed to create stay' });
+    return res.status(500).json({ error: 'Failed to create stay' });
   }
 });
 
@@ -53,10 +53,10 @@ router.get('/stays', tenantMiddleware, async (req: TenantRequest, res) => {
       offset: offset ? parseInt(offset as string) : undefined
     });
 
-    res.json(result);
+    return res.json(result);
   } catch (error) {
     logger.error({ error }, 'Error listing stays');
-    res.status(500).json({ error: 'Failed to list stays' });
+    return res.status(500).json({ error: 'Failed to list stays' });
   }
 });
 
@@ -79,10 +79,10 @@ router.get('/stays/:id', tenantMiddleware, async (req: TenantRequest, res) => {
       return res.status(404).json({ error: 'Stay not found' });
     }
 
-    res.json(stay);
+    return res.json(stay);
   } catch (error) {
     logger.error({ error }, 'Error fetching stay');
-    res.status(500).json({ error: 'Failed to fetch stay' });
+    return res.status(500).json({ error: 'Failed to fetch stay' });
   }
 });
 
@@ -96,10 +96,10 @@ router.get('/stays/:id/upsells', tenantMiddleware, async (req: TenantRequest, re
 
     const suggestions = await DaycareService.suggestUpsells(id);
 
-    res.json({ suggestions });
+    return res.json({ suggestions });
   } catch (error) {
     logger.error({ error }, 'Error generating upsell suggestions');
-    res.status(500).json({ error: 'Failed to generate upsell suggestions' });
+    return res.status(500).json({ error: 'Failed to generate upsell suggestions' });
   }
 });
 
@@ -118,10 +118,10 @@ router.patch('/stays/:id', tenantMiddleware, async (req: TenantRequest, res) => 
 
     const stay = await DaycareService.updateStay(id, organizationId, req.body);
 
-    res.json(stay);
+    return res.json(stay);
   } catch (error) {
     logger.error({ error }, 'Error updating stay');
-    res.status(500).json({ error: 'Failed to update stay' });
+    return res.status(500).json({ error: 'Failed to update stay' });
   }
 });
 
@@ -145,10 +145,10 @@ router.post('/stays/:id/services', tenantMiddleware, async (req: TenantRequest, 
 
     const stay = await DaycareService.addExtraService(id, organizationId, service);
 
-    res.json(stay);
+    return res.json(stay);
   } catch (error) {
     logger.error({ error }, 'Error adding extra service');
-    res.status(500).json({ error: 'Failed to add extra service' });
+    return res.status(500).json({ error: 'Failed to add extra service' });
   }
 });
 

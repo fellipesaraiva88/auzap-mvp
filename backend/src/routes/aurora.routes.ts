@@ -19,7 +19,7 @@ router.use(tenantMiddleware);
  * 
  * Body: { phoneNumber, ownerName }
  */
-router.post('/register-owner', async (req: TenantRequest, res) => {
+router.post('/register-owner', async (req: TenantRequest, res): Promise<void> => {
   try {
     const organizationId = req.organizationId!;
     const { phoneNumber, ownerName } = req.body;
@@ -112,7 +112,7 @@ router.post('/register-owner', async (req: TenantRequest, res) => {
       logger.error({ error }, 'Welcome ritual failed (background)');
     });
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Owner registered successfully! Aurora is introducing herself...',
       isNew: true,
@@ -121,7 +121,7 @@ router.post('/register-owner', async (req: TenantRequest, res) => {
 
   } catch (error) {
     logger.error({ error }, 'Error in register-owner endpoint');
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Internal server error',
       code: 'INTERNAL_ERROR'
     });
@@ -154,7 +154,7 @@ router.get('/check-owner', async (req: TenantRequest, res): Promise<void> => {
       .eq('phone_number', normalizedPhone)
       .single();
 
-    res.json({
+    return res.json({
       isRegistered: !!owner,
       isActive: owner?.is_active || false,
       ownerName: owner?.owner_name || null,
@@ -163,7 +163,7 @@ router.get('/check-owner', async (req: TenantRequest, res): Promise<void> => {
 
   } catch (error) {
     logger.error({ error }, 'Error checking owner status');
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Internal server error',
       code: 'INTERNAL_ERROR'
     });
@@ -177,7 +177,7 @@ router.use(auroraAuthMiddleware);
  * POST /api/aurora/message
  * Processar mensagem do dono
  */
-router.post('/message', async (req, res) => {
+router.post('/message', async (req: TenantRequest, res): Promise<void> => {
   try {
     const { message } = req.body;
     const context = req.auroraContext!;
@@ -195,10 +195,10 @@ router.post('/message', async (req, res) => {
       message
     );
 
-    res.json({ response });
+    return res.json({ response });
   } catch (error) {
     logger.error({ error }, 'Error processing Aurora message');
-    res.status(500).json({ error: 'Failed to process message' });
+    return res.status(500).json({ error: 'Failed to process message' });
   }
 });
 
@@ -206,14 +206,14 @@ router.post('/message', async (req, res) => {
  * POST /api/aurora/summary/daily
  * Gerar resumo diário
  */
-router.post('/summary/daily', async (req, res) => {
+router.post('/summary/daily', async (req: TenantRequest, res): Promise<void> => {
   try {
     const organizationId = req.auroraContext!.organizationId;
     const summary = await auroraService.generateDailySummary(organizationId);
-    res.json({ summary });
+    return res.json({ summary });
   } catch (error) {
     logger.error({ error }, 'Error generating daily summary');
-    res.status(500).json({ error: 'Failed to generate summary' });
+    return res.status(500).json({ error: 'Failed to generate summary' });
   }
 });
 
@@ -221,7 +221,7 @@ router.post('/summary/daily', async (req, res) => {
  * GET /api/aurora/analytics
  * Obter analytics
  */
-router.get('/analytics', async (req, res) => {
+router.get('/analytics', async (req: TenantRequest, res): Promise<void> => {
   try {
     const organizationId = req.auroraContext!.organizationId;
     const { period = 'week' } = req.query;
@@ -229,10 +229,10 @@ router.get('/analytics', async (req, res) => {
     // Buscar analytics via Aurora context
     const analytics = await (auroraService as any).getAnalytics(organizationId, period as string);
     
-    res.json(analytics);
+    return res.json(analytics);
   } catch (error) {
     logger.error({ error }, 'Error fetching analytics');
-    res.status(500).json({ error: 'Failed to fetch analytics' });
+    return res.status(500).json({ error: 'Failed to fetch analytics' });
   }
 });
 
@@ -240,7 +240,7 @@ router.get('/analytics', async (req, res) => {
  * POST /api/aurora/campaigns/suggest
  * Sugerir campanha
  */
-router.post('/campaigns/suggest', async (req, res) => {
+router.post('/campaigns/suggest', async (req: TenantRequest, res): Promise<void> => {
   try {
     const { type } = req.body;
     
@@ -254,10 +254,10 @@ router.post('/campaigns/suggest', async (req, res) => {
       actions: []
     };
 
-    res.json(suggestion);
+    return res.json(suggestion);
   } catch (error) {
     logger.error({ error }, 'Error suggesting campaign');
-    res.status(500).json({ error: 'Failed to suggest campaign' });
+    return res.status(500).json({ error: 'Failed to suggest campaign' });
   }
 });
 
@@ -265,14 +265,14 @@ router.post('/campaigns/suggest', async (req, res) => {
  * GET /api/aurora/opportunities
  * Identificar oportunidades
  */
-router.get('/opportunities', async (req, res) => {
+router.get('/opportunities', async (req: TenantRequest, res): Promise<void> => {
   try {
     const organizationId = req.auroraContext!.organizationId;
     const opportunities = await auroraService.identifyOpportunities(organizationId);
-    res.json({ opportunities });
+    return res.json({ opportunities });
   } catch (error) {
     logger.error({ error }, 'Error identifying opportunities');
-    res.status(500).json({ error: 'Failed to identify opportunities' });
+    return res.status(500).json({ error: 'Failed to identify opportunities' });
   }
 });
 
@@ -280,14 +280,14 @@ router.get('/opportunities', async (req, res) => {
  * POST /api/aurora/proactive/analyze
  * Analisar e gerar notificações proativas
  */
-router.post('/proactive/analyze', async (req, res) => {
+router.post('/proactive/analyze', async (req: TenantRequest, res): Promise<void> => {
   try {
     const organizationId = req.auroraContext!.organizationId;
     const messages = await auroraProactiveService.analyzeAndNotify(organizationId);
-    res.json({ messages, count: messages.length });
+    return res.json({ messages, count: messages.length });
   } catch (error) {
     logger.error({ error }, 'Error analyzing proactive opportunities');
-    res.status(500).json({ error: 'Failed to analyze' });
+    return res.status(500).json({ error: 'Failed to analyze' });
   }
 });
 
@@ -295,14 +295,14 @@ router.post('/proactive/analyze', async (req, res) => {
  * POST /api/aurora/proactive/weekly-report
  * Gerar relatório semanal
  */
-router.post('/proactive/weekly-report', async (req, res) => {
+router.post('/proactive/weekly-report', async (req: TenantRequest, res): Promise<void> => {
   try {
     const organizationId = req.auroraContext!.organizationId;
     const report = await auroraProactiveService.generateWeeklyReport(organizationId);
-    res.json({ report });
+    return res.json({ report });
   } catch (error) {
     logger.error({ error }, 'Error generating weekly report');
-    res.status(500).json({ error: 'Failed to generate report' });
+    return res.status(500).json({ error: 'Failed to generate report' });
   }
 });
 
@@ -310,7 +310,7 @@ router.post('/proactive/weekly-report', async (req, res) => {
  * POST /api/aurora/proactive/send
  * Enviar mensagem proativa
  */
-router.post('/proactive/send', async (req, res) => {
+router.post('/proactive/send', async (req: TenantRequest, res): Promise<void> => {
   try {
     const organizationId = req.auroraContext!.organizationId;
     const { message, priority = 'medium' } = req.body;
@@ -326,10 +326,10 @@ router.post('/proactive/send', async (req, res) => {
       priority
     );
 
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (error) {
     logger.error({ error }, 'Error sending proactive message');
-    res.status(500).json({ error: 'Failed to send message' });
+    return res.status(500).json({ error: 'Failed to send message' });
   }
 });
 

@@ -5,7 +5,7 @@ import { redisConnection } from '../config/redis.js';
 const router = Router();
 
 // Basic health check
-router.get('/health', async (req, res) => {
+router.get('/health', async (_req, res) => {
   try {
     res.json({
       status: 'ok',
@@ -22,7 +22,7 @@ router.get('/health', async (req, res) => {
 });
 
 // Redis health check
-router.get('/health/redis', async (req, res) => {
+router.get('/health/redis', async (_req, res) => {
   try {
     await redisConnection.ping();
     res.json({
@@ -39,9 +39,9 @@ router.get('/health/redis', async (req, res) => {
 });
 
 // Supabase health check
-router.get('/health/supabase', async (req, res) => {
+router.get('/health/supabase', async (_req, res) => {
   try {
-    const { data, error } = await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from('organizations')
       .select('id')
       .limit(1);
@@ -64,7 +64,7 @@ router.get('/health/supabase', async (req, res) => {
 });
 
 // Environment variables check (safe - doesn't expose keys)
-router.get('/health/env', async (req, res) => {
+router.get('/health/env', async (_req, res) => {
   res.json({
     status: 'ok',
     env: {

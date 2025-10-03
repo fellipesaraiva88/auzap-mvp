@@ -23,10 +23,10 @@ router.post('/plans', tenantMiddleware, async (req: TenantRequest, res) => {
       ...req.body
     });
 
-    res.status(201).json(plan);
+    return res.status(201).json(plan);
   } catch (error) {
     logger.error({ error }, 'Error creating training plan');
-    res.status(500).json({ error: 'Failed to create training plan' });
+    return res.status(500).json({ error: 'Failed to create training plan' });
   }
 });
 
@@ -51,10 +51,10 @@ router.get('/plans', tenantMiddleware, async (req: TenantRequest, res) => {
       offset: offset ? parseInt(offset as string) : undefined
     });
 
-    res.json(result);
+    return res.json(result);
   } catch (error) {
     logger.error({ error }, 'Error listing training plans');
-    res.status(500).json({ error: 'Failed to list training plans' });
+    return res.status(500).json({ error: 'Failed to list training plans' });
   }
 });
 
@@ -77,10 +77,10 @@ router.get('/plans/:id', tenantMiddleware, async (req: TenantRequest, res) => {
       return res.status(404).json({ error: 'Training plan not found' });
     }
 
-    res.json(plan);
+    return res.json(plan);
   } catch (error) {
     logger.error({ error }, 'Error fetching training plan');
-    res.status(500).json({ error: 'Failed to fetch training plan' });
+    return res.status(500).json({ error: 'Failed to fetch training plan' });
   }
 });
 
@@ -99,10 +99,10 @@ router.patch('/plans/:id', tenantMiddleware, async (req: TenantRequest, res) => 
 
     const plan = await TrainingService.updateTrainingPlan(id, organizationId, req.body);
 
-    res.json(plan);
+    return res.json(plan);
   } catch (error) {
     logger.error({ error }, 'Error updating training plan');
-    res.status(500).json({ error: 'Failed to update training plan' });
+    return res.status(500).json({ error: 'Failed to update training plan' });
   }
 });
 
@@ -121,10 +121,10 @@ router.delete('/plans/:id', tenantMiddleware, async (req: TenantRequest, res) =>
 
     await TrainingService.cancelTrainingPlan(id, organizationId);
 
-    res.status(204).send();
+    return res.status(204).send();
   } catch (error) {
     logger.error({ error }, 'Error cancelling training plan');
-    res.status(500).json({ error: 'Failed to cancel training plan' });
+    return res.status(500).json({ error: 'Failed to cancel training plan' });
   }
 });
 

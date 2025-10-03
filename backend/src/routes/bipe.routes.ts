@@ -21,10 +21,10 @@ router.get('/pending', tenantMiddleware, async (req: TenantRequest, res) => {
 
     const bipes = await BipeService.listPendingBipes(organizationId);
 
-    res.json({ bipes });
+    return res.json({ bipes });
   } catch (error) {
     logger.error({ error }, 'Error listing pending BIPEs');
-    res.status(500).json({ error: 'Failed to list pending BIPEs' });
+    return res.status(500).json({ error: 'Failed to list pending BIPEs' });
   }
 });
 
@@ -47,10 +47,10 @@ router.post('/:id/respond', tenantMiddleware, async (req: TenantRequest, res) =>
 
     const bipe = await BipeService.processManagerResponse(id, response, instanceId);
 
-    res.json(bipe);
+    return res.json(bipe);
   } catch (error) {
     logger.error({ error }, 'Error responding to BIPE');
-    res.status(500).json({ error: 'Failed to respond to BIPE' });
+    return res.status(500).json({ error: 'Failed to respond to BIPE' });
   }
 });
 
@@ -69,10 +69,10 @@ router.post('/conversations/:conversationId/reactivate', tenantMiddleware, async
 
     await BipeService.reactivateAI(conversationId, organizationId);
 
-    res.json({ success: true, message: 'AI reactivated successfully' });
+    return res.json({ success: true, message: 'AI reactivated successfully' });
   } catch (error) {
     logger.error({ error }, 'Error reactivating AI');
-    res.status(500).json({ error: 'Failed to reactivate AI' });
+    return res.status(500).json({ error: 'Failed to reactivate AI' });
   }
 });
 
@@ -97,10 +97,10 @@ router.get('/knowledge', tenantMiddleware, async (req: TenantRequest, res) => {
       sortBy: sortBy as 'recent' | 'usage' | 'alphabetical'
     });
 
-    res.json(result);
+    return res.json(result);
   } catch (error) {
     logger.error({ error }, 'Error listing knowledge entries');
-    res.status(500).json({ error: 'Failed to list knowledge entries' });
+    return res.status(500).json({ error: 'Failed to list knowledge entries' });
   }
 });
 
@@ -129,10 +129,10 @@ router.post('/knowledge', tenantMiddleware, async (req: TenantRequest, res) => {
       source: 'manual'
     });
 
-    res.status(201).json(entry);
+    return res.status(201).json(entry);
   } catch (error) {
     logger.error({ error }, 'Error adding knowledge entry');
-    res.status(500).json({ error: 'Failed to add knowledge entry' });
+    return res.status(500).json({ error: 'Failed to add knowledge entry' });
   }
 });
 
@@ -150,10 +150,10 @@ router.get('/knowledge/stats', tenantMiddleware, async (req: TenantRequest, res)
 
     const stats = await KnowledgeBaseService.getStats(organizationId);
 
-    res.json(stats);
+    return res.json(stats);
   } catch (error) {
     logger.error({ error }, 'Error fetching KB stats');
-    res.status(500).json({ error: 'Failed to fetch KB stats' });
+    return res.status(500).json({ error: 'Failed to fetch KB stats' });
   }
 });
 
@@ -172,10 +172,10 @@ router.patch('/knowledge/:id', tenantMiddleware, async (req: TenantRequest, res)
 
     const entry = await KnowledgeBaseService.updateEntry(id, organizationId, req.body);
 
-    res.json(entry);
+    return res.json(entry);
   } catch (error) {
     logger.error({ error }, 'Error updating knowledge entry');
-    res.status(500).json({ error: 'Failed to update knowledge entry' });
+    return res.status(500).json({ error: 'Failed to update knowledge entry' });
   }
 });
 
@@ -194,10 +194,10 @@ router.delete('/knowledge/:id', tenantMiddleware, async (req: TenantRequest, res
 
     await KnowledgeBaseService.deleteEntry(id, organizationId);
 
-    res.status(204).send();
+    return res.status(204).send();
   } catch (error) {
     logger.error({ error }, 'Error deleting knowledge entry');
-    res.status(500).json({ error: 'Failed to delete knowledge entry' });
+    return res.status(500).json({ error: 'Failed to delete knowledge entry' });
   }
 });
 
