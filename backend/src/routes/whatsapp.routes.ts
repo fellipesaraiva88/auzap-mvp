@@ -3,12 +3,15 @@ import { baileysService } from '../services/baileys/baileys.service.js';
 import { logger } from '../config/logger.js';
 import { webhookLimiter, standardLimiter } from '../middleware/rate-limiter.js';
 import { TenantRequest, tenantMiddleware } from '../middleware/tenant.middleware.js';
+import { supabaseAdmin } from '../config/supabase.js';
+import { contactsService } from '../services/contacts/contacts.service.js';
 import type {
   InitializeInstanceConfig,
   TextMessage,
   MediaMessage,
   AudioMessage
 } from '../types/whatsapp.types.js';
+import type { TablesInsert } from '../types/database.types.js';
 
 const router = Router();
 
@@ -196,7 +199,7 @@ router.get('/instances/:instanceId/health', async (req: TenantRequest, res: Resp
 
 /**
  * POST /api/whatsapp/send/text
- * Envia mensagem de texto
+ * Envia mensagem de texto e registra no banco de dados
  *
  * Body: { instanceId, to, text }
  */
@@ -217,18 +220,132 @@ router.post('/send/text', async (req: TenantRequest, res: Response): Promise<voi
       text
     };
 
+    // 1. Enviar mensagem via Baileys
     const result = await baileysService.sendTextMessage(message);
 
-    if (result.success) {
-      res.json({
-        success: true,
-        messageId: result.messageId,
-        timestamp: result.timestamp
-      });
-    } else {
+    if (!result.success) {
       res.status(500).json({
         success: false,
         error: result.error
+      });
+      return;
+    }
+
+    // 2. Registrar mensagem no banco de dados
+    try {
+      // Extrair número de telefone limpo
+      const phoneNumber = to.includes('@') ? to.split('@')[0] : to;
+
+      // Buscar/criar contato
+      const contact = await contactsService.findOrCreateByPhone(
+        organizationId,
+        phoneNumber,
+        instanceId
+      );
+
+      // Buscar whatsapp_instance_id do banco (converter instanceId string para UUID)
+      const { data: whatsappInstance } = await supabaseAdmin
+        .from('whatsapp_instances')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .maybeSingle();
+
+      if (!whatsappInstance) {
+        logger.warn({ organizationId, instanceId }, 'WhatsApp instance not found in database - message sent but not saved');
+        res.json({
+          success: true,
+          messageId: result.messageId,
+          timestamp: result.timestamp,
+          savedToDatabase: false
+        });
+        return;
+      }
+
+      const whatsappInstanceId = whatsappInstance.id;
+
+      // Buscar conversa existente
+      const { data: existingConversation } = await supabaseAdmin
+        .from('conversations')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .eq('whatsapp_instance_id', whatsappInstanceId)
+        .eq('contact_id', contact.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let conversationId: string;
+
+      if (existingConversation) {
+        conversationId = existingConversation.id;
+      } else {
+        // Criar nova conversa
+        const conversationData: TablesInsert<'conversations'> = {
+          organization_id: organizationId,
+          whatsapp_instance_id: whatsappInstanceId,
+          contact_id: contact.id,
+          status: 'active',
+          last_message_at: new Date().toISOString(),
+          tags: []
+        };
+
+        const { data: newConversation, error: convError } = await supabaseAdmin
+          .from('conversations')
+          .insert(conversationData)
+          .select('id')
+          .single();
+
+        if (convError || !newConversation) {
+          logger.error({ error: convError }, 'Failed to create conversation');
+          throw convError;
+        }
+
+        conversationId = newConversation.id;
+      }
+
+      // Salvar mensagem outbound
+      const messageData: TablesInsert<'messages'> = {
+        organization_id: organizationId,
+        conversation_id: conversationId,
+        direction: 'outbound',
+        content: text,
+        sent_by_ai: false, // Mensagem manual via API
+        whatsapp_message_id: result.messageId,
+        metadata: {
+          messageId: result.messageId,
+          timestamp: result.timestamp,
+          sentViaAPI: true,
+          instanceId
+        }
+      };
+
+      await supabaseAdmin.from('messages').insert(messageData);
+
+      // Atualizar timestamp da conversa
+      await supabaseAdmin
+        .from('conversations')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', conversationId);
+
+      logger.info({ conversationId, messageId: result.messageId }, 'Message sent and saved to database');
+
+      res.json({
+        success: true,
+        messageId: result.messageId,
+        timestamp: result.timestamp,
+        savedToDatabase: true,
+        conversationId
+      });
+    } catch (dbError: any) {
+      // Mensagem foi enviada mas falhou ao salvar no banco
+      logger.error({ error: dbError }, 'Message sent but failed to save to database');
+      res.json({
+        success: true,
+        messageId: result.messageId,
+        timestamp: result.timestamp,
+        savedToDatabase: false,
+        error: 'Failed to save to database: ' + dbError.message
       });
     }
   } catch (error: any) {
