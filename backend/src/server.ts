@@ -135,11 +135,24 @@ app.use((req: Request, res: Response, next: NextFunction): void => {
   ].filter(Boolean);
 
   const origin = req.headers.origin;
+
+  // DEBUG: Log para investigar
+  logger.info({
+    origin,
+    allowedOrigins,
+    includes: origin ? allowedOrigins.includes(origin) : false,
+    nodeEnv: process.env.NODE_ENV
+  }, 'CORS DEBUG');
+
   if (origin && allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
+    logger.info({ origin }, 'CORS: Allow-Origin header SET');
   } else if (process.env.NODE_ENV === 'development') {
     // Apenas em desenvolvimento, permite qualquer origem
     res.header('Access-Control-Allow-Origin', '*');
+    logger.info('CORS: Wildcard * header SET');
+  } else {
+    logger.warn({ origin, allowedOrigins }, 'CORS: NO header set - origin not in whitelist');
   }
 
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH');
