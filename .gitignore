@@ -12,6 +12,17 @@ dist
 dist-ssr
 *.local
 
+# Environment and credentials
+.env
+.env.*
+!.env.example
+RENDER_ENV_SETUP.md
+
+# Test and debug files
+*.png
+test-*.mjs
+test-*.js
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
