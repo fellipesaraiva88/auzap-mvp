@@ -15,14 +15,15 @@ export default function Monitoring() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
-  const [instances, setInstances] = useState<any[]>([]);
-  const [queueStats, setQueueStats] = useState<any>(null);
-  const [alerts, setAlerts] = useState<any[]>([]);
+  const [instances, setInstances] = useState<Record<string, unknown>[]>([]);
+  const [queueStats, setQueueStats] = useState<Record<string, unknown> | null>(null);
+  const [alerts, setAlerts] = useState<Record<string, unknown>[]>([]);
 
   useEffect(() => {
     fetchMonitoringData();
     const interval = setInterval(fetchMonitoringData, 10000); // Atualizar a cada 10s
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchMonitoringData = async () => {
@@ -44,19 +45,22 @@ export default function Monitoring() {
       setInstances(instancesRes.data.instances);
       setQueueStats(queueRes.data);
       setAlerts(alertsRes.data.alerts);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching monitoring:', error);
 
-      if (error.response?.status === 401) {
-        navigate('/admin/login');
-        return;
-      }
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number; data?: { error?: string } } };
+        if (axiosError.response?.status === 401) {
+          navigate('/admin/login');
+          return;
+        }
 
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao carregar monitoramento',
-        description: error.response?.data?.error || 'Tente novamente'
-      });
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao carregar monitoramento',
+          description: axiosError.response?.data?.error || 'Tente novamente'
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -78,11 +82,12 @@ export default function Monitoring() {
       });
 
       fetchMonitoringData();
-    } catch (error: any) {
+    } catch (error) {
+      const axiosError = error as { response?: { data?: { error?: string } } };
       toast({
         variant: 'destructive',
         title: 'Erro na reconexão',
-        description: error.response?.data?.error || 'Tente novamente'
+        description: axiosError.response?.data?.error || 'Tente novamente'
       });
     }
   };
@@ -116,12 +121,12 @@ export default function Monitoring() {
             Alertas Ativos ({alerts.length})
           </h3>
           <div className="space-y-2">
-            {alerts.map((alert: any, idx: number) => (
+            {alerts.map((alert, idx: number) => (
               <div key={idx} className="text-sm">
-                <Badge variant={alert.severity === 'critical' ? 'destructive' : 'secondary'}>
-                  {alert.type}
+                <Badge variant={(alert as { severity: string }).severity === 'critical' ? 'destructive' : 'secondary'}>
+                  {(alert as { type: string }).type}
                 </Badge>
-                <span className="ml-2">{alert.message}</span>
+                <span className="ml-2">{(alert as { message: string }).message}</span>
               </div>
             ))}
           </div>
@@ -166,31 +171,41 @@ export default function Monitoring() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {instances.map((instance: any) => (
-              <TableRow key={instance.id}>
-                <TableCell className="font-medium">{instance.instance_name}</TableCell>
-                <TableCell>{instance.organizations?.name}</TableCell>
-                <TableCell>{instance.phone_number || '-'}</TableCell>
-                <TableCell>
-                  <InstanceStatusBadge status={instance.status} />
-                </TableCell>
-                <TableCell>
-                  {instance.last_connected_at
-                    ? new Date(instance.last_connected_at).toLocaleString('pt-BR')
-                    : 'Nunca'}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleForceReconnect(instance.id)}
-                    disabled={instance.status === 'connected'}
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {instances.map((instance) => {
+              const inst = instance as {
+                id: string;
+                instance_name: string;
+                organizations?: { name: string };
+                phone_number?: string;
+                status: string;
+                last_connected_at?: string
+              };
+              return (
+                <TableRow key={inst.id}>
+                  <TableCell className="font-medium">{inst.instance_name}</TableCell>
+                  <TableCell>{inst.organizations?.name}</TableCell>
+                  <TableCell>{inst.phone_number || '-'}</TableCell>
+                  <TableCell>
+                    <InstanceStatusBadge status={inst.status} />
+                  </TableCell>
+                  <TableCell>
+                    {inst.last_connected_at
+                      ? new Date(inst.last_connected_at).toLocaleString('pt-BR')
+                      : 'Nunca'}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleForceReconnect(inst.id)}
+                      disabled={inst.status === 'connected'}
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </Card>

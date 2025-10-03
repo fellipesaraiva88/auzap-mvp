@@ -21,12 +21,13 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
-  const [metrics, setMetrics] = useState<any>(null);
-  const [charts, setCharts] = useState<any>(null);
-  const [activities, setActivities] = useState<any[]>([]);
+  const [metrics, setMetrics] = useState<Record<string, unknown> | null>(null);
+  const [charts, setCharts] = useState<Record<string, unknown> | null>(null);
+  const [activities, setActivities] = useState<Record<string, unknown>[]>([]);
 
   useEffect(() => {
     fetchDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchDashboardData = async () => {
@@ -48,19 +49,22 @@ export default function Dashboard() {
       setMetrics(metricsRes.data);
       setCharts(chartsRes.data);
       setActivities(activitiesRes.data.activities);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching dashboard:', error);
 
-      if (error.response?.status === 401) {
-        navigate('/admin/login');
-        return;
-      }
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number; data?: { error?: string } } };
+        if (axiosError.response?.status === 401) {
+          navigate('/admin/login');
+          return;
+        }
 
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao carregar dashboard',
-        description: error.response?.data?.error || 'Tente novamente'
-      });
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao carregar dashboard',
+          description: axiosError.response?.data?.error || 'Tente novamente'
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -178,14 +182,14 @@ export default function Dashboard() {
         <Card className="p-4">
           <h3 className="text-lg font-semibold mb-4">Atividades Recentes</h3>
           <div className="space-y-2 max-h-[250px] overflow-y-auto">
-            {activities.map((activity: any) => (
-              <div key={activity.id} className="text-sm border-b pb-2">
-                <p className="font-medium">{activity.user_email}</p>
+            {activities.map((activity) => (
+              <div key={(activity as { id: string }).id} className="text-sm border-b pb-2">
+                <p className="font-medium">{(activity as { user_email: string }).user_email}</p>
                 <p className="text-muted-foreground">
-                  {activity.action} - {activity.resource_type}
+                  {(activity as { action: string }).action} - {(activity as { resource_type: string }).resource_type}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {new Date(activity.created_at).toLocaleString('pt-BR')}
+                  {new Date((activity as { created_at: string }).created_at).toLocaleString('pt-BR')}
                 </p>
               </div>
             ))}

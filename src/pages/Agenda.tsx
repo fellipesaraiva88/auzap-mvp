@@ -2,7 +2,7 @@ import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,13 +15,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Calendar, Clock, DollarSign, CheckCircle, Bot, User, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, DollarSign, CheckCircle, Bot, User, Loader2 } from "lucide-react";
 import { useBookings } from "@/hooks/useBookings";
 import { useContacts } from "@/hooks/useContacts";
 import { usePets } from "@/hooks/usePets";
 import { bookingsService } from "@/services/bookings.service";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { CalendarView } from "@/components/CalendarView";
 
 export default function Agenda() {
   const { toast } = useToast();

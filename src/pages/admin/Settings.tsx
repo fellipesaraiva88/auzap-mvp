@@ -19,13 +19,14 @@ export default function Settings() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
-  const [team, setTeam] = useState<any[]>([]);
-  const [plans, setPlans] = useState<any[]>([]);
+  const [team, setTeam] = useState<Record<string, unknown>[]>([]);
+  const [plans, setPlans] = useState<Record<string, unknown>[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', role: 'viewer', password: '' });
 
   useEffect(() => {
     fetchSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchSettings = async () => {
@@ -43,17 +44,20 @@ export default function Settings() {
 
       setTeam(teamRes.data.team);
       setPlans(plansRes.data.plans);
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        navigate('/admin/login');
-        return;
-      }
+    } catch (error) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number; data?: { error?: string } } };
+        if (axiosError.response?.status === 401) {
+          navigate('/admin/login');
+          return;
+        }
 
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao carregar configurações',
-        description: error.response?.data?.error || 'Tente novamente'
-      });
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao carregar configurações',
+          description: axiosError.response?.data?.error || 'Tente novamente'
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -75,11 +79,12 @@ export default function Settings() {
       setIsDialogOpen(false);
       setNewUser({ name: '', email: '', role: 'viewer', password: '' });
       fetchSettings();
-    } catch (error: any) {
+    } catch (error) {
+      const axiosError = error as { response?: { data?: { error?: string } } };
       toast({
         variant: 'destructive',
         title: 'Erro ao criar usuário',
-        description: error.response?.data?.error || 'Tente novamente'
+        description: axiosError.response?.data?.error || 'Tente novamente'
       });
     }
   };
@@ -100,11 +105,12 @@ export default function Settings() {
       });
 
       fetchSettings();
-    } catch (error: any) {
+    } catch (error) {
+      const axiosError = error as { response?: { data?: { error?: string } } };
       toast({
         variant: 'destructive',
         title: 'Erro ao atualizar',
-        description: error.response?.data?.error || 'Tente novamente'
+        description: axiosError.response?.data?.error || 'Tente novamente'
       });
     }
   };
@@ -202,34 +208,44 @@ export default function Settings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {team.map((member: any) => (
-                  <TableRow key={member.id}>
-                    <TableCell className="font-medium">{member.name}</TableCell>
-                    <TableCell>{member.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{member.role}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={member.is_active ? 'default' : 'secondary'}>
-                        {member.is_active ? 'Ativo' : 'Inativo'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {member.last_login_at
-                        ? new Date(member.last_login_at).toLocaleString('pt-BR')
-                        : 'Nunca'}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleToggleActive(member.id, member.is_active)}
-                      >
-                        {member.is_active ? 'Desativar' : 'Ativar'}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {team.map((member) => {
+                  const m = member as {
+                    id: string;
+                    name: string;
+                    email: string;
+                    role: string;
+                    is_active: boolean;
+                    last_login_at?: string;
+                  };
+                  return (
+                    <TableRow key={m.id}>
+                      <TableCell className="font-medium">{m.name}</TableCell>
+                      <TableCell>{m.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{m.role}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={m.is_active ? 'default' : 'secondary'}>
+                          {m.is_active ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {m.last_login_at
+                          ? new Date(m.last_login_at).toLocaleString('pt-BR')
+                          : 'Nunca'}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleToggleActive(m.id, m.is_active)}
+                        >
+                          {m.is_active ? 'Desativar' : 'Ativar'}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </Card>
@@ -237,18 +253,27 @@ export default function Settings() {
 
         <TabsContent value="plans">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {plans.map((plan: any) => (
-              <Card key={plan.id} className="p-4">
-                <h3 className="text-xl font-bold">{plan.name}</h3>
-                <p className="text-3xl font-bold mt-2">
-                  R$ {(plan.price_cents / 100).toFixed(2)}
-                </p>
-                <div className="mt-4 space-y-2 text-sm">
-                  <p>{plan.quota_messages_monthly.toLocaleString()} mensagens/mês</p>
-                  <p>{plan.quota_instances} instâncias</p>
-                </div>
-              </Card>
-            ))}
+            {plans.map((plan) => {
+              const p = plan as {
+                id: string;
+                name: string;
+                price_cents: number;
+                quota_messages_monthly: number;
+                quota_instances: number;
+              };
+              return (
+                <Card key={p.id} className="p-4">
+                  <h3 className="text-xl font-bold">{p.name}</h3>
+                  <p className="text-3xl font-bold mt-2">
+                    R$ {(p.price_cents / 100).toFixed(2)}
+                  </p>
+                  <div className="mt-4 space-y-2 text-sm">
+                    <p>{p.quota_messages_monthly.toLocaleString()} mensagens/mês</p>
+                    <p>{p.quota_instances} instâncias</p>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
       </Tabs>

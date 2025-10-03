@@ -17,12 +17,13 @@ export default function Logs() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
-  const [logs, setLogs] = useState<any[]>([]);
-  const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [logs, setLogs] = useState<Record<string, unknown>[]>([]);
+  const [selectedLog, setSelectedLog] = useState<Record<string, unknown> | null>(null);
   const [actionFilter, setActionFilter] = useState('');
 
   useEffect(() => {
     fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actionFilter]);
 
   const fetchLogs = async () => {
@@ -37,17 +38,20 @@ export default function Logs() {
       });
 
       setLogs(data.logs);
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        navigate('/admin/login');
-        return;
-      }
+    } catch (error) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number; data?: { error?: string } } };
+        if (axiosError.response?.status === 401) {
+          navigate('/admin/login');
+          return;
+        }
 
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao carregar logs',
-        description: error.response?.data?.error || 'Tente novamente'
-      });
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao carregar logs',
+          description: axiosError.response?.data?.error || 'Tente novamente'
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -115,18 +119,18 @@ export default function Logs() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {logs.map((log: any) => (
-                  <TableRow key={log.id}>
-                    <TableCell>{new Date(log.created_at).toLocaleString('pt-BR')}</TableCell>
+                {logs.map((log) => (
+                  <TableRow key={(log as { id: string }).id}>
+                    <TableCell>{new Date((log as { created_at: string }).created_at).toLocaleString('pt-BR')}</TableCell>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{log.user_email}</p>
-                        <p className="text-xs text-muted-foreground">{log.user_role}</p>
+                        <p className="font-medium">{(log as { user_email: string }).user_email}</p>
+                        <p className="text-xs text-muted-foreground">{(log as { user_role: string }).user_role}</p>
                       </div>
                     </TableCell>
-                    <TableCell>{log.action}</TableCell>
-                    <TableCell>{log.resource_type}</TableCell>
-                    <TableCell>{log.ip_address || '-'}</TableCell>
+                    <TableCell>{(log as { action: string }).action}</TableCell>
+                    <TableCell>{(log as { resource_type: string }).resource_type}</TableCell>
+                    <TableCell>{(log as { ip_address?: string }).ip_address || '-'}</TableCell>
                     <TableCell>
                       <Button
                         size="sm"

@@ -14,16 +14,17 @@ export default function Analytics() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
-  const [kpis, setKpis] = useState<any>(null);
-  const [funnel, setFunnel] = useState<any[]>([]);
-  const [revenue, setRevenue] = useState<any>({});
-  const [dateRange, setDateRange] = useState<any>({
+  const [kpis, setKpis] = useState<Record<string, unknown> | null>(null);
+  const [funnel, setFunnel] = useState<Record<string, unknown>[]>([]);
+  const [revenue, setRevenue] = useState<Record<string, unknown>>({});
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date()
   });
 
   useEffect(() => {
     fetchAnalytics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
 
   const fetchAnalytics = async () => {
@@ -49,17 +50,20 @@ export default function Analytics() {
       setKpis(kpisRes.data);
       setFunnel(funnelRes.data.funnel);
       setRevenue(revenueRes.data.revenue_by_period);
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        navigate('/admin/login');
-        return;
-      }
+    } catch (error) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number; data?: { error?: string } } };
+        if (axiosError.response?.status === 401) {
+          navigate('/admin/login');
+          return;
+        }
 
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao carregar analytics',
-        description: error.response?.data?.error || 'Tente novamente'
-      });
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao carregar analytics',
+          description: axiosError.response?.data?.error || 'Tente novamente'
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -73,9 +77,9 @@ export default function Analytics() {
     );
   }
 
-  const revenueData = Object.entries(revenue).map(([date, cents]: any) => ({
+  const revenueData = Object.entries(revenue).map(([date, cents]) => ({
     date,
-    revenue: cents / 100
+    revenue: (cents as number) / 100
   }));
 
   return (

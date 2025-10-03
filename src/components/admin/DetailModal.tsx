@@ -12,7 +12,7 @@ interface DetailModalProps {
   onClose: () => void;
   title: string;
   description?: string;
-  data: any;
+  data: Record<string, unknown> | null;
 }
 
 export function DetailModal({
