@@ -167,6 +167,42 @@ export function useConversationMessages(conversationId?: string) {
     refetchInterval: 5000, // Atualizar mensagens a cada 5 segundos
   });
 
+  // 🔴 Supabase Realtime: Sincronização automática de mensagens
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const organizationId = localStorage.getItem('organizationId');
+    if (!organizationId) return;
+
+    console.log('[Supabase Realtime] Setting up messages subscription', { conversationId });
+
+    const channel = supabase
+      .channel(`messages-${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        (payload) => {
+          console.log('[Supabase Realtime] Message change detected', payload);
+          // Invalidar cache para forçar refetch
+          queryClient.invalidateQueries({ queryKey: ['conversation-messages', conversationId] });
+          queryClient.invalidateQueries({ queryKey: ['conversations'] }); // Atualizar lista também
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Supabase Realtime] Messages subscription status:', status);
+      });
+
+    return () => {
+      console.log('[Supabase Realtime] Cleaning up messages subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId, queryClient]);
+
   const sendMessageMutation = useMutation({
     mutationFn: ({ conversationId, content }: { conversationId: string; content: string }) =>
       conversationsService.sendMessage(conversationId, content),
