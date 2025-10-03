@@ -5,13 +5,71 @@ import { SearchInput } from "@/components/SearchInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Users, UserPlus, Dog, Cat, Bot, Loader2 } from "lucide-react";
 import { useContacts } from "@/hooks/useContacts";
 import { usePets } from "@/hooks/usePets";
+import { contactsService } from "@/services/contacts.service";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Clientes() {
   const [searchQuery, setSearchQuery] = useState("");
-  const { contacts, total, isLoading } = useContacts(searchQuery);
+  const { contacts, total, isLoading, refetch } = useContacts(searchQuery);
+  const { toast } = useToast();
+
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newContact, setNewContact] = useState({
+    phone_number: "",
+    full_name: "",
+    email: "",
+  });
+
+  const handleCreateContact = async () => {
+    if (!newContact.phone_number || !newContact.full_name) {
+      toast({
+        variant: "destructive",
+        title: "Campos obrigatórios",
+        description: "Preencha nome e telefone do cliente",
+      });
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      await contactsService.create({
+        phone_number: newContact.phone_number,
+        full_name: newContact.full_name,
+        email: newContact.email || undefined,
+      });
+
+      toast({
+        title: "✅ Cliente criado!",
+        description: `${newContact.full_name} foi adicionado com sucesso`,
+      });
+
+      setNewContact({ phone_number: "", full_name: "", email: "" });
+      setIsDialogOpen(false);
+      refetch();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao criar cliente",
+        description: error.response?.data?.error || "Tente novamente",
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   // Para cada contato, buscar seus pets
   const contactsWithPets = contacts.map(contact => {
@@ -33,10 +91,78 @@ export default function Clientes() {
         title="Clientes & Pets"
         subtitle="Gerencie clientes e seus pets"
         actions={
-          <Button>
-            <UserPlus className="w-4 h-4" />
-            Novo Cliente
-          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="btn-gradient text-white">
+                <UserPlus className="w-4 h-4" />
+                Novo Cliente
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Adicionar Novo Cliente</DialogTitle>
+                <DialogDescription>
+                  Preencha os dados do cliente para cadastrá-lo no sistema
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="full_name">Nome Completo *</Label>
+                  <Input
+                    id="full_name"
+                    placeholder="Ex: João Silva"
+                    value={newContact.full_name}
+                    onChange={(e) =>
+                      setNewContact({ ...newContact, full_name: e.target.value })
+                    }
+                    disabled={isCreating}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone_number">Telefone (com DDD) *</Label>
+                  <Input
+                    id="phone_number"
+                    placeholder="Ex: 11987654321"
+                    value={newContact.phone_number}
+                    onChange={(e) =>
+                      setNewContact({ ...newContact, phone_number: e.target.value })
+                    }
+                    disabled={isCreating}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email (opcional)</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Ex: joao@email.com"
+                    value={newContact.email}
+                    onChange={(e) =>
+                      setNewContact({ ...newContact, email: e.target.value })
+                    }
+                    disabled={isCreating}
+                  />
+                </div>
+                <Button
+                  onClick={handleCreateContact}
+                  disabled={isCreating}
+                  className="w-full btn-gradient text-white"
+                >
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Criando...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Criar Cliente
+                    </>
+                  )}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         }
       />
 

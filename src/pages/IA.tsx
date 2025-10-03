@@ -1,14 +1,35 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bot, CheckCircle, Clock, Calendar, MessageSquare, Zap } from "lucide-react";
-import { mockFollowups } from "@/data/mockData";
+import { WhatsAppStatusCard } from "@/components/WhatsAppStatus";
+import { Bot, CheckCircle, Clock, Calendar, MessageSquare, Zap, Settings, AlertCircle, Loader2 } from "lucide-react";
+import { useWhatsAppInstances } from "@/hooks/useWhatsApp";
+import { useFollowups } from "@/hooks/useFollowups";
+import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function IA() {
-  const pendingFollowups = mockFollowups.filter((f) => f.status === "pending").length;
-  const sentFollowups = mockFollowups.filter((f) => f.status === "sent").length;
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { data: instancesData, isLoading: loadingInstances } = useWhatsAppInstances();
+  const { followups, isLoading: loadingFollowups } = useFollowups();
+  const { metrics, isLoading: loadingMetrics } = useDashboardMetrics();
+
+  const instances = instancesData?.instances || [];
+  const primaryInstance = instances[0];
+
+  const pendingFollowups = followups?.filter((f) => f.status === "pending").length || 0;
+  const sentFollowups = followups?.filter((f) => f.status === "sent").length || 0;
+
+  const aiConversations = metrics?.conversationsToday || 0;
+  const aiActions = metrics?.aiActionsToday || 0;
+  const timeSaved = metrics?.timeSavedToday || "0h 0min";
+
+  const isLoading = loadingInstances || loadingFollowups || loadingMetrics;
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -16,9 +37,9 @@ export default function IA() {
         title="Inteligência Artificial"
         subtitle="Configure e monitore sua assistente virtual"
         actions={
-          <Button>
-            <Bot className="w-4 h-4" />
-            Configurar IA
+          <Button onClick={() => navigate("/whatsapp-setup")} className="btn-gradient text-white">
+            <Settings className="w-4 h-4" />
+            Configurar WhatsApp
           </Button>
         }
       />
@@ -28,25 +49,25 @@ export default function IA() {
         <StatCard
           icon={Bot}
           title="Status da IA"
-          value="Ativa"
-          subtitle="Funcionando 24/7"
+          value={primaryInstance?.status === "connected" ? "Ativa" : "Offline"}
+          subtitle={primaryInstance?.status === "connected" ? "Funcionando 24/7" : "Configurar conexão"}
         />
         <StatCard
           icon={MessageSquare}
           title="Conversas Hoje"
-          value="23"
+          value={isLoading ? "-" : aiConversations}
           subtitle="Atendidas pela IA"
         />
         <StatCard
           icon={Zap}
           title="Ações Executadas"
-          value="47"
+          value={isLoading ? "-" : aiActions}
           subtitle="Últimas 24h"
         />
         <StatCard
           icon={Clock}
           title="Tempo Economizado"
-          value="4h 23min"
+          value={isLoading ? "-" : timeSaved}
           subtitle="Hoje"
         />
       </div>
@@ -58,75 +79,97 @@ export default function IA() {
             <CardTitle>Status da Conexão</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
-                    <CheckCircle className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">WhatsApp Conectado</h4>
-                    <p className="text-sm text-muted-foreground">
-                      +55 11 99999-9999
-                    </p>
-                  </div>
-                </div>
-                <Badge variant="default" className="bg-green-500">
-                  Online
-                </Badge>
+            {loadingInstances ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 text-ocean-blue animate-spin" />
               </div>
-
-              <div className="border-t border-border pt-6">
-                <h4 className="font-semibold mb-4">Personalidade da IA</h4>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Nome da Atendente:</span>
-                    <span className="font-medium">Maria</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Estilo:</span>
-                    <span className="font-medium">Carinhosa e Acolhedora</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Idioma:</span>
-                    <span className="font-medium">Português</span>
-                  </div>
-                </div>
-                <Button variant="outline" className="w-full mt-4">
-                  Editar Personalidade
+            ) : !primaryInstance ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <AlertCircle className="w-12 h-12 text-yellow-500 mb-4" />
+                <h4 className="font-semibold mb-2">Nenhuma instância configurada</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Configure sua primeira instância WhatsApp para começar
+                </p>
+                <Button onClick={() => navigate("/whatsapp-setup")} className="btn-gradient text-white">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Configurar WhatsApp
                 </Button>
               </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full ${primaryInstance.status === 'connected' ? 'bg-green-500' : 'bg-gray-500'} flex items-center justify-center`}>
+                      {primaryInstance.status === 'connected' ? (
+                        <CheckCircle className="w-6 h-6 text-white" />
+                      ) : (
+                        <AlertCircle className="w-6 h-6 text-white" />
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold">{primaryInstance.name || 'Instância WhatsApp'}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {primaryInstance.phone_number || 'Aguardando conexão'}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant={primaryInstance.status === 'connected' ? "default" : "secondary"} className={primaryInstance.status === 'connected' ? 'bg-green-500' : ''}>
+                    {primaryInstance.status === 'connected' ? 'Online' : 'Offline'}
+                  </Badge>
+                </div>
 
-              <div className="border-t border-border pt-6">
-                <h4 className="font-semibold mb-4">Ações Automáticas</h4>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                    <span className="text-sm">Cadastrar clientes</span>
-                    <Badge variant="default" className="bg-green-500">
-                      Ativo
-                    </Badge>
+                <div className="border-t border-border pt-6">
+                  <h4 className="font-semibold mb-4">Personalidade da IA</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Nome da Atendente:</span>
+                      <span className="font-medium">Aurora</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Estilo:</span>
+                      <span className="font-medium">Profissional e Acolhedora</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Idioma:</span>
+                      <span className="font-medium">Português (BR)</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                    <span className="text-sm">Cadastrar pets</span>
-                    <Badge variant="default" className="bg-green-500">
-                      Ativo
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                    <span className="text-sm">Criar agendamentos</span>
-                    <Badge variant="default" className="bg-green-500">
-                      Ativo
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                    <span className="text-sm">Registrar vendas</span>
-                    <Badge variant="default" className="bg-green-500">
-                      Ativo
-                    </Badge>
+                  <Button variant="outline" className="w-full mt-4">
+                    Editar Personalidade
+                  </Button>
+                </div>
+
+                <div className="border-t border-border pt-6">
+                  <h4 className="font-semibold mb-4">Ações Automáticas</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                      <span className="text-sm">Cadastrar clientes</span>
+                      <Badge variant="default" className="bg-green-500">
+                        Ativo
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                      <span className="text-sm">Cadastrar pets</span>
+                      <Badge variant="default" className="bg-green-500">
+                        Ativo
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                      <span className="text-sm">Criar agendamentos</span>
+                      <Badge variant="default" className="bg-green-500">
+                        Ativo
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                      <span className="text-sm">Registrar vendas</span>
+                      <Badge variant="default" className="bg-green-500">
+                        Ativo
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -136,52 +179,66 @@ export default function IA() {
             <CardTitle>Follow-ups Automáticos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4 mb-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Pendentes</span>
-                <span className="font-semibold text-yellow-600">{pendingFollowups}</span>
+            {loadingFollowups ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 text-ocean-blue animate-spin" />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Enviados Hoje</span>
-                <span className="font-semibold text-green-600">{sentFollowups}</span>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {mockFollowups.slice(0, 3).map((followup) => (
-                <div
-                  key={followup.id}
-                  className="p-3 rounded-lg border border-border"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-ocean-blue" />
-                      <span className="text-sm font-medium">
-                        {followup.type === "appointment_reminder"
-                          ? "Lembrete"
-                          : followup.type === "feedback"
-                          ? "Feedback"
-                          : "Vacina"}
-                      </span>
-                    </div>
-                    <Badge
-                      variant={
-                        followup.status === "pending" ? "secondary" : "default"
-                      }
-                    >
-                      {followup.status === "pending" ? "Pendente" : "Enviado"}
-                    </Badge>
+            ) : (
+              <>
+                <div className="space-y-4 mb-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Pendentes</span>
+                    <span className="font-semibold text-yellow-600">{pendingFollowups}</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {followup.customerName} • {followup.petName}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Enviados Hoje</span>
+                    <span className="font-semibold text-green-600">{sentFollowups}</span>
+                  </div>
                 </div>
-              ))}
-            </div>
 
-            <Button variant="outline" className="w-full mt-4">
-              Ver Todos os Follow-ups
-            </Button>
+                {followups && followups.length > 0 ? (
+                  <div className="space-y-3">
+                    {followups.slice(0, 3).map((followup) => (
+                      <div
+                        key={followup.id}
+                        className="p-3 rounded-lg border border-border"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-ocean-blue" />
+                            <span className="text-sm font-medium">
+                              {followup.followup_type === "appointment_reminder"
+                                ? "Lembrete"
+                                : followup.followup_type === "feedback"
+                                ? "Feedback"
+                                : "Follow-up"}
+                            </span>
+                          </div>
+                          <Badge
+                            variant={
+                              followup.status === "pending" ? "secondary" : "default"
+                            }
+                          >
+                            {followup.status === "pending" ? "Pendente" : "Enviado"}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {followup.contact?.full_name || "Cliente"}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <p className="text-sm">Nenhum follow-up agendado</p>
+                  </div>
+                )}
+
+                <Button variant="outline" className="w-full mt-4">
+                  Ver Todos os Follow-ups
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
