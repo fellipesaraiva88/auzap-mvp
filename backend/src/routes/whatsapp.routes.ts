@@ -47,14 +47,20 @@ router.post('/instances', async (req: TenantRequest, res: Response): Promise<voi
       logger.info({ organizationId, dbInstanceId }, 'Using existing WhatsApp instance from database');
     } else {
       // Criar novo registro com UUID válido
+      const instanceData: any = {
+        organization_id: organizationId,
+        instance_name: 'Instância Principal',
+        status: 'connecting'
+      };
+
+      // Adicionar phone_number apenas se fornecido (Pairing Code)
+      if (phoneNumber) {
+        instanceData.phone_number = phoneNumber.replace(/\D/g, '');
+      }
+
       const { data: newInstance, error: createError } = await supabaseAdmin
         .from('whatsapp_instances')
-        .insert({
-          organization_id: organizationId,
-          instance_name: 'Instância Principal',
-          phone_number: phoneNumber?.replace(/\D/g, ''),
-          status: 'connecting'
-        })
+        .insert(instanceData)
         .select('id')
         .single();
 
@@ -71,11 +77,15 @@ router.post('/instances', async (req: TenantRequest, res: Response): Promise<voi
     const config: InitializeInstanceConfig = {
       organizationId,
       instanceId: dbInstanceId, // ✅ Usar UUID do banco
-      phoneNumber,
       preferredAuthMethod: preferredAuthMethod || 'pairing_code'
-    };
+    } as any;
 
-    logger.info({ organizationId, instanceId: dbInstanceId, phoneNumber, preferredAuthMethod }, 'Initializing WhatsApp instance');
+    // Adicionar phoneNumber apenas se fornecido (Pairing Code)
+    if (phoneNumber) {
+      config.phoneNumber = phoneNumber;
+    }
+
+    logger.info({ organizationId, instanceId: dbInstanceId, phoneNumber: phoneNumber || 'QR Code', preferredAuthMethod }, 'Initializing WhatsApp instance');
 
     const result = await baileysService.initializeInstance(config);
 
