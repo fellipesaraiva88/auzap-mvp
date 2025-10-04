@@ -40,7 +40,6 @@ export interface WhatsAppHealthResponse {
 }
 
 export interface InitializeInstanceData {
-  instanceId: string;
   phoneNumber: string;
   preferredAuthMethod?: 'pairing_code' | 'qr_code';
 }
