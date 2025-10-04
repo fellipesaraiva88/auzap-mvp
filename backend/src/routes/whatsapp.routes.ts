@@ -30,22 +30,52 @@ router.use(standardLimiter);
  */
 router.post('/instances', async (req: TenantRequest, res: Response): Promise<void> => {
   try {
-    const { instanceId, phoneNumber, preferredAuthMethod } = req.body;
+    const { phoneNumber, preferredAuthMethod } = req.body;
     const organizationId = req.organizationId!;
 
-    if (!instanceId) {
-      res.status(400).json({ error: 'instanceId is required' });
-      return;
+    // 🔧 FIX: Buscar ou criar registro no banco com UUID válido
+    let dbInstanceId: string;
+
+    const { data: existingInstance } = await supabaseAdmin
+      .from('whatsapp_instances')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (existingInstance) {
+      dbInstanceId = existingInstance.id;
+      logger.info({ organizationId, dbInstanceId }, 'Using existing WhatsApp instance from database');
+    } else {
+      // Criar novo registro com UUID válido
+      const { data: newInstance, error: createError } = await supabaseAdmin
+        .from('whatsapp_instances')
+        .insert({
+          organization_id: organizationId,
+          instance_name: 'Instância Principal',
+          phone_number: phoneNumber?.replace(/\D/g, ''),
+          status: 'connecting'
+        })
+        .select('id')
+        .single();
+
+      if (createError || !newInstance) {
+        logger.error({ error: createError }, 'Failed to create WhatsApp instance in database');
+        res.status(500).json({ error: 'Failed to create instance record' });
+        return;
+      }
+
+      dbInstanceId = newInstance.id;
+      logger.info({ organizationId, dbInstanceId }, 'Created new WhatsApp instance in database');
     }
 
     const config: InitializeInstanceConfig = {
       organizationId,
-      instanceId,
+      instanceId: dbInstanceId, // ✅ Usar UUID do banco
       phoneNumber,
       preferredAuthMethod: preferredAuthMethod || 'pairing_code'
     };
 
-    logger.info({ organizationId, instanceId, phoneNumber, preferredAuthMethod }, 'Initializing WhatsApp instance');
+    logger.info({ organizationId, instanceId: dbInstanceId, phoneNumber, preferredAuthMethod }, 'Initializing WhatsApp instance');
 
     const result = await baileysService.initializeInstance(config);
 

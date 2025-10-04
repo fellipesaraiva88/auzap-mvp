@@ -129,14 +129,16 @@ export default function WhatsAppSetup() {
     }
 
     try {
-      const instanceId = `instance_${Date.now()}`;
-      setCurrentInstanceId(instanceId); // Salvar para polling
-
+      // ✅ Backend gera UUID válido automaticamente
       const result = await initializeWhatsApp.mutateAsync({
-        instanceId,
         phoneNumber: phoneNumber.replace(/\D/g, ''),
         preferredAuthMethod: 'pairing_code',
       });
+
+      // Salvar instanceId retornado pelo backend
+      if (result.instanceId) {
+        setCurrentInstanceId(result.instanceId);
+      }
 
       if (result.success && result.pairingCode) {
         setPairingCode(result.pairingCode);
