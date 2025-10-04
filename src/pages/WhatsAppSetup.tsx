@@ -1,3 +1,4 @@
+// Force rebuild - Dual auth method support (Pairing Code + QR Code)
 import { useState, useEffect, useRef } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
