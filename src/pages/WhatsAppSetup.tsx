@@ -114,31 +114,39 @@ export default function WhatsAppSetup() {
   }, []);
 
   const handleGenerateCode = async () => {
-    // Validações
-    if (!phoneNumber.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'Número obrigatório',
-        description: 'Digite seu número WhatsApp para continuar',
-      });
-      return;
-    }
+    // Validações APENAS para Pairing Code (QR Code não precisa de número)
+    if (authMethod === 'pairing_code') {
+      if (!phoneNumber.trim()) {
+        toast({
+          variant: 'destructive',
+          title: 'Número obrigatório',
+          description: 'Digite seu número WhatsApp para continuar',
+        });
+        return;
+      }
 
-    if (!isValidPhoneNumber(phoneNumber)) {
-      toast({
-        variant: 'destructive',
-        title: 'Número inválido',
-        description: 'Verifique se digitou o número completo com DDD',
-      });
-      return;
+      if (!isValidPhoneNumber(phoneNumber)) {
+        toast({
+          variant: 'destructive',
+          title: 'Número inválido',
+          description: 'Verifique se digitou o número completo com DDD',
+        });
+        return;
+      }
     }
 
     try {
-      // ✅ Backend gera UUID válido automaticamente
-      const result = await initializeWhatsApp.mutateAsync({
-        phoneNumber: phoneNumber.replace(/\D/g, ''),
-        preferredAuthMethod: authMethod,
-      });
+      // Construir request data com tipo correto
+      const requestData = authMethod === 'pairing_code'
+        ? {
+            phoneNumber: phoneNumber.replace(/\D/g, ''),
+            preferredAuthMethod: authMethod as 'pairing_code',
+          }
+        : {
+            preferredAuthMethod: authMethod as 'qr_code',
+          };
+
+      const result = await initializeWhatsApp.mutateAsync(requestData);
 
       // Salvar instanceId retornado pelo backend
       if (result.instanceId) {
@@ -440,20 +448,23 @@ export default function WhatsAppSetup() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <Label htmlFor="phone" className="text-base font-medium">
-                    Número do WhatsApp
-                  </Label>
-                  <PhoneInput
-                    value={phoneNumber}
-                    onChange={setPhoneNumber}
-                    disabled={initializeWhatsApp.isPending}
-                  />
-                  <p className="text-sm text-muted-foreground flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                    Incluindo código do país (+55) e DDD
-                  </p>
-                </div>
+                {/* Campo de telefone APENAS para Pairing Code */}
+                {authMethod === 'pairing_code' && (
+                  <div className="space-y-3">
+                    <Label htmlFor="phone" className="text-base font-medium">
+                      Número do WhatsApp
+                    </Label>
+                    <PhoneInput
+                      value={phoneNumber}
+                      onChange={setPhoneNumber}
+                      disabled={initializeWhatsApp.isPending}
+                    />
+                    <p className="text-sm text-muted-foreground flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                      Incluindo código do país (+55) e DDD
+                    </p>
+                  </div>
+                )}
 
                 <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-sm text-blue-800 font-medium mb-2">
@@ -476,17 +487,20 @@ export default function WhatsAppSetup() {
 
                 <Button
                   onClick={handleGenerateCode}
-                  disabled={initializeWhatsApp.isPending || !phoneNumber}
+                  disabled={
+                    initializeWhatsApp.isPending ||
+                    (authMethod === 'pairing_code' && !phoneNumber)
+                  }
                   className="w-full btn-gradient text-white text-lg h-12 group"
                 >
                   {initializeWhatsApp.isPending ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Gerando código...
+                      {authMethod === 'qr_code' ? 'Gerando QR Code...' : 'Gerando código...'}
                     </>
                   ) : (
                     <>
-                      Gerar Código
+                      {authMethod === 'qr_code' ? 'Gerar QR Code' : 'Gerar Código'}
                       <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                     </>
                   )}
