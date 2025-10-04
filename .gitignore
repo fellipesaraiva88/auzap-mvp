@@ -26,6 +26,9 @@ test-*.js
 test-results
 playwright-report
 
+# WhatsApp session files
+backend/sessions/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
