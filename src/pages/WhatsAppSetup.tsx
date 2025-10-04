@@ -33,6 +33,7 @@ import { ProgressoDaIA } from '@/components/esquecidos/ProgressoDaIA';
 import { useClientesEsquecidos } from '@/hooks/useClientesEsquecidos';
 
 type WizardStep = 'phone' | 'code' | 'verifying' | 'success';
+type AuthMethod = 'pairing_code' | 'qr_code';
 
 export default function WhatsAppSetup() {
   const { toast } = useToast();
@@ -52,8 +53,10 @@ export default function WhatsAppSetup() {
   // Wizard State
   const [dialogOpen, setDialogOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState<WizardStep>('phone');
+  const [authMethod, setAuthMethod] = useState<AuthMethod>('pairing_code');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [pairingCode, setPairingCode] = useState('');
+  const [qrCode, setQrCode] = useState('');
   const [currentInstanceId, setCurrentInstanceId] = useState('');
   const [copied, setCopied] = useState(false);
   const [countdown, setCountdown] = useState(60);
@@ -90,8 +93,10 @@ export default function WhatsAppSetup() {
     }
     setTimeout(() => {
       setWizardStep('phone');
+      setAuthMethod('pairing_code');
       setPhoneNumber('');
       setPairingCode('');
+      setQrCode('');
       setCurrentInstanceId('');
       setCopied(false);
       setCountdown(60);
@@ -132,7 +137,7 @@ export default function WhatsAppSetup() {
       // ✅ Backend gera UUID válido automaticamente
       const result = await initializeWhatsApp.mutateAsync({
         phoneNumber: phoneNumber.replace(/\D/g, ''),
-        preferredAuthMethod: 'pairing_code',
+        preferredAuthMethod: authMethod,
       });
 
       // Salvar instanceId retornado pelo backend
@@ -140,15 +145,35 @@ export default function WhatsAppSetup() {
         setCurrentInstanceId(result.instanceId);
       }
 
-      if (result.success && result.pairingCode) {
-        setPairingCode(result.pairingCode);
-        setWizardStep('code');
-        setCountdown(60);
+      if (result.success) {
+        // Pairing Code
+        if (authMethod === 'pairing_code' && result.pairingCode) {
+          setPairingCode(result.pairingCode);
+          setWizardStep('code');
+          setCountdown(60);
 
-        // Iniciar polling automático após 5s (dar tempo pro usuário ler)
-        setTimeout(() => {
-          startConnectionPolling();
-        }, 5000);
+          // Iniciar polling automático após 5s (dar tempo pro usuário ler)
+          setTimeout(() => {
+            startConnectionPolling();
+          }, 5000);
+        }
+        // QR Code
+        else if (authMethod === 'qr_code' && result.qrCode) {
+          setQrCode(result.qrCode);
+          setWizardStep('code');
+          setCountdown(60);
+
+          // Iniciar polling automático após 5s
+          setTimeout(() => {
+            startConnectionPolling();
+          }, 5000);
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Erro ao gerar código',
+            description: result.error || 'Tente novamente em alguns segundos',
+          });
+        }
       } else {
         toast({
           variant: 'destructive',
@@ -372,6 +397,49 @@ export default function WhatsAppSetup() {
             {/* PASSO 1: Telefone */}
             {wizardStep === 'phone' && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {/* Seleção de Método de Autenticação */}
+                <div className="space-y-3">
+                  <Label className="text-base font-medium">
+                    Método de Conexão
+                  </Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setAuthMethod('pairing_code')}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        authMethod === 'pairing_code'
+                          ? 'border-ocean-blue bg-ocean-blue/10'
+                          : 'border-gray-200 hover:border-ocean-blue/50'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-2xl mb-2">🔢</div>
+                        <div className="font-semibold text-sm">Pairing Code</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Código de 8 dígitos
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAuthMethod('qr_code')}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        authMethod === 'qr_code'
+                          ? 'border-ocean-blue bg-ocean-blue/10'
+                          : 'border-gray-200 hover:border-ocean-blue/50'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-2xl mb-2">📱</div>
+                        <div className="font-semibold text-sm">QR Code</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Escanear com câmera
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
                 <div className="space-y-3">
                   <Label htmlFor="phone" className="text-base font-medium">
                     Número do WhatsApp
@@ -388,12 +456,22 @@ export default function WhatsAppSetup() {
                 </div>
 
                 <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-800 font-medium mb-2">📱 Como funciona:</p>
-                  <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-                    <li>Geramos um código de 8 dígitos</li>
-                    <li>Você cola no seu WhatsApp</li>
-                    <li>Pronto! IA começa a atender automaticamente</li>
-                  </ol>
+                  <p className="text-sm text-blue-800 font-medium mb-2">
+                    📱 Como funciona {authMethod === 'pairing_code' ? '(Código)' : '(QR Code)'}:
+                  </p>
+                  {authMethod === 'pairing_code' ? (
+                    <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                      <li>Geramos um código de 8 dígitos</li>
+                      <li>Você cola no seu WhatsApp</li>
+                      <li>Pronto! IA começa a atender automaticamente</li>
+                    </ol>
+                  ) : (
+                    <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                      <li>Geramos um QR Code</li>
+                      <li>Você escaneia com a câmera do WhatsApp</li>
+                      <li>Pronto! IA começa a atender automaticamente</li>
+                    </ol>
+                  )}
                 </div>
 
                 <Button
@@ -416,70 +494,117 @@ export default function WhatsAppSetup() {
               </div>
             )}
 
-            {/* PASSO 2: Código */}
+            {/* PASSO 2: Código ou QR Code */}
             {wizardStep === 'code' && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                {/* Código Gigante - Estilo WhatsApp */}
-                <div className="relative">
-                  <div
-                    onClick={handleCopyCode}
-                    className="p-8 bg-[#25D366] rounded-2xl text-center cursor-pointer hover:scale-[1.02] transition-transform duration-200 shadow-lg group"
-                  >
-                    <p className="text-white text-sm font-medium mb-3">
-                      👆 Clique no código para copiar:
-                    </p>
-                    <div className="text-6xl font-bold text-white tracking-[0.2em] font-mono mb-2 select-all">
-                      {pairingCode}
-                    </div>
-                    {copied && (
-                      <div className="text-white text-sm font-medium mb-3 animate-pulse">
-                        ✅ Copiado!
+                {authMethod === 'pairing_code' && pairingCode && (
+                  <>
+                    {/* Código Gigante - Estilo WhatsApp */}
+                    <div className="relative">
+                      <div
+                        onClick={handleCopyCode}
+                        className="p-8 bg-[#25D366] rounded-2xl text-center cursor-pointer hover:scale-[1.02] transition-transform duration-200 shadow-lg group"
+                      >
+                        <p className="text-white text-sm font-medium mb-3">
+                          👆 Clique no código para copiar:
+                        </p>
+                        <div className="text-6xl font-bold text-white tracking-[0.2em] font-mono mb-2 select-all">
+                          {pairingCode}
+                        </div>
+                        {copied && (
+                          <div className="text-white text-sm font-medium mb-3 animate-pulse">
+                            ✅ Copiado!
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  {/* Botão de Copiar GIGANTE - Estilo WhatsApp */}
-                  <Button
-                    onClick={handleCopyCode}
-                    size="lg"
-                    className="w-full mt-4 bg-white hover:bg-gray-50 text-[#25D366] font-bold text-xl h-16 shadow-lg border-2 border-[#25D366]/30 hover:border-[#25D366]/50"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="w-6 h-6 mr-3" />
-                        <span>Código Copiado! ✅</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-6 h-6 mr-3" />
-                        Copiar Código para o WhatsApp
-                      </>
-                    )}
-                  </Button>
+                      {/* Botão de Copiar GIGANTE - Estilo WhatsApp */}
+                      <Button
+                        onClick={handleCopyCode}
+                        size="lg"
+                        className="w-full mt-4 bg-white hover:bg-gray-50 text-[#25D366] font-bold text-xl h-16 shadow-lg border-2 border-[#25D366]/30 hover:border-[#25D366]/50"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="w-6 h-6 mr-3" />
+                            <span>Código Copiado! ✅</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-6 h-6 mr-3" />
+                            Copiar Código para o WhatsApp
+                          </>
+                        )}
+                      </Button>
 
-                  {/* Timer Visual */}
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                      <span>Código expira em:</span>
-                      <span className="font-mono font-bold">{countdown}s</span>
+                      {/* Timer Visual */}
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                          <span>Código expira em:</span>
+                          <span className="font-mono font-bold">{countdown}s</span>
+                        </div>
+                        <Progress value={(countdown / 60) * 100} className="h-2" />
+                      </div>
                     </div>
-                    <Progress value={(countdown / 60) * 100} className="h-2" />
-                  </div>
-                </div>
 
-                {/* Instruções */}
-                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                  <p className="text-sm text-green-800 font-medium mb-3">
-                    ✅ Agora no WhatsApp:
-                  </p>
-                  <ol className="text-sm text-green-700 space-y-2 list-decimal list-inside">
-                    <li>Abra o WhatsApp no celular</li>
-                    <li>Toque em <strong>⋮ (Mais opções)</strong> → <strong>Aparelhos conectados</strong></li>
-                    <li>Toque em <strong>Conectar um aparelho</strong></li>
-                    <li>Escolha <strong>"Conectar com código"</strong></li>
-                    <li>Cole o código: <span className="font-mono font-bold">{pairingCode}</span></li>
-                  </ol>
-                </div>
+                    {/* Instruções Pairing Code */}
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <p className="text-sm text-green-800 font-medium mb-3">
+                        ✅ Agora no WhatsApp:
+                      </p>
+                      <ol className="text-sm text-green-700 space-y-2 list-decimal list-inside">
+                        <li>Abra o WhatsApp no celular</li>
+                        <li>Toque em <strong>⋮ (Mais opções)</strong> → <strong>Aparelhos conectados</strong></li>
+                        <li>Toque em <strong>Conectar um aparelho</strong></li>
+                        <li>Escolha <strong>"Conectar com código"</strong></li>
+                        <li>Cole o código: <span className="font-mono font-bold">{pairingCode}</span></li>
+                      </ol>
+                    </div>
+                  </>
+                )}
+
+                {authMethod === 'qr_code' && qrCode && (
+                  <>
+                    {/* QR Code Display */}
+                    <div className="relative">
+                      <div className="p-8 bg-white rounded-2xl border-4 border-[#25D366] text-center shadow-lg">
+                        <p className="text-gray-700 text-sm font-medium mb-4">
+                          📱 Escaneie com a câmera do WhatsApp:
+                        </p>
+                        <div className="flex justify-center items-center bg-white p-4 rounded-lg">
+                          <img
+                            src={qrCode}
+                            alt="QR Code WhatsApp"
+                            className="w-64 h-64 object-contain"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Timer Visual */}
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                          <span>QR Code expira em:</span>
+                          <span className="font-mono font-bold">{countdown}s</span>
+                        </div>
+                        <Progress value={(countdown / 60) * 100} className="h-2" />
+                      </div>
+                    </div>
+
+                    {/* Instruções QR Code */}
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <p className="text-sm text-green-800 font-medium mb-3">
+                        ✅ Agora no WhatsApp:
+                      </p>
+                      <ol className="text-sm text-green-700 space-y-2 list-decimal list-inside">
+                        <li>Abra o WhatsApp no celular</li>
+                        <li>Toque em <strong>⋮ (Mais opções)</strong> → <strong>Aparelhos conectados</strong></li>
+                        <li>Toque em <strong>Conectar um aparelho</strong></li>
+                        <li>Aponte a câmera para o QR Code acima</li>
+                        <li>Aguarde a confirmação automática</li>
+                      </ol>
+                    </div>
+                  </>
+                )}
 
                 <Button
                   onClick={handleCheckConnection}
