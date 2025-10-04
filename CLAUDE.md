@@ -11,6 +11,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+## ⚡ Most Frequent Commands (Quick Reference)
+
+```bash
+# Frontend Development
+npm run dev                    # Start frontend (localhost:5173)
+npm run validate               # Type-check + lint
+npm run build                  # Production build
+
+# Backend Development
+cd backend && npm run dev      # Start backend (localhost:3001)
+cd backend && npm run workers:start  # Start all queue workers
+cd backend && npm run queues:monitor # Bull Board UI (localhost:3002)
+
+# Testing & Validation
+npm run test:e2e              # Playwright E2E tests (frontend)
+cd backend && npm test        # Unit tests (backend)
+
+# Deployment Validation
+git pull origin main          # ALWAYS before modifying files
+git add . && git commit && git push  # ALWAYS after Playwright validation
+```
+
+---
+
 ## 🚀 Quick Start Commands
 
 ### Development Setup
