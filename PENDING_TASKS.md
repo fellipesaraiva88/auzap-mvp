@@ -7,14 +7,16 @@
 
 ## 🎯 RESUMO EXECUTIVO
 
-**Status Geral:** 70% Completo
+**Status Geral:** 75% Completo (↑5% desde 2025-10-04)
 
 - ✅ **Infraestrutura:** 100% (Backend + Frontend deployed)
 - ✅ **Core Features:** 100% (WhatsApp + Dual AI + Multi-tenant)
 - ✅ **New Verticals:** 100% (Training, Daycare, BIPE, Knowledge Base - backend)
-- ⏳ **Testing:** 30% (Playwright suite pendente)
+- ⏳ **Testing:** 60% (↑30% - Playwright suite core completo)
 - ⏳ **Proativo (Fase 3):** 0% (Ainda não iniciado)
 - ⏳ **Production Validation:** 50% (Falta validação completa)
+
+**Última Atualização:** 2025-10-05
 
 ---
 
@@ -29,21 +31,33 @@
 
 **Status:** FINALIZADO (2025-10-04)
 
-### 2. ⏳ **Comprehensive Playwright Test Suite**
+### 2. ⏳ **Comprehensive Playwright Test Suite** - 60% COMPLETO
 **Por que é crítico:** Validação E2E obrigatória antes de production release
 
+**✅ Concluído:**
+- [x] Testes E2E para fluxo de login/autenticação (8 testes)
+- [x] Testes E2E para WhatsApp connection (Pairing Code + QR Code) (15+ testes)
+- [x] Estrutura de testes criada (auth/, whatsapp/)
+- [x] Documentação completa (TEST_REPORT.md)
+- [x] Dual authentication validada com sucesso
+
 **O que falta:**
-- [ ] Testes E2E para fluxo de login/autenticação
-- [ ] Testes E2E para WhatsApp connection (Pairing Code + QR Code)
 - [ ] Testes E2E para Client AI interactions
 - [ ] Testes E2E para Aurora AI interactions
 - [ ] Testes E2E para novos verticals (Training, Daycare, BIPE)
 - [ ] Testes E2E para Knowledge Base
 - [ ] Configuração de CI/CD com Playwright
 - [ ] Visual regression tests para UI components
+- [ ] Instalar WebKit browser (`npx playwright install webkit`)
 
-**Estimativa:** 2-3 dias
-**Bloqueador:** Nenhum - pode iniciar agora
+**Estimativa:** 1-2 dias restantes
+**Bloqueador:** Nenhum - pode continuar agora
+
+**Progresso Detalhado:**
+- 📁 `tests/e2e/auth/login.spec.ts` - ✅ Criado (8 testes)
+- 📁 `tests/e2e/whatsapp/connection.spec.ts` - ✅ Criado (15+ testes)
+- 📁 `tests/e2e/TEST_REPORT.md` - ✅ Documentação completa
+- Commit: `c53422c` - feat(tests): Implement comprehensive Playwright E2E test suite
 
 ---
 
@@ -180,7 +194,9 @@
 - [x] TypeScript strict mode
 - [x] ESLint configuration
 - [x] Unit tests for services
-- [ ] **Comprehensive Playwright E2E tests**
+- [x] **Playwright E2E tests - Core** (login, WhatsApp connection)
+- [ ] **Playwright E2E tests - AI interactions**
+- [ ] **Playwright E2E tests - New verticals**
 - [ ] **Visual regression tests**
 - [ ] **Performance benchmarks**
 - [ ] **Security audit**
@@ -236,10 +252,16 @@
 ## 📞 NEXT ACTIONS (Imediatas)
 
 ### Para Claude Code:
-1. ✅ **Dual Authentication** - CONCLUÍDO
-2. ⏳ **Começar Playwright Test Suite**
-   - Criar estrutura de testes
-   - Implementar primeiro teste (login flow)
+1. ✅ **Dual Authentication** - CONCLUÍDO (2025-10-04)
+2. ✅ **Playwright Test Suite - Fase 1** - CONCLUÍDO (2025-10-05)
+   - ✅ Estrutura de testes criada
+   - ✅ Login flow implementado (8 testes)
+   - ✅ WhatsApp connection implementado (15+ testes)
+   - ✅ Dual authentication validado
+   - ✅ TEST_REPORT.md criado
+3. ⏳ **Próximo: Playwright Test Suite - Fase 2**
+   - Implementar testes para AI interactions
+   - Implementar testes para novos verticals
 
 ### Para Fellipe Saraiva:
 1. **Identificar Beta Petshop** - Parceiro para testes reais
